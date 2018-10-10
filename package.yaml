@@ -1,0 +1,84 @@
+name:                crossref-verifier
+version:             0.1.0.0
+github:              "githubuser/crossref-verifier"
+license:             MIT
+author:              "Kostya Ivanov"
+maintainer:          "martoon.hsk@gmail.com"
+copyright:           "2018 Martoon"
+
+extra-source-files:
+- README.md
+
+description:         Please see the README on GitHub at <https://github.com/serokell/crossref-verifier#readme>
+
+default-extensions:
+  - AllowAmbiguousTypes
+  - BangPatterns
+  - ConstraintKinds
+  - DataKinds
+  - DefaultSignatures
+  - DeriveDataTypeable
+  - DeriveGeneric
+  - FlexibleContexts
+  - FlexibleInstances
+  - FunctionalDependencies
+  - GeneralizedNewtypeDeriving
+  - LambdaCase
+  - MonadFailDesugaring
+  - MultiParamTypeClasses
+  - MultiWayIf
+  - NamedFieldPuns
+  - OverloadedStrings
+  - RankNTypes
+  - RecordWildCards
+  - ScopedTypeVariables
+  - StandaloneDeriving
+  - TemplateHaskell
+  - TupleSections
+  - TypeFamilies
+  - UndecidableInstances
+  - ViewPatterns
+  - TypeApplications
+  - TypeOperators
+
+build-tools:
+  - autoexporter
+
+ghc-options:
+  - -Wall
+
+dependencies:
+  - base-noprelude
+  - containers
+  - req
+  - data-default
+  - deepseq
+  - directory-tree
+  - directory
+  - filepath
+  - fmt
+  - http-client
+  - http-types
+  - lens
+  - loot-prelude
+  - pretty-terminal
+  - network-uri
+  - megaparsec
+  - mtl
+  - roman-numerals
+  - text
+
+library:
+  source-dirs: src
+
+executables:
+  crossref-verify:
+    main:                Main.hs
+    source-dirs:         exec
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    - -O2
+    dependencies:
+    - crossref-verifier

@@ -1,0 +1,20 @@
+resolver: lts-12.0
+
+packages:
+- .
+
+extra-deps:
+- base-noprelude-4.11.1.0
+- megaparsec-7.0.1
+- parser-combinators-1.0.0
+- cmark-0.5.6
+- text-format-0.3.2
+- fmt-0.6
+- pretty-terminal-0.1.0.0
+- roman-numerals-0.5.1.5
+- req-1.2.1
+
+- git: https://github.com/serokell/lootbox.git
+  commit: 34e389808e34f1cfa56f456773682325bed56d17
+  subdirs:
+    - code/prelude

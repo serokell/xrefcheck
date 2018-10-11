@@ -1,0 +1,17 @@
+# Parameters of repository traversal.
+traversal:
+  # Full paths which should be excluded from consideration.
+  excluded:
+    - .stack-work
+
+# Parameters of verification.
+verification:
+  # On 'anchor not found' error, how similar anchors should be displayed as hint.
+  # Number should be between 0 and 1, larger value means stricter filter.
+  anchorSimilarityThreshold: 0.5
+  # When checking external references, how long to wait on request before
+  # declaring "Response timeout".
+  externalRefCheckTimeout: 1s
+
+# Verbosity.
+verbose: false

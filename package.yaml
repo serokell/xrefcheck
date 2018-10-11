@@ -48,6 +48,8 @@ ghc-options:
   - -Wall
 
 dependencies:
+  - aeson
+  - aeson-options
   - base-noprelude
   - containers
   - cmark-gfm
@@ -64,10 +66,13 @@ dependencies:
   - pretty-terminal
   - network-uri
   - mtl
+  - o-clock
+  - optparse-applicative
   - req
   - roman-numerals
   - text
   - text-metrics
+  - yaml
 
 library:
   source-dirs: src

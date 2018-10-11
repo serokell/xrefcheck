@@ -30,8 +30,9 @@ import System.Console.Pretty (Style (..), style)
 import System.Directory (doesDirectoryExist, doesFileExist)
 import System.FilePath.Posix (takeDirectory)
 import System.FilePath.Posix ((</>))
-import System.Timeout (timeout)
+import Time (timeout)
 
+import Crv.Config
 import Crv.Core
 
 -----------------------------------------------------------
@@ -103,10 +104,12 @@ instance Buildable CrvVerifyError where
             [h] -> ",\n   did you mean " +| h |+ "?\n"
             hs  -> ", did you mean:\n" +| blockListF' "    -" build hs
 
-verifyRepo :: FilePath
-           -> RepoInfo
-           -> IO (VerifyResult $ WithReferenceLoc CrvVerifyError)
-verifyRepo root (RepoInfo repoInfo) =
+verifyRepo
+    :: VerifyConfig
+    -> FilePath
+    -> RepoInfo
+    -> IO (VerifyResult $ WithReferenceLoc CrvVerifyError)
+verifyRepo VerifyConfig{..} root (RepoInfo repoInfo) =
     concatForM (M.toList repoInfo) $ \(file, fileInfo) ->
         concatForM (_fiReferences fileInfo) $ \ref@Reference{..} ->
             fmap (fmap $ WithReferenceLoc file ref) $
@@ -132,14 +135,16 @@ verifyRepo root (RepoInfo repoInfo) =
         case find ((== anchor) . aName) givenAnchors of
             Just _ -> pass
             Nothing ->
-                let similarAnchors =
-                        -- TODO: take from config
-                        filter ((> 0.5) . damerauLevenshteinNorm anchor . aName)
+                let isSimilar = (>= vcAnchorSimilarityThreshold)
+                    similarAnchors =
+                        filter (isSimilar . realToFrac . damerauLevenshteinNorm anchor . aName)
                         givenAnchors
                 in throwError $ AnchorDoesNotExist anchor similarAnchors
 
-checkExternalResource :: Text -> IO (VerifyResult CrvVerifyError)
-checkExternalResource link = fmap toVerifyRes $ do
+checkExternalResource :: VerifyConfig
+                      -> Text
+                      -> IO (VerifyResult CrvVerifyError)
+checkExternalResource VerifyConfig{..} link = fmap toVerifyRes $ do
     makeRequest HEAD >>= \case
         Right () -> return $ Right ()
         Left (ExternalResourceUnavailable _ status) | statusCode status == 405
@@ -157,8 +162,8 @@ checkExternalResource link = fmap toVerifyRes $ do
                 Right (url, option) ->
                     runReq def $ req method url NoReqBody ignoreResponse option
 
-        -- TODO: tunable timeout
-        mres <- liftIO (timeout 3000000 $ void reqLink) `catch` (throwError . processErrors)
+        mres <- liftIO (timeout vcExternalRefCheckTimeout $ void reqLink)
+                `catch` (throwError . processErrors)
         maybe (throwError $ ExternalResourceSomeError "Response timeout") pure mres
 
     processErrors = \case

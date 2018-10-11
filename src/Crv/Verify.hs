@@ -20,12 +20,13 @@ module Crv.Verify
 import Control.Monad.Except (ExceptT (..), MonadError (..))
 import Data.Default (def)
 import qualified Data.Map as M
-import Fmt (Buildable (..), listF, (+|), (|+))
+import Data.Text.Metrics (damerauLevenshteinNorm)
+import Fmt (Buildable (..), blockListF', listF, (+|), (|+))
 import Network.HTTP.Client (HttpException (..), HttpExceptionContent (..), responseStatus)
 import Network.HTTP.Req (GET (..), HEAD (..), HttpException (..), NoReqBody (..), ignoreResponse,
                          parseUrl, req, runReq)
 import Network.HTTP.Types.Status (Status, statusCode, statusMessage)
-import System.Console.Pretty (Style (Faint), style)
+import System.Console.Pretty (Style (..), style)
 import System.Directory (doesDirectoryExist, doesFileExist)
 import System.FilePath.Posix (takeDirectory)
 import System.FilePath.Posix ((</>))
@@ -72,7 +73,7 @@ data WithReferenceLoc a = WithReferenceLoc
 
 instance Buildable a => Buildable (WithReferenceLoc a) where
     build WithReferenceLoc{..} =
-        "In file " +| style Faint wrlFile |+ " " +| wrlReference |+ "\n"
+        "In file " +| style Faint wrlFile |+ "\nbroken " +| wrlReference |+ "\n"
         +| wrlItem |+ "\n\n"
 
 data CrvVerifyError
@@ -86,16 +87,21 @@ data CrvVerifyError
 instance Buildable CrvVerifyError where
     build = \case
         FileDoesNotExist file ->
-            "File does not exist: " +| file |+ ""
-        AnchorDoesNotExist anchor available ->
-            "Anchor '" +| anchor |+ "' does not exist in the file, available ones: "
-            +| listF available |+ ""
+            "⛀  File does not exist:\n   " +| file |+ "\n"
+        AnchorDoesNotExist anchor similar ->
+            "⛀  Anchor '" +| anchor |+ "' is not present" +|
+            anchorHints similar
         ExternalResourceInvalidUri link ->
-            "Bad url: " +| link |+ ", expected 'http' or 'https'"
+            "⛂  Bad url: " +| link |+ ", expected 'http' or 'https'\n"
         ExternalResourceUnavailable link status ->
-            "Resource unavailable: (" +| statusCode status |+ " " +|
-            decodeUtf8 @Text (statusMessage status) |+ "): " +| link |+ ""
-        ExternalResourceSomeError err -> build err
+            "⛂  Resource unavailable: (" +| statusCode status |+ " " +|
+            decodeUtf8 @Text (statusMessage status) |+ "): " +| link |+ "\n"
+        ExternalResourceSomeError err -> "⛂  " +| build err |+ "\n"
+      where
+        anchorHints = \case
+            []  -> "\n"
+            [h] -> ",\n   did you mean " +| h |+ "?\n"
+            hs  -> ", did you mean:\n" +| blockListF' "    -" build hs
 
 verifyRepo :: FilePath
            -> RepoInfo
@@ -120,10 +126,17 @@ verifyRepo root (RepoInfo repoInfo) =
         case M.lookup file repoInfo of
             Nothing -> pass  -- no support for such file, can do nothing
             Just referedFileInfo ->
-                whenJust mAnchor $ \anchor -> do
-                    let fileAnchors = _fiAnchors referedFileInfo
-                    maybe (throwError $ AnchorDoesNotExist anchor fileAnchors) pure $
-                        void $ find ((== anchor) . aName) fileAnchors
+                whenJust mAnchor $ checkAnchorExists (_fiAnchors referedFileInfo)
+
+    checkAnchorExists givenAnchors anchor =
+        case find ((== anchor) . aName) givenAnchors of
+            Just _ -> pass
+            Nothing ->
+                let similarAnchors =
+                        -- TODO: take from config
+                        filter ((> 0.5) . damerauLevenshteinNorm anchor . aName)
+                        givenAnchors
+                in throwError $ AnchorDoesNotExist anchor similarAnchors
 
 checkExternalResource :: Text -> IO (VerifyResult CrvVerifyError)
 checkExternalResource link = fmap toVerifyRes $ do

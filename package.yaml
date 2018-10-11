@@ -67,6 +67,7 @@ dependencies:
   - req
   - roman-numerals
   - text
+  - text-metrics
 
 library:
   source-dirs: src

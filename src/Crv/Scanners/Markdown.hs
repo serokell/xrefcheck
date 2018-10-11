@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -fno-warn-orphans #-}
+
 -- | Markdown documents markdownScanner.
 
 module Crv.Scanners.Markdown
@@ -5,104 +7,68 @@ module Crv.Scanners.Markdown
     , markdownSupport
     ) where
 
+import CMarkGFM (Node (..), NodeType (..), commonmarkToNode)
 import Control.Lens ((%=))
 import Data.Default (Default (..))
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as LT
 import qualified Data.Text.Lazy.IO as LT
+import Fmt (Buildable (..), blockListF, nameF)
 import GHC.Conc (par)
-import qualified Text.Megaparsec as P
-import qualified Text.Megaparsec.Char as P
 
 import Crv.Core
 import Crv.Scan
 
-type MonadFileScan m = (P.MonadParsec () LT.Text m, MonadState FileInfo m)
+instance Buildable Node where
+    build (Node _mpos ty subs) = nameF (show ty) $ blockListF subs
 
-inBrackets :: MonadFileScan m => LT.Text -> LT.Text -> m Text
-inBrackets open close = do
-    _ <- P.string open
-    res <- P.takeWhileP (Just "in brackets") (/= LT.head close)
-    _ <- P.string close
-    return $ toStrict res
+nodeFlatten :: Node -> [NodeType]
+nodeFlatten (Node _pos ty subs) = ty : concatMap nodeFlatten subs
 
-fileInfoParser :: (MonadFileScan m) => m ()
-fileInfoParser = loop >> modify finaliseFileInfo
+nodeExtractText :: Node -> Text
+nodeExtractText = mconcat . map extractText . nodeFlatten
   where
-    loop = do
-        asum
-            [ P.try parseReference
-            , P.try parseBiblioRef
-            , P.try parseFootnoteRef
-            , P.try parseHandAnchor
-            , P.try parseSectionName
-            , P.try parseBiblioAnchor
-            , skipQuotes
-            , skipCodeBlocks
-            , skipUninteresting
-            ]
-        unlessM P.atEnd loop
+    extractText = \case
+        TEXT t -> t
+        CODE t -> t
+        _ -> ""
 
-    parseReference = do
-        rName <- inBrackets "[" "]"
-        rawLink <- inBrackets "(" ")"
-
-        let link = if null rawLink then rName else rawLink
-        let (rLink, rAnchor) = case T.splitOn "#" link of
-                [t]    -> (t, Nothing)
-                t : ts -> (t, Just $ T.intercalate "#" ts)
-                []     -> error "impossible"
-
-        fiReferences %= (Reference{..} :)
-
-    parseBiblioRef = do
-        rName <- inBrackets "[" "]"
-        anchor <- inBrackets "[" "]"
-        let rAnchor = Just $ if null anchor then rName else anchor
-        let rLink = ""
-        fiReferences %= (Reference{..} :)
-
-    parseFootnoteRef = do
-        rName <- inBrackets "[^" "]"
-        let rAnchor = Just ("^" <> rName)
-            rLink = ""
-        fiReferences %= (Reference{..} :)
-
-    parseHandAnchor = do
-        aName <- inBrackets "<a name=\"" "\"></a>"
-        let aType = HandAnchor
-        fiAnchors %= (Anchor{..} :)
-
-    parseBiblioAnchor = do
-        aName <- inBrackets "[" "]:"
-        let aType = BiblioAnchor
-        fiAnchors %= (Anchor{..} :)
-
-    parseSectionName = do
-        prefix <- P.takeWhile1P (Just "header prefix") (== '#')
-        rawName <- P.takeWhileP (Just "header") $ \c -> all (/= c) ['\r', '\n']
-        _ <- P.eol
-        let aType = HeaderAnchor (length prefix)
-            aName = headerToAnchor $
-                    T.dropWhileEnd (\c -> c == '#' || c == ' ') $ T.strip $
-                    toStrict rawName
-        fiAnchors %= (Anchor{..} :)
-
-    skipQuotes = do
-        _ <- P.char '`'
-        P.skipMany (void (P.string "\\\\`") <|> void (P.anySingleBut '`'))
-        _ <- P.char '`'
-        return ()
-
-    skipCodeBlocks = void $ inBrackets "```" "```"
-
-    skipUninteresting = do
-        _ <- P.anySingle
-        P.skipMany $ P.satisfy (\c -> all (/= c) ['[', '<', '#', '`'])
+nodeExtractInfo :: Node -> ExceptT Text Identity FileInfo
+nodeExtractInfo docNode = fmap finaliseFileInfo $ execStateT (loop docNode) def
+  where
+    loop node@(Node _pos ty subs) = case ty of
+        DOCUMENT ->
+            mapM_ loop subs
+        PARAGRAPH ->
+            mapM_ loop subs
+        HEADING lvl ->
+            let text = nodeExtractText node
+                aType = HeaderAnchor lvl
+                aName = headerToAnchor text
+            in fiAnchors %= (Anchor{..} :)
+        LIST _ ->
+            mapM_ loop subs
+        ITEM ->
+            mapM_ loop subs
+        HTML_INLINE htmlText -> do
+            let mName = T.stripSuffix "\">" =<< T.stripPrefix "<a name=\"" htmlText
+            whenJust mName $ \aName -> do
+                let aType = HandAnchor
+                fiAnchors %= (Anchor{..} :)
+        LINK url _ -> do
+            let rName = nodeExtractText node
+                link = if null url then rName else url
+            let (rLink, rAnchor) = case T.splitOn "#" link of
+                    [t]    -> (t, Nothing)
+                    t : ts -> (t, Just $ T.intercalate "#" ts)
+                    []     -> error "impossible"
+            fiReferences %= (Reference{..} :)
+        _ -> pass
 
 parseFileInfo :: FilePath -> LT.Text -> FileInfo
 parseFileInfo path input =
-    let outcome = P.parse (execStateT fileInfoParser def) path input
+    let outcome = runIdentity . runExceptT $
+                  nodeExtractInfo $ commonmarkToNode [] [] $ toStrict input
     in case outcome of
         Left err  -> error $ "Failed to parse file " <> show path <>
                              ": " <> show err

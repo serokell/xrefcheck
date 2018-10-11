@@ -50,7 +50,7 @@ ghc-options:
 dependencies:
   - base-noprelude
   - containers
-  - req
+  - cmark-gfm
   - data-default
   - deepseq
   - directory-tree
@@ -63,8 +63,8 @@ dependencies:
   - loot-prelude
   - pretty-terminal
   - network-uri
-  - megaparsec
   - mtl
+  - req
   - roman-numerals
   - text
 

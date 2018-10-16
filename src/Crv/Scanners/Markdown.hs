@@ -9,10 +9,10 @@ module Crv.Scanners.Markdown
 
 import CMarkGFM (Node (..), NodeType (..), commonmarkToNode)
 import Control.Lens ((%=))
+import qualified Data.ByteString.Lazy as BSL
 import Data.Default (Default (..))
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as LT
-import qualified Data.Text.Lazy.IO as LT
 import Fmt (Buildable (..), blockListF, nameF)
 import GHC.Conc (par)
 
@@ -76,7 +76,7 @@ parseFileInfo path input =
 
 markdownScanner :: ScanAction
 markdownScanner path = liftIO $ do
-    res <- parseFileInfo path <$> LT.readFile path
+    res <- parseFileInfo path . decodeUtf8 <$> BSL.readFile path
     force res `par` return res
 
 markdownSupport :: ([Extension], ScanAction)

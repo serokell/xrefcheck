@@ -50,7 +50,9 @@ ghc-options:
 dependencies:
   - aeson
   - aeson-options
+  - async
   - base-noprelude
+  - bytestring
   - containers
   - cmark-gfm
   - data-default

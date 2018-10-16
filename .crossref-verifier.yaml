@@ -11,7 +11,7 @@ verification:
   anchorSimilarityThreshold: 0.5
   # When checking external references, how long to wait on request before
   # declaring "Response timeout".
-  externalRefCheckTimeout: 1s
+  externalRefCheckTimeout: 10s
 
 # Verbosity.
 verbose: false

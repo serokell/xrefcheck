@@ -143,6 +143,7 @@ locationType location = case toString location of
     hasProtocol = "://" `T.isInfixOf` (T.take 10 location)
 
 -- | Convert section header name to an anchor refering it.
+-- Conversion rules: https://docs.gitlab.com/ee/user/markdown.html#header-ids-and-links
 headerToAnchor :: Text -> Text
 headerToAnchor =
     T.filter (\c -> isAlphaNum c || c == '-') .

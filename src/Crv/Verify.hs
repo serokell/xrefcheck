@@ -17,9 +17,11 @@ module Crv.Verify
     , checkExternalResource
     ) where
 
+import Control.Concurrent.Async (Concurrently (..))
 import Control.Monad.Except (ExceptT (..), MonadError (..))
 import Data.Default (def)
 import qualified Data.Map as M
+import qualified Data.Text as T
 import Data.Text.Metrics (damerauLevenshteinNorm)
 import Fmt (Buildable (..), blockListF', listF, (+|), (|+))
 import Network.HTTP.Client (HttpException (..), HttpExceptionContent (..), responseStatus)
@@ -80,8 +82,8 @@ instance Buildable a => Buildable (WithReferenceLoc a) where
 data CrvVerifyError
     = FileDoesNotExist FilePath
     | AnchorDoesNotExist Text [Anchor]
-    | ExternalResourceInvalidUri Text
-    | ExternalResourceUnavailable Text Status
+    | ExternalResourceInvalidUri
+    | ExternalResourceUnavailable Status
     | ExternalResourceSomeError Text
     deriving (Show)
 
@@ -92,11 +94,11 @@ instance Buildable CrvVerifyError where
         AnchorDoesNotExist anchor similar ->
             "⛀  Anchor '" +| anchor |+ "' is not present" +|
             anchorHints similar
-        ExternalResourceInvalidUri link ->
-            "⛂  Bad url: " +| link |+ ", expected 'http' or 'https'\n"
-        ExternalResourceUnavailable link status ->
-            "⛂  Resource unavailable: (" +| statusCode status |+ " " +|
-            decodeUtf8 @Text (statusMessage status) |+ "): " +| link |+ "\n"
+        ExternalResourceInvalidUri ->
+            "⛂  Bad url (expected 'http' or 'https')\n"
+        ExternalResourceUnavailable status ->
+            "⛂  Resource unavailable (" +| statusCode status |+ " " +|
+            decodeUtf8 @Text (statusMessage status) |+ ")"
         ExternalResourceSomeError err -> "⛂  " +| build err |+ "\n"
       where
         anchorHints = \case
@@ -109,16 +111,18 @@ verifyRepo
     -> FilePath
     -> RepoInfo
     -> IO (VerifyResult $ WithReferenceLoc CrvVerifyError)
-verifyRepo VerifyConfig{..} root (RepoInfo repoInfo) =
+verifyRepo config@VerifyConfig{..} root (RepoInfo repoInfo) =
+    runConcurrently $
     concatForM (M.toList repoInfo) $ \(file, fileInfo) ->
         concatForM (_fiReferences fileInfo) $ \ref@Reference{..} ->
+            Concurrently $
             fmap (fmap $ WithReferenceLoc file ref) $
             case locationType rLink of
                 LocalLoc    -> checkFileRef rAnchor file
                 RelativeLoc -> checkFileRef rAnchor
                                (takeDirectory file </> toString rLink)
                 AbsoluteLoc -> checkFileRef rAnchor (root <> toString rLink)
-                ExternalLoc -> return mempty  -- checkExternalResource rLink
+                ExternalLoc -> checkExternalResource config rLink
   where
     checkFileRef mAnchor file = verifying $ do
         fileExists <- liftIO $ doesFileExist file
@@ -144,18 +148,20 @@ verifyRepo VerifyConfig{..} root (RepoInfo repoInfo) =
 checkExternalResource :: VerifyConfig
                       -> Text
                       -> IO (VerifyResult CrvVerifyError)
-checkExternalResource VerifyConfig{..} link = fmap toVerifyRes $ do
-    makeRequest HEAD >>= \case
-        Right () -> return $ Right ()
-        Left (ExternalResourceUnavailable _ status) | statusCode status == 405
-                                                   || statusCode status == 418
-                 -> makeRequest GET
-        Left err -> pure (Left err)
+checkExternalResource VerifyConfig{..} link
+    | doesReferLocalhost = return mempty
+    | otherwise = fmap toVerifyRes $ do
+        makeRequest HEAD >>= \case
+            Right () -> return $ Right ()
+            Left ExternalResourceUnavailable{} -> makeRequest GET
+            Left err -> pure (Left err)
   where
+    doesReferLocalhost = any (`T.isInfixOf` link) ["://localhost", "://127.0.0.1"]
+
     makeRequest :: _ => method -> IO (Either CrvVerifyError ())
     makeRequest method = runExceptT $ do
         parsedUrl <- parseUrl (encodeUtf8 link)
-                  & maybe (throwError $ ExternalResourceInvalidUri link) pure
+                  & maybe (throwError ExternalResourceInvalidUri) pure
         let reqLink = case parsedUrl of
                 Left (url, option) ->
                     runReq def $ req method url NoReqBody ignoreResponse option
@@ -163,14 +169,14 @@ checkExternalResource VerifyConfig{..} link = fmap toVerifyRes $ do
                     runReq def $ req method url NoReqBody ignoreResponse option
 
         mres <- liftIO (timeout vcExternalRefCheckTimeout $ void reqLink)
-                `catch` (throwError . processErrors)
+                `catch` (throwError . interpretErrors)
         maybe (throwError $ ExternalResourceSomeError "Response timeout") pure mres
 
-    processErrors = \case
+    interpretErrors = \case
         JsonHttpException _ -> error "External link JSON parse exception"
         VanillaHttpException err -> case err of
             InvalidUrlException{} -> error "External link URL invalid exception"
             HttpExceptionRequest _ exc -> case exc of
                 StatusCodeException resp _ ->
-                    ExternalResourceUnavailable link (responseStatus resp)
+                    ExternalResourceUnavailable (responseStatus resp)
                 other -> ExternalResourceSomeError $ show other

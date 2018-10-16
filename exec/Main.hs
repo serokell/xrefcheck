@@ -32,5 +32,5 @@ main = do
         Just (toList -> errs) -> do
             fmt $ "Invalid references found:\n\n" <>
                   indentF 2 (blockListF' ("➥ ") build errs)
-            fmtLn "Invalid references dumped."
+            fmtLn $ "Invalid references dumped, " <> build (length errs) <> " in total."
             exitFailure

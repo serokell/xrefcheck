@@ -45,7 +45,7 @@ instance Default VerifyConfig where
     def =
         VerifyConfig
         { vcAnchorSimilarityThreshold = 0.5
-        , vcExternalRefCheckTimeout = sec 1
+        , vcExternalRefCheckTimeout = sec 3
         }
 
 -----------------------------------------------------------

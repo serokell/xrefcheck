@@ -90,3 +90,12 @@ executables:
     - -O2
     dependencies:
     - crossref-verifier
+
+tests:
+  crossref-verifier-tests:
+    main:                Main.hs
+    source-dirs:         tests
+    dependencies:
+    - crossref-verifier
+    - hspec
+    - QuickCheck

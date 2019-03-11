@@ -12,7 +12,7 @@ import Fmt (Buildable (..), blockListF, blockListF', nameF, (+|), (|+))
 import System.Console.Pretty (Color (..), Style (..), color, style)
 import Text.Numeral.Roman (toRoman)
 
-import Crv.Util ()
+import Crv.Util (paren)
 
 -----------------------------------------------------------
 -- Types
@@ -72,7 +72,7 @@ instance NFData Anchor
 instance NFData FileInfo
 
 instance Buildable Reference where
-    build Reference{..} = nameF ("reference (" +| build loc |+ ")") $
+    build Reference{..} = nameF ("reference " +| paren (build loc)) $
         blockListF
         [ "text: " <> show rName
         , "link: " <> rLink
@@ -121,6 +121,8 @@ data LocationType
       -- ^ Reference to a file relative to the root
     | ExternalLoc
       -- ^ Reference to a file at outer site
+    | OtherLoc
+      -- ^ Entry not to be processed (e.g. "mailto:e-mail")
     deriving (Show)
 
 instance Buildable LocationType where
@@ -129,6 +131,7 @@ instance Buildable LocationType where
         RelativeLoc -> color Yellow "relative"
         AbsoluteLoc -> color Blue "absolute"
         ExternalLoc -> color Red "external"
+        OtherLoc -> ""
 
 -- | Get type of reference.
 locationType :: Text -> LocationType
@@ -137,10 +140,12 @@ locationType location = case toString location of
     '/' : _             -> AbsoluteLoc
     '.' : '/' : _       -> RelativeLoc
     '.' : '.' : '/' : _ -> RelativeLoc
-    _ | hasProtocol     -> ExternalLoc
-    _                   -> RelativeLoc
+    _ | hasUrlProtocol  -> ExternalLoc
+      | hasProtocol     -> OtherLoc
+      | otherwise       -> RelativeLoc
   where
-    hasProtocol = "://" `T.isInfixOf` (T.take 10 location)
+    hasUrlProtocol = "://" `T.isInfixOf` (T.take 10 location)
+    hasProtocol = ":" `T.isInfixOf` (T.take 10 location)
 
 -- | Convert section header name to an anchor refering it.
 -- Conversion rules: https://docs.gitlab.com/ee/user/markdown.html#header-ids-and-links

@@ -32,7 +32,7 @@ import System.Console.Pretty (Style (..), style)
 import System.Directory (doesDirectoryExist, doesFileExist)
 import System.FilePath.Posix (takeDirectory)
 import System.FilePath.Posix ((</>))
-import Time (timeout)
+import Time (RatioNat, Second, Time (..), timeout)
 
 import Crv.Config
 import Crv.Core
@@ -123,6 +123,7 @@ verifyRepo config@VerifyConfig{..} root (RepoInfo repoInfo) =
                                (takeDirectory file </> toString rLink)
                 AbsoluteLoc -> checkFileRef rAnchor (root <> toString rLink)
                 ExternalLoc -> checkExternalResource config rLink
+                OtherLoc    -> verifying pass
   where
     checkFileRef mAnchor file = verifying $ do
         fileExists <- liftIO $ doesFileExist file
@@ -151,32 +152,41 @@ checkExternalResource :: VerifyConfig
 checkExternalResource VerifyConfig{..} link
     | doesReferLocalhost = return mempty
     | otherwise = fmap toVerifyRes $ do
-        makeRequest HEAD >>= \case
+        makeRequest HEAD 0.3 >>= \case
             Right () -> return $ Right ()
-            Left ExternalResourceUnavailable{} -> makeRequest GET
-            Left err -> pure (Left err)
+            Left   _ -> makeRequest GET 0.7
   where
     doesReferLocalhost = any (`T.isInfixOf` link) ["://localhost", "://127.0.0.1"]
 
-    makeRequest :: _ => method -> IO (Either CrvVerifyError ())
-    makeRequest method = runExceptT $ do
+    makeRequest :: _ => method -> RatioNat -> IO (Either CrvVerifyError ())
+    makeRequest method timeoutFrac = runExceptT $ do
         parsedUrl <- parseUrl (encodeUtf8 link)
-                  & maybe (throwError ExternalResourceInvalidUri) pure
+                   & maybe (throwError ExternalResourceInvalidUri) pure
         let reqLink = case parsedUrl of
                 Left (url, option) ->
                     runReq def $ req method url NoReqBody ignoreResponse option
                 Right (url, option) ->
                     runReq def $ req method url NoReqBody ignoreResponse option
 
-        mres <- liftIO (timeout vcExternalRefCheckTimeout $ void reqLink)
-                `catch` (throwError . interpretErrors)
+        let maxTime = Time @Second $ unTime vcExternalRefCheckTimeout * timeoutFrac
+
+        mres <- liftIO (timeout maxTime $ void reqLink)
+                `catch` (either throwError (\() -> return (Just ())) . interpretErrors)
         maybe (throwError $ ExternalResourceSomeError "Response timeout") pure mres
+
+    isAllowedErrorCode = or . sequence
+        -- We have to stay conservative - if some URL can be accessed under
+        -- some circumstances, we should do our best to report it as fine.
+        [ (403 ==)  -- unauthorized access
+        , (405 ==)  -- method mismatch
+        ]
 
     interpretErrors = \case
         JsonHttpException _ -> error "External link JSON parse exception"
         VanillaHttpException err -> case err of
             InvalidUrlException{} -> error "External link URL invalid exception"
             HttpExceptionRequest _ exc -> case exc of
-                StatusCodeException resp _ ->
-                    ExternalResourceUnavailable (responseStatus resp)
-                other -> ExternalResourceSomeError $ show other
+                StatusCodeException resp _
+                    | isAllowedErrorCode (statusCode $ responseStatus resp) -> Right ()
+                    | otherwise -> Left $ ExternalResourceUnavailable (responseStatus resp)
+                other -> Left . ExternalResourceSomeError $ show other

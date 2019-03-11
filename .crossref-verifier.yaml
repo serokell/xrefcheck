@@ -3,10 +3,12 @@ traversal:
   # Full paths which should be excluded from consideration.
   excluded:
     - .stack-work
+    - .github/pull_request_template.md
+    - .docs/pull_request_template.md
 
 # Parameters of verification.
 verification:
-  # On 'anchor not found' error, how similar anchors should be displayed as hint.
+  # On 'anchor not found' error, how much similar anchors should be displayed as hint.
   # Number should be between 0 and 1, larger value means stricter filter.
   anchorSimilarityThreshold: 0.5
   # When checking external references, how long to wait on request before

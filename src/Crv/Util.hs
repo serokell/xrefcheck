@@ -2,6 +2,7 @@
 
 module Crv.Util
     ( nameF'
+    , paren
     ) where
 
 import Fmt (Builder, build, fmt, nameF)
@@ -13,3 +14,8 @@ instance Pretty Builder where
 
 nameF' :: Builder -> Builder -> Builder
 nameF' a b = nameF (style Faint a) b
+
+paren :: Builder -> Builder
+paren a
+    | a == "" = ""
+    | otherwise = "(" <> a <> ")"

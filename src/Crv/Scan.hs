@@ -49,7 +49,7 @@ gatherRepoInfo formatsSupport config root = do
     return $ RepoInfo (M.fromList fileInfos)
   where
     rootNE = if null root then "." else root
-    dirOfRoot = if null root then "" else takeDirectory root
+    dirOfRoot = if root == "" || root == "." then "" else takeDirectory root
     processFile file = do
         let ext = takeExtension file
         forM (formatsSupport ext) $ \scanFile ->

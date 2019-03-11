@@ -99,7 +99,7 @@ instance Buildable CrvVerifyError where
         ExternalResourceUnavailable status ->
             "⛂  Resource unavailable (" +| statusCode status |+ " " +|
             decodeUtf8 @Text (statusMessage status) |+ ")"
-        ExternalResourceSomeError err -> "⛂  " +| build err |+ "\n"
+        ExternalResourceSomeError err -> "⛂  " +| build err |+ "\n\n"
       where
         anchorHints = \case
             []  -> "\n"

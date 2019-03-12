@@ -4,7 +4,7 @@ traversal:
   excluded:
     - .stack-work
     - .github/pull_request_template.md
-    - .docs/pull_request_template.md
+    - docs/pull_request_template.md
 
 # Parameters of verification.
 verification:

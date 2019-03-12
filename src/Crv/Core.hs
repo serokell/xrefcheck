@@ -6,13 +6,15 @@ import Control.DeepSeq (NFData)
 import Control.Lens (makeLenses, (%=))
 import Data.Char (isAlphaNum)
 import Data.Default (Default (..))
+import qualified Data.List as L
 import qualified Data.Map as M
 import qualified Data.Text as T
 import Fmt (Buildable (..), blockListF, blockListF', nameF, (+|), (|+))
 import System.Console.Pretty (Color (..), Style (..), color, style)
 import Text.Numeral.Roman (toRoman)
 
-import Crv.Util (paren)
+import Crv.Progress
+import Crv.Util
 
 -----------------------------------------------------------
 -- Types
@@ -133,6 +135,13 @@ instance Buildable LocationType where
         ExternalLoc -> color Red "external"
         OtherLoc -> ""
 
+-- | Whether this is a link to external resource.
+isExternal :: LocationType -> Bool
+isExternal = \case
+    ExternalLoc -> True
+    _ -> False
+
+
 -- | Get type of reference.
 locationType :: Text -> LocationType
 locationType location = case toString location of
@@ -155,3 +164,34 @@ headerToAnchor =
     T.replace " " "-" .
     T.replace "+" "-" .
     T.toLower
+
+-----------------------------------------------------------
+-- Visualisation
+-----------------------------------------------------------
+
+data VerifyProgress = VerifyProgress
+    { vrLocal    :: !(Progress Int)
+    , vrExternal :: !(Progress Int)
+    } deriving (Show)
+
+initVerifyProgress :: RepoInfo -> VerifyProgress
+initVerifyProgress (RepoInfo info) =
+    VerifyProgress
+    { vrLocal = initProgress (length localRefs)
+    , vrExternal = initProgress (length extRefs)
+    }
+  where
+    (extRefs, localRefs) =
+        L.partition isExternal $
+        map locationType . map rLink . foldMap (_fiReferences) $ toList info
+
+showAnalyseProgress :: VerifyProgress -> Text
+showAnalyseProgress VerifyProgress{..} = mconcat
+    [ "Verifying "
+    , showProgress "local" 10 White vrLocal
+    , "  "
+    , showProgress "external" 15 Yellow vrExternal
+    ]
+
+reprintAnalyseProgress :: Rewrite -> VerifyProgress -> IO ()
+reprintAnalyseProgress rw p = putTextRewrite rw (showAnalyseProgress p)

@@ -5,6 +5,7 @@ import Fmt (blockListF', build, fmt, fmtLn, indentF)
 
 import Crv.CLI
 import Crv.Config
+import Crv.Progress
 import Crv.Scan
 import Crv.Scanners
 import Crv.Verify
@@ -21,11 +22,14 @@ main = do
     config <- decodeFileEither oConfig
               >>= either (error . show) pure
 
-    repoInfo <- gatherRepoInfo formats (cTraversal config) root
+    repoInfo <- allowRewrite $ \rw ->
+        gatherRepoInfo rw formats (cTraversal config) root
+
     when (cVerbose config) $
         fmtLn $ "Repository data:\n\n" <> indentF 2 (build repoInfo)
 
-    verifyRes <- verifyRepo (cVerification config) root repoInfo
+    verifyRes <- allowRewrite $ \rw ->
+        verifyRepo rw (cVerification config) root repoInfo
     case verifyErrors verifyRes of
         Nothing ->
             fmtLn "All repository links are valid."

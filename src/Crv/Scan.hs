@@ -12,11 +12,13 @@ module Crv.Scan
 
 import qualified Data.Foldable as F
 import qualified Data.Map as M
+import GHC.Err (errorWithoutStackTrace)
 import qualified System.Directory.Tree as Tree
 import System.FilePath.Posix (takeDirectory, takeExtension, (</>))
 
 import Crv.Config
 import Crv.Core
+import Crv.Progress
 import Crv.Util ()
 
 -- | File extension, dot included.
@@ -39,8 +41,9 @@ specificFormatsSupport formats = \ext -> M.lookup ext formatsMap
 
 gatherRepoInfo
     :: MonadIO m
-    => FormatsSupport -> TraversalConfig -> FilePath -> m RepoInfo
-gatherRepoInfo formatsSupport config root = do
+    => Rewrite -> FormatsSupport -> TraversalConfig -> FilePath -> m RepoInfo
+gatherRepoInfo rw formatsSupport config root = do
+    putTextRewrite rw "Scanning repository..."
     _ Tree.:/ repoTree <- liftIO $ Tree.readDirectoryWithL processFile rootNE
     let fileInfos = filter (\(path, _) -> not $ isExcluded path) $
                     dropSndMaybes . F.toList $
@@ -66,4 +69,6 @@ gatherRepoInfo formatsSupport config root = do
                   else map visitRec subfiles
                 visitRec sub = filterExcludedDirs (cur </> Tree.name sub) sub
             in Tree.Dir name subfiles'
-        other -> other
+        file@Tree.File{} -> file
+        Tree.Failed _name err ->
+            errorWithoutStackTrace $ "Repository traversal failed: " <> show err

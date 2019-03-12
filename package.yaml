@@ -46,6 +46,7 @@ build-tools:
 
 ghc-options:
   - -Wall
+  - -Wincomplete-record-updates
 
 dependencies:
   - aeson

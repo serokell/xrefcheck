@@ -17,7 +17,7 @@ module Crv.Verify
     , checkExternalResource
     ) where
 
-import Control.Concurrent.Async (Concurrently (..))
+import Control.Concurrent.Async (forConcurrently, withAsync)
 import Control.Monad.Except (ExceptT (..), MonadError (..))
 import Data.Default (def)
 import qualified Data.Map as M
@@ -32,10 +32,11 @@ import System.Console.Pretty (Style (..), style)
 import System.Directory (doesDirectoryExist, doesFileExist)
 import System.FilePath.Posix (takeDirectory)
 import System.FilePath.Posix ((</>))
-import Time (RatioNat, Second, Time (..), timeout)
+import Time (RatioNat, Second, Time (..), ms, threadDelay, timeout)
 
 import Crv.Config
 import Crv.Core
+import Crv.Progress
 
 -----------------------------------------------------------
 -- General verification
@@ -107,23 +108,51 @@ instance Buildable CrvVerifyError where
             hs  -> ", did you mean:\n" +| blockListF' "    -" build hs
 
 verifyRepo
-    :: VerifyConfig
+    :: Rewrite
+    -> VerifyConfig
     -> FilePath
     -> RepoInfo
     -> IO (VerifyResult $ WithReferenceLoc CrvVerifyError)
-verifyRepo config@VerifyConfig{..} root (RepoInfo repoInfo) =
-    runConcurrently $
-    concatForM (M.toList repoInfo) $ \(file, fileInfo) ->
-        concatForM (_fiReferences fileInfo) $ \ref@Reference{..} ->
-            Concurrently $
-            fmap (fmap $ WithReferenceLoc file ref) $
-            case locationType rLink of
-                LocalLoc    -> checkFileRef rAnchor file
-                RelativeLoc -> checkFileRef rAnchor
-                               (takeDirectory file </> toString rLink)
-                AbsoluteLoc -> checkFileRef rAnchor (root <> toString rLink)
-                ExternalLoc -> checkExternalResource config rLink
-                OtherLoc    -> verifying pass
+verifyRepo rw config@VerifyConfig{..} root repoInfo'@(RepoInfo repoInfo) = do
+    progressRef <- newIORef $ initVerifyProgress repoInfo'
+    withAsync (printer progressRef) $ \_ ->
+        fmap fold . forConcurrently (M.toList repoInfo) $ \(file, fileInfo) ->
+            fmap fold . forConcurrently (_fiReferences fileInfo) $ \ref ->
+                verifyReference config progressRef repoInfo' root file ref
+  where
+    printer progressRef = forever $ do
+        readIORef progressRef >>= reprintAnalyseProgress rw
+        threadDelay (ms 100)
+
+verifyReference
+    :: VerifyConfig
+    -> IORef VerifyProgress
+    -> RepoInfo
+    -> FilePath
+    -> FilePath
+    -> Reference
+    -> IO (VerifyResult $ WithReferenceLoc CrvVerifyError)
+verifyReference config@VerifyConfig{..} progressRef (RepoInfo repoInfo)
+                root containingFile ref@Reference{..} = do
+    res <- case locationType rLink of
+        LocalLoc    -> checkFileRef rAnchor containingFile
+        RelativeLoc -> checkFileRef rAnchor
+                      (takeDirectory containingFile </> toString rLink)
+        AbsoluteLoc -> checkFileRef rAnchor (root <> toString rLink)
+        ExternalLoc -> checkExternalResource config rLink
+        OtherLoc    -> verifying pass
+
+    let moveProgress =
+            incProgress .
+            (if verifyOk res then id else incProgressErrors)
+
+    atomicModifyIORef' progressRef $ \VerifyProgress{..} ->
+        ( if isExternal (locationType rLink)
+          then VerifyProgress{ vrExternal = moveProgress vrExternal, .. }
+          else VerifyProgress{ vrLocal = moveProgress vrLocal, .. }
+        , ()
+        )
+    return $ fmap (WithReferenceLoc containingFile ref) res
   where
     checkFileRef mAnchor file = verifying $ do
         fileExists <- liftIO $ doesFileExist file

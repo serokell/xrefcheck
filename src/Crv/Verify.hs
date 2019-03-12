@@ -110,49 +110,63 @@ instance Buildable CrvVerifyError where
 verifyRepo
     :: Rewrite
     -> VerifyConfig
+    -> VerifyMode
     -> FilePath
     -> RepoInfo
     -> IO (VerifyResult $ WithReferenceLoc CrvVerifyError)
-verifyRepo rw config@VerifyConfig{..} root repoInfo'@(RepoInfo repoInfo) = do
+verifyRepo rw config@VerifyConfig{..} mode root repoInfo'@(RepoInfo repoInfo) = do
     progressRef <- newIORef $ initVerifyProgress repoInfo'
     withAsync (printer progressRef) $ \_ ->
         fmap fold . forConcurrently (M.toList repoInfo) $ \(file, fileInfo) ->
             fmap fold . forConcurrently (_fiReferences fileInfo) $ \ref ->
-                verifyReference config progressRef repoInfo' root file ref
+                verifyReference config mode progressRef repoInfo' root file ref
   where
     printer progressRef = forever $ do
-        readIORef progressRef >>= reprintAnalyseProgress rw
+        readIORef progressRef >>= reprintAnalyseProgress rw mode
         threadDelay (ms 100)
+
+shouldCheckLocType :: VerifyMode -> LocationType -> Bool
+shouldCheckLocType mode locType
+    | isExternal locType = shouldCheckExternal mode
+    | isLocal locType = shouldCheckLocal mode
+    | otherwise = False
 
 verifyReference
     :: VerifyConfig
+    -> VerifyMode
     -> IORef VerifyProgress
     -> RepoInfo
     -> FilePath
     -> FilePath
     -> Reference
     -> IO (VerifyResult $ WithReferenceLoc CrvVerifyError)
-verifyReference config@VerifyConfig{..} progressRef (RepoInfo repoInfo)
+verifyReference config@VerifyConfig{..} mode progressRef (RepoInfo repoInfo)
                 root containingFile ref@Reference{..} = do
-    res <- case locationType rLink of
-        LocalLoc    -> checkFileRef rAnchor containingFile
-        RelativeLoc -> checkFileRef rAnchor
-                      (takeDirectory containingFile </> toString rLink)
-        AbsoluteLoc -> checkFileRef rAnchor (root <> toString rLink)
-        ExternalLoc -> checkExternalResource config rLink
-        OtherLoc    -> verifying pass
 
-    let moveProgress =
-            incProgress .
-            (if verifyOk res then id else incProgressErrors)
+    let locType = locationType rLink
 
-    atomicModifyIORef' progressRef $ \VerifyProgress{..} ->
-        ( if isExternal (locationType rLink)
-          then VerifyProgress{ vrExternal = moveProgress vrExternal, .. }
-          else VerifyProgress{ vrLocal = moveProgress vrLocal, .. }
-        , ()
-        )
-    return $ fmap (WithReferenceLoc containingFile ref) res
+    if shouldCheckLocType mode locType
+    then do
+        res <- case locType of
+            LocalLoc    -> checkFileRef rAnchor containingFile
+            RelativeLoc -> checkFileRef rAnchor
+                          (takeDirectory containingFile </> toString rLink)
+            AbsoluteLoc -> checkFileRef rAnchor (root <> toString rLink)
+            ExternalLoc -> checkExternalResource config rLink
+            OtherLoc    -> verifying pass
+
+        let moveProgress =
+                incProgress .
+                (if verifyOk res then id else incProgressErrors)
+
+        atomicModifyIORef' progressRef $ \VerifyProgress{..} ->
+            ( if isExternal locType
+              then VerifyProgress{ vrExternal = moveProgress vrExternal, .. }
+              else VerifyProgress{ vrLocal = moveProgress vrLocal, .. }
+            , ()
+            )
+        return $ fmap (WithReferenceLoc containingFile ref) res
+    else return mempty
   where
     checkFileRef mAnchor file = verifying $ do
         fileExists <- liftIO $ doesFileExist file

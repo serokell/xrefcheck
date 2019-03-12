@@ -29,7 +29,7 @@ main = do
         fmtLn $ "Repository data:\n\n" <> indentF 2 (build repoInfo)
 
     verifyRes <- allowRewrite $ \rw ->
-        verifyRepo rw (cVerification config) root repoInfo
+        verifyRepo rw (cVerification config) oMode root repoInfo
     case verifyErrors verifyRes of
         Nothing ->
             fmtLn "All repository links are valid."

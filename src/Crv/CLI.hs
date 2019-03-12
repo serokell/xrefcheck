@@ -1,18 +1,39 @@
 {-# LANGUAGE ApplicativeDo #-}
 
 module Crv.CLI
-    ( Options (..)
+    ( VerifyMode (..)
+    , shouldCheckLocal
+    , shouldCheckExternal
+    , Options (..)
     , getOptions
     ) where
 
 import Data.Version (showVersion)
-import Options.Applicative (Parser, execParser, fullDesc, help, helper, info, infoOption, long,
-                            metavar, progDesc, short, strOption, value)
+import Options.Applicative (Parser, ReadM, eitherReader, execParser, fullDesc, help, helper, info,
+                            infoOption, long, metavar, option, progDesc, short, strOption, value)
 import Paths_crossref_verifier (version)
+
+import Crv.Core
+
+modeReadM :: ReadM VerifyMode
+modeReadM = eitherReader $ \s ->
+    case find ((== s) . fst) modes of
+        Just (_, mode) -> Right mode
+        Nothing -> Left . mconcat $ intersperse "\n"
+            [ "Unknown mode " <> show s <> "."
+            , "Allowed values: " <> mconcat (intersperse ", " $ map (show . fst) modes)
+            ]
+  where
+    modes =
+        [ ("local-only", LocalOnlyMode)
+        , ("external-only", ExternalOnlyMode)
+        , ("full", FullMode)
+        ]
 
 data Options = Options
     { oConfig :: FilePath
     , oRoot   :: FilePath
+    , oMode   :: VerifyMode
     }
 
 optionsParser :: Parser Options
@@ -29,6 +50,14 @@ optionsParser = do
         metavar "DIRECTORY" <>
         help "Path to repository root." <>
         value ""
+    oMode <- option modeReadM $
+        short 'm' <>
+        long "mode" <>
+        metavar "KEYWORD" <>
+        value LocalOnlyMode <>
+        help "Which parts of verification to invoke. \
+             \You can enable only verification of repository-local references, \
+             \only verification of external references or both."
     return Options{..}
 
 versionOption :: Parser (a -> a)

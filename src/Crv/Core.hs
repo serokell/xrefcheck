@@ -141,6 +141,14 @@ isExternal = \case
     ExternalLoc -> True
     _ -> False
 
+-- | Whether this is a link to repo-local resource.
+isLocal :: LocationType -> Bool
+isLocal = \case
+    LocalLoc -> True
+    RelativeLoc -> True
+    AbsoluteLoc -> True
+    ExternalLoc -> False
+    OtherLoc -> False
 
 -- | Get type of reference.
 locationType :: Text -> LocationType
@@ -155,6 +163,24 @@ locationType location = case toString location of
   where
     hasUrlProtocol = "://" `T.isInfixOf` (T.take 10 location)
     hasProtocol = ":" `T.isInfixOf` (T.take 10 location)
+
+-- | Which parts of verification do we perform.
+data VerifyMode
+    = LocalOnlyMode
+    | ExternalOnlyMode
+    | FullMode
+
+shouldCheckLocal :: VerifyMode -> Bool
+shouldCheckLocal = \case
+    LocalOnlyMode -> True
+    ExternalOnlyMode -> False
+    FullMode -> True
+
+shouldCheckExternal :: VerifyMode -> Bool
+shouldCheckExternal = \case
+    LocalOnlyMode -> False
+    ExternalOnlyMode -> True
+    FullMode -> True
 
 -- | Convert section header name to an anchor refering it.
 -- Conversion rules: https://docs.gitlab.com/ee/user/markdown.html#header-ids-and-links
@@ -185,13 +211,14 @@ initVerifyProgress (RepoInfo info) =
         L.partition isExternal $
         map locationType . map rLink . foldMap (_fiReferences) $ toList info
 
-showAnalyseProgress :: VerifyProgress -> Text
-showAnalyseProgress VerifyProgress{..} = mconcat
-    [ "Verifying "
-    , showProgress "local" 10 White vrLocal
-    , "  "
-    , showProgress "external" 15 Yellow vrExternal
+showAnalyseProgress :: VerifyMode -> VerifyProgress -> Text
+showAnalyseProgress mode VerifyProgress{..} = mconcat . mconcat $
+    [ [ "Verifying " ]
+    , [ showProgress "local" 10 White vrLocal <> " "
+      | shouldCheckLocal mode ]
+    , [ showProgress "external" 15 Yellow vrExternal
+      | shouldCheckExternal mode ]
     ]
 
-reprintAnalyseProgress :: Rewrite -> VerifyProgress -> IO ()
-reprintAnalyseProgress rw p = putTextRewrite rw (showAnalyseProgress p)
+reprintAnalyseProgress :: Rewrite -> VerifyMode -> VerifyProgress -> IO ()
+reprintAnalyseProgress rw mode p = putTextRewrite rw (showAnalyseProgress mode p)

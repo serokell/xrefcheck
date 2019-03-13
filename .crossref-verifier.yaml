@@ -2,15 +2,28 @@
 traversal:
   # Full paths which should be excluded from consideration.
   excluded:
+    # Stack files
     - .stack-work
+
+    # Github-specific files
     - .github/pull_request_template.md
     - docs/pull_request_template.md
 
-# Parameters of verification.
+# Verification parameters.
 verification:
   # On 'anchor not found' error, how much similar anchors should be displayed as hint.
   # Number should be between 0 and 1, larger value means stricter filter.
   anchorSimilarityThreshold: 0.5
+
   # When checking external references, how long to wait on request before
   # declaring "Response timeout".
   externalRefCheckTimeout: 10s
+
+  # Glob patterns describing the files which do not physically exist in the repository
+  # but should be treated as existing nevertheless.
+  virtualFiles:
+    # Github pages
+    - ../../issues
+    - ../../issues/*
+    - ../../pulls
+    - ../../pulls/*

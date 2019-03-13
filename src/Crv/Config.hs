@@ -8,6 +8,8 @@ import Data.Aeson.TH (deriveFromJSON)
 import Data.Default (Default (..))
 import Time (KnownRatName, Second, Time, sec, unitsP)
 
+import Crv.System (CanonicalizedGlobPattern)
+
 -- | Overall config.
 data Config = Config
     { cTraversal    :: TraversalConfig
@@ -23,6 +25,7 @@ data TraversalConfig = TraversalConfig
 data VerifyConfig = VerifyConfig
     { vcAnchorSimilarityThreshold :: Double
     , vcExternalRefCheckTimeout   :: Time Second
+    , vcVirtualFiles              :: [CanonicalizedGlobPattern]
     }
 
 -----------------------------------------------------------
@@ -44,6 +47,7 @@ instance Default VerifyConfig where
         VerifyConfig
         { vcAnchorSimilarityThreshold = 0.5
         , vcExternalRefCheckTimeout = sec 3
+        , vcVirtualFiles = []
         }
 
 -----------------------------------------------------------

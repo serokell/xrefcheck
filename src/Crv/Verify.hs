@@ -29,7 +29,8 @@ import Network.HTTP.Req (GET (..), HEAD (..), HttpException (..), NoReqBody (..)
                          parseUrl, req, runReq)
 import Network.HTTP.Types.Status (Status, statusCode, statusMessage)
 import System.Console.Pretty (Style (..), style)
-import System.Directory (doesDirectoryExist, doesFileExist)
+import System.Directory (canonicalizePath, doesDirectoryExist, doesFileExist)
+import qualified System.FilePath.Glob as Glob
 import System.FilePath.Posix (takeDirectory)
 import System.FilePath.Posix ((</>))
 import Time (RatioNat, Second, Time (..), ms, threadDelay, timeout)
@@ -37,6 +38,7 @@ import Time (RatioNat, Second, Time (..), ms, threadDelay, timeout)
 import Crv.Config
 import Crv.Core
 import Crv.Progress
+import Crv.System
 
 -----------------------------------------------------------
 -- General verification
@@ -148,10 +150,10 @@ verifyReference config@VerifyConfig{..} mode progressRef (RepoInfo repoInfo)
     if shouldCheckLocType mode locType
     then do
         res <- case locType of
-            LocalLoc    -> checkFileRef rAnchor containingFile
-            RelativeLoc -> checkFileRef rAnchor
+            LocalLoc    -> checkRef rAnchor containingFile
+            RelativeLoc -> checkRef rAnchor
                           (takeDirectory containingFile </> toString rLink)
-            AbsoluteLoc -> checkFileRef rAnchor (root <> toString rLink)
+            AbsoluteLoc -> checkRef rAnchor (root <> toString rLink)
             ExternalLoc -> checkExternalResource config rLink
             OtherLoc    -> verifying pass
 
@@ -168,16 +170,24 @@ verifyReference config@VerifyConfig{..} mode progressRef (RepoInfo repoInfo)
         return $ fmap (WithReferenceLoc containingFile ref) res
     else return mempty
   where
-    checkFileRef mAnchor file = verifying $ do
-        fileExists <- liftIO $ doesFileExist file
-        dirExists <- liftIO $ doesDirectoryExist file
-        unless (fileExists || dirExists) $
-            throwError (FileDoesNotExist file)
-
+    checkRef mAnchor file = verifying $ do
+        checkReferredFileExists file
         case M.lookup file repoInfo of
             Nothing -> pass  -- no support for such file, can do nothing
             Just referedFileInfo ->
                 whenJust mAnchor $ checkAnchorExists (_fiAnchors referedFileInfo)
+
+    checkReferredFileExists file = do
+        let fileExists = readingSystem $ doesFileExist file
+        let dirExists = readingSystem $ doesDirectoryExist file
+
+        let cfile = readingSystem $ canonicalizePath file
+        let isVirtual = or
+                [ Glob.match pat cfile
+                | CanonicalizedGlobPattern pat <- vcVirtualFiles ]
+
+        unless (fileExists || dirExists || isVirtual) $
+            throwError (FileDoesNotExist file)
 
     checkAnchorExists givenAnchors anchor =
         case find ((== anchor) . aName) givenAnchors of

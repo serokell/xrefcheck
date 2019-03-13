@@ -92,7 +92,7 @@ allowRewrite action =
         maxPrintedSize <- readIORef rMaxPrintedSize
         hPutStr stderr $ '\r' : replicate maxPrintedSize ' ' ++ "\r"
         -- prevent our output to interleave with further outputs
-        threadDelay (ms 70)
+        threadDelay (ms 100)
 
 -- | Return caret and print the given text.
 putTextRewrite :: MonadIO m => Rewrite -> Text -> m ()

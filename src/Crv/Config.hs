@@ -12,7 +12,6 @@ import Time (KnownRatName, Second, Time, sec, unitsP)
 data Config = Config
     { cTraversal    :: TraversalConfig
     , cVerification :: VerifyConfig
-    , cVerbose      :: Bool
     }
 
 -- | Config of repositry traversal.
@@ -35,7 +34,6 @@ instance Default Config where
         Config
         { cTraversal = def
         , cVerification = def
-        , cVerbose = False
         }
 
 instance Default TraversalConfig where

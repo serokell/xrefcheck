@@ -10,7 +10,8 @@ module Crv.CLI
 
 import Data.Version (showVersion)
 import Options.Applicative (Parser, ReadM, eitherReader, execParser, fullDesc, help, helper, info,
-                            infoOption, long, metavar, option, progDesc, short, strOption, value)
+                            infoOption, long, metavar, option, progDesc, short, strOption, switch,
+                            value)
 import Paths_crossref_verifier (version)
 
 import Crv.Core
@@ -31,9 +32,10 @@ modeReadM = eitherReader $ \s ->
         ]
 
 data Options = Options
-    { oConfig :: FilePath
-    , oRoot   :: FilePath
-    , oMode   :: VerifyMode
+    { oConfig  :: FilePath
+    , oRoot    :: FilePath
+    , oMode    :: VerifyMode
+    , oVerbose :: Bool
     }
 
 optionsParser :: Parser Options
@@ -58,6 +60,10 @@ optionsParser = do
         help "Which parts of verification to invoke. \
              \You can enable only verification of repository-local references, \
              \only verification of external references or both."
+    oVerbose <- switch $
+        short 'v' <>
+        long "verbose" <>
+        help "Report repository scan and verification details."
     return Options{..}
 
 versionOption :: Parser (a -> a)

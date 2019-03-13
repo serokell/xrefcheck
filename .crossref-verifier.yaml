@@ -14,6 +14,3 @@ verification:
   # When checking external references, how long to wait on request before
   # declaring "Response timeout".
   externalRefCheckTimeout: 10s
-
-# Verbosity.
-verbose: false

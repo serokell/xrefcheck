@@ -25,7 +25,7 @@ main = do
     repoInfo <- allowRewrite $ \rw ->
         gatherRepoInfo rw formats (cTraversal config) root
 
-    when (cVerbose config) $
+    when oVerbose $
         fmtLn $ "Repository data:\n\n" <> indentF 2 (build repoInfo)
 
     verifyRes <- allowRewrite $ \rw ->

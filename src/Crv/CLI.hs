@@ -51,7 +51,7 @@ optionsParser = do
         long "root" <>
         metavar "DIRECTORY" <>
         help "Path to repository root." <>
-        value ""
+        value "."
     oMode <- option modeReadM $
         short 'm' <>
         long "mode" <>

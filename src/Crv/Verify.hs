@@ -24,6 +24,7 @@ import qualified Data.Map as M
 import qualified Data.Text as T
 import Data.Text.Metrics (damerauLevenshteinNorm)
 import Fmt (Buildable (..), blockListF', listF, (+|), (|+))
+import qualified GHC.Exts as Exts
 import Network.HTTP.Client (HttpException (..), HttpExceptionContent (..), responseStatus)
 import Network.HTTP.Req (GET (..), HEAD (..), HttpException (..), NoReqBody (..), ignoreResponse,
                          parseUrl, req, runReq)
@@ -79,12 +80,13 @@ data WithReferenceLoc a = WithReferenceLoc
 
 instance Buildable a => Buildable (WithReferenceLoc a) where
     build WithReferenceLoc{..} =
-        "In file " +| style Faint wrlFile |+ "\nbroken " +| wrlReference |+ "\n"
+        "In file " +| style Faint wrlFile |+ "\nbad " +| wrlReference |+ "\n"
         +| wrlItem |+ "\n\n"
 
 data CrvVerifyError
     = FileDoesNotExist FilePath
     | AnchorDoesNotExist Text [Anchor]
+    | AmbiguousAnchorRef FilePath Text (NonEmpty Anchor)
     | ExternalResourceInvalidUri
     | ExternalResourceUnavailable Status
     | ExternalResourceSomeError Text
@@ -97,6 +99,13 @@ instance Buildable CrvVerifyError where
         AnchorDoesNotExist anchor similar ->
             "⛀  Anchor '" +| anchor |+ "' is not present" +|
             anchorHints similar
+        AmbiguousAnchorRef file anchor fileAnchors ->
+            "⛀  Ambiguous reference to anchor '" +| anchor |+ "'\n   " +|
+            "In file " +| file |+ "\n   " +|
+            "Similar anchors are:\n" +|
+                blockListF' "    -" build fileAnchors |+ "" +|
+            "   Use of such anchors is discouraged because referenced object\n\
+            \   can change silently whereas the document containing it evolves."
         ExternalResourceInvalidUri ->
             "⛂  Bad url (expected 'http' or 'https')\n"
         ExternalResourceUnavailable status ->
@@ -143,16 +152,16 @@ verifyReference
     -> Reference
     -> IO (VerifyResult $ WithReferenceLoc CrvVerifyError)
 verifyReference config@VerifyConfig{..} mode progressRef (RepoInfo repoInfo)
-                root containingFile ref@Reference{..} = do
+                root fileWithReference ref@Reference{..} = do
 
     let locType = locationType rLink
 
     if shouldCheckLocType mode locType
     then do
         res <- case locType of
-            LocalLoc    -> checkRef rAnchor containingFile
+            LocalLoc    -> checkRef rAnchor fileWithReference
             RelativeLoc -> checkRef rAnchor
-                          (takeDirectory containingFile </> toString rLink)
+                          (takeDirectory fileWithReference </> toString rLink)
             AbsoluteLoc -> checkRef rAnchor (root <> toString rLink)
             ExternalLoc -> checkExternalResource config rLink
             OtherLoc    -> verifying pass
@@ -167,15 +176,15 @@ verifyReference config@VerifyConfig{..} mode progressRef (RepoInfo repoInfo)
               else VerifyProgress{ vrLocal = moveProgress vrLocal, .. }
             , ()
             )
-        return $ fmap (WithReferenceLoc containingFile ref) res
+        return $ fmap (WithReferenceLoc fileWithReference ref) res
     else return mempty
   where
-    checkRef mAnchor file = verifying $ do
-        checkReferredFileExists file
-        case M.lookup file repoInfo of
+    checkRef mAnchor referredFile = verifying $ do
+        checkReferredFileExists referredFile
+        case M.lookup referredFile repoInfo of
             Nothing -> pass  -- no support for such file, can do nothing
-            Just referedFileInfo ->
-                whenJust mAnchor $ checkAnchorExists (_fiAnchors referedFileInfo)
+            Just referredFileInfo ->
+                whenJust mAnchor $ checkAnchor referredFile (_fiAnchors referredFileInfo)
 
     checkReferredFileExists file = do
         let fileExists = readingSystem $ doesFileExist file
@@ -188,6 +197,26 @@ verifyReference config@VerifyConfig{..} mode progressRef (RepoInfo repoInfo)
 
         unless (fileExists || dirExists || isVirtual) $
             throwError (FileDoesNotExist file)
+
+    checkAnchor file fileAnchors anchor = do
+        checkAnchorReferenceAmbiguity file fileAnchors anchor
+        checkDeduplicatedAnchorReference file fileAnchors anchor
+        checkAnchorExists fileAnchors anchor
+
+    -- Detect a case when original file contains two identical anchors, github
+    -- has added a suffix to the duplicate, and now the original is referrenced -
+    -- such links are pretty fragile and we discourage their use despite
+    -- they are in fact unambiguous.
+    checkAnchorReferenceAmbiguity file fileAnchors anchor = do
+        let similarAnchors = filter ((== anchor) . aName) fileAnchors
+        when (length similarAnchors > 1) $
+            throwError $ AmbiguousAnchorRef file anchor (Exts.fromList similarAnchors)
+
+    -- Similar to the previous one, but for the case when we reference the
+    -- renamed duplicate.
+    checkDeduplicatedAnchorReference file fileAnchors anchor =
+        whenJust (stripAnchorDupNo anchor) $ \origAnchor ->
+            checkAnchorReferenceAmbiguity file fileAnchors origAnchor
 
     checkAnchorExists givenAnchors anchor =
         case find ((== anchor) . aName) givenAnchors of

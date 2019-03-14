@@ -5,6 +5,7 @@ module Crv.Core where
 import Control.DeepSeq (NFData)
 import Control.Lens (makeLenses, (%=))
 import Data.Char (isAlphaNum)
+import qualified Data.Char as C
 import Data.Default (Default (..))
 import qualified Data.List as L
 import qualified Data.Map as M
@@ -190,6 +191,19 @@ headerToAnchor =
     T.replace " " "-" .
     T.replace "+" "-" .
     T.toLower
+
+-- | When there are several anchors with the same name, github automatically attaches
+-- "-<number>" suffixes to duplications to make them referable unambiguously.
+-- For instance, if there are two headers called "description", they would gain
+-- "description" and "description-1" anchors correspondingly.
+--
+-- This function strips this suffix and returns the original anchor in case when
+-- suffix is present.
+stripAnchorDupNo :: Text -> Maybe Text
+stripAnchorDupNo t = do
+    let strippedNo = T.dropWhileEnd C.isNumber t
+    guard (length strippedNo < length t)
+    T.stripSuffix "-" strippedNo
 
 -----------------------------------------------------------
 -- Visualisation

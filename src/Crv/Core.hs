@@ -21,6 +21,17 @@ import Crv.Util
 -- Types
 -----------------------------------------------------------
 
+-- | Description of element position in source file.
+-- We keep this in text because scanners for different formats use different
+-- representation of this thing, and it actually appears in reports only.
+newtype Position = Position (Maybe Text)
+    deriving (Show, Generic)
+
+instance Buildable Position where
+    build (Position pos) = case pos of
+        Nothing -> ""
+        Just p  -> style Faint $ "at src:" <> build p
+
 -- | Full info about a reference.
 data Reference = Reference
     { rName   :: Text
@@ -29,6 +40,7 @@ data Reference = Reference
       -- ^ File or site reference points to.
     , rAnchor :: Maybe Text
       -- ^ Section or custom anchor tag.
+    , rPos    :: Position
     } deriving (Show, Generic)
 
 -- | Context of anchor.
@@ -45,6 +57,7 @@ data AnchorType
 data Anchor = Anchor
     { aType :: AnchorType
     , aName :: Text
+    , aPos  :: Position
     } deriving (Show, Generic)
 
 -- | All information regarding a single file we care about.
@@ -69,18 +82,20 @@ finaliseFileInfo = execState $ do
 -- Instances
 -----------------------------------------------------------
 
+instance NFData Position
 instance NFData Reference
 instance NFData AnchorType
 instance NFData Anchor
 instance NFData FileInfo
 
 instance Buildable Reference where
-    build Reference{..} = nameF ("reference " +| paren (build loc)) $
-        blockListF
-        [ "text: " <> show rName
-        , "link: " <> rLink
-        , "anchor: " <> (rAnchor ?: style Faint "-")
-        ]
+    build Reference{..} =
+        nameF ("reference " +| paren (build loc) |+ " " +| rPos |+ "") $
+            blockListF
+            [ "text: " <> show rName
+            , "link: " <> build rLink
+            , "anchor: " <> build (rAnchor ?: style Faint "-")
+            ]
       where
         loc = locationType rLink
 
@@ -91,7 +106,7 @@ instance Buildable AnchorType where
         BiblioAnchor -> color Cyan "biblio"
 
 instance Buildable Anchor where
-    build (Anchor t a) = a |+ " (" +| t |+ ")"
+    build (Anchor t a p) = a |+ " (" +| t |+ ") " +| p |+ ""
 
 instance Buildable FileInfo where
     build FileInfo{..} =

@@ -7,13 +7,13 @@ module Crv.Scanners.Markdown
     , markdownSupport
     ) where
 
-import CMarkGFM (Node (..), NodeType (..), commonmarkToNode)
+import CMarkGFM (Node (..), NodeType (..), PosInfo (..), commonmarkToNode)
 import Control.Lens ((%=))
 import qualified Data.ByteString.Lazy as BSL
 import Data.Default (Default (..))
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as LT
-import Fmt (Buildable (..), blockListF, nameF)
+import Fmt (Buildable (..), blockListF, nameF, (+|), (|+))
 import GHC.Conc (par)
 
 import Crv.Core
@@ -21,6 +21,16 @@ import Crv.Scan
 
 instance Buildable Node where
     build (Node _mpos ty subs) = nameF (show ty) $ blockListF subs
+
+toPosition :: Maybe PosInfo -> Position
+toPosition = Position . \case
+    Nothing -> Nothing
+    Just PosInfo{..}
+        | startLine == endLine -> Just $
+            startLine |+ ":" +| startColumn |+ "-" +| endColumn |+ ""
+        | otherwise -> Just $
+            startLine |+ ":" +| startColumn |+ " - " +|
+            endLine |+ ":" +| endColumn |+ ""
 
 nodeFlatten :: Node -> [NodeType]
 nodeFlatten (Node _pos ty subs) = ty : concatMap nodeFlatten subs
@@ -36,7 +46,7 @@ nodeExtractText = mconcat . map extractText . nodeFlatten
 nodeExtractInfo :: Node -> ExceptT Text Identity FileInfo
 nodeExtractInfo docNode = fmap finaliseFileInfo $ execStateT (loop docNode) def
   where
-    loop node@(Node _pos ty subs) = case ty of
+    loop node@(Node pos ty subs) = case ty of
         DOCUMENT ->
             mapM_ loop subs
         PARAGRAPH ->
@@ -45,6 +55,7 @@ nodeExtractInfo docNode = fmap finaliseFileInfo $ execStateT (loop docNode) def
             let text = nodeExtractText node
                 aType = HeaderAnchor lvl
                 aName = headerToAnchor text
+                aPos = toPosition pos
             in fiAnchors %= (Anchor{..} :)
         LIST _ ->
             mapM_ loop subs
@@ -54,9 +65,11 @@ nodeExtractInfo docNode = fmap finaliseFileInfo $ execStateT (loop docNode) def
             let mName = T.stripSuffix "\">" =<< T.stripPrefix "<a name=\"" htmlText
             whenJust mName $ \aName -> do
                 let aType = HandAnchor
+                    aPos = toPosition pos
                 fiAnchors %= (Anchor{..} :)
         LINK url _ -> do
             let rName = nodeExtractText node
+                rPos = toPosition pos
                 link = if null url then rName else url
             let (rLink, rAnchor) = case T.splitOn "#" link of
                     [t]    -> (t, Nothing)

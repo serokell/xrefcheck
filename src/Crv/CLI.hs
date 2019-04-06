@@ -32,10 +32,11 @@ modeReadM = eitherReader $ \s ->
         ]
 
 data Options = Options
-    { oConfig  :: FilePath
-    , oRoot    :: FilePath
-    , oMode    :: VerifyMode
-    , oVerbose :: Bool
+    { oConfig          :: FilePath
+    , oRoot            :: FilePath
+    , oMode            :: VerifyMode
+    , oVerbose         :: Bool
+    , oShowProgressBar :: Bool
     }
 
 optionsParser :: Parser Options
@@ -64,6 +65,9 @@ optionsParser = do
         short 'v' <>
         long "verbose" <>
         help "Report repository scan and verification details."
+    oShowProgressBar <- fmap not . switch $
+        long "no-progress" <>
+        help "Do not display progress bar during verification."
     return Options{..}
 
 versionOption :: Parser (a -> a)

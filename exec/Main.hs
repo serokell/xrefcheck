@@ -22,13 +22,13 @@ main = do
     config <- decodeFileEither oConfig
               >>= either (error . show) pure
 
-    repoInfo <- allowRewrite $ \rw ->
+    repoInfo <- allowRewrite oShowProgressBar $ \rw ->
         gatherRepoInfo rw formats (cTraversal config) root
 
     when oVerbose $
         fmtLn $ "Repository data:\n\n" <> indentF 2 (build repoInfo)
 
-    verifyRes <- allowRewrite $ \rw ->
+    verifyRes <- allowRewrite oShowProgressBar $ \rw ->
         verifyRepo rw (cVerification config) oMode root repoInfo
     case verifyErrors verifyRes of
         Nothing ->

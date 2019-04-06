@@ -73,30 +73,43 @@ showProgress name width col Progress{..} = mconcat
 -- Rewritable output
 -----------------------------------------------------------
 
--- | Dummy datatype which allows to return caret and replace text in line.
--- Only functions which has this thing can do that because being
--- interleaved with 'putTextLn' printing caret symbol produced garbage.
-data Rewrite = Rewrite
+-- | Rewrites state.
+data RewriteCtx = RewriteCtx
     { rMaxPrintedSize :: IORef Int
     }
 
+-- | Passing this object allows returning caret and replace text in line.
+-- Only functions which has this thing can do that because being
+-- interleaved with 'putTextLn' printing caret symbol produced garbage.
+data Rewrite
+  = Rewrite RewriteCtx
+    -- ^ Default value.
+  | RewriteDisabled
+    -- ^ Do not print anything which will be rewritten.
+    -- Useful when terminal does not interpret caret returns as expected.
+
 -- | Provide context for rewrite operations.
-allowRewrite :: (MonadIO m, MonadMask m) => (Rewrite -> m a) -> m a
-allowRewrite action =
+allowRewrite :: (MonadIO m, MonadMask m) => Bool -> (Rewrite -> m a) -> m a
+allowRewrite enabled action =
     bracket prepare erase action
   where
-    prepare = do
-        rMaxPrintedSize <- newIORef 0
-        return Rewrite{..}
-    erase Rewrite{..} = liftIO $ do
+    prepare
+      | enabled = do
+          rMaxPrintedSize <- newIORef 0
+          return $ Rewrite RewriteCtx{..}
+      | otherwise =
+          pure RewriteDisabled
+    erase (Rewrite RewriteCtx{..}) = liftIO $ do
         maxPrintedSize <- readIORef rMaxPrintedSize
         hPutStr stderr $ '\r' : replicate maxPrintedSize ' ' ++ "\r"
         -- prevent our output to interleave with further outputs
         threadDelay (ms 100)
+    erase RewriteDisabled = pass
 
 -- | Return caret and print the given text.
 putTextRewrite :: MonadIO m => Rewrite -> Text -> m ()
-putTextRewrite Rewrite{..} msg = do
+putTextRewrite (Rewrite RewriteCtx{..}) msg = do
     liftIO $ hPutStr stderr ('\r' : toString msg)
     atomicModifyIORef' rMaxPrintedSize $ \maxPrinted ->
         (max maxPrinted (length msg), ())
+putTextRewrite RewriteDisabled _ = pass

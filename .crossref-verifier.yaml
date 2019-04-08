@@ -1,13 +1,9 @@
 # Parameters of repository traversal.
 traversal:
-  # Full paths which should be excluded from consideration.
-  excluded:
+  # Folders which we pretend do not exist.
+  ignored:
     # Stack files
     - .stack-work
-
-    # Github-specific files
-    - .github/pull_request_template.md
-    - docs/pull_request_template.md
 
 # Verification parameters.
 verification:
@@ -18,6 +14,12 @@ verification:
   # When checking external references, how long to wait on request before
   # declaring "Response timeout".
   externalRefCheckTimeout: 10s
+  # Files prefixes references in which should not be analyzed.
+
+  notScanned:
+    # Github-specific files
+    - .github/pull_request_template.md
+    - docs/pull_request_template.md
 
   # Glob patterns describing the files which do not physically exist in the repository
   # but should be treated as existing nevertheless.

@@ -126,11 +126,17 @@ verifyRepo
     -> RepoInfo
     -> IO (VerifyResult $ WithReferenceLoc CrvVerifyError)
 verifyRepo rw config@VerifyConfig{..} mode root repoInfo'@(RepoInfo repoInfo) = do
-    progressRef <- newIORef $ initVerifyProgress repoInfo'
+    let toScan = do
+          (file, fileInfo) <- M.toList repoInfo
+          guard . not $ any ((`isPrefixOf` file) . (root </>)) vcNotScanned
+          ref <- _fiReferences fileInfo
+          return (file, ref)
+
+    progressRef <- newIORef $ initVerifyProgress (map snd toScan)
+
     withAsync (printer progressRef) $ \_ ->
-        fmap fold . forConcurrently (M.toList repoInfo) $ \(file, fileInfo) ->
-            fmap fold . forConcurrently (_fiReferences fileInfo) $ \ref ->
-                verifyReference config mode progressRef repoInfo' root file ref
+        fmap fold . forConcurrently toScan $ \(file, ref) ->
+            verifyReference config mode progressRef repoInfo' root file ref
   where
     printer progressRef = forever $ do
         readIORef progressRef >>= reprintAnalyseProgress rw mode

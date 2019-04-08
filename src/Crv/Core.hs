@@ -229,8 +229,8 @@ data VerifyProgress = VerifyProgress
     , vrExternal :: !(Progress Int)
     } deriving (Show)
 
-initVerifyProgress :: RepoInfo -> VerifyProgress
-initVerifyProgress (RepoInfo info) =
+initVerifyProgress :: [Reference] -> VerifyProgress
+initVerifyProgress references =
     VerifyProgress
     { vrLocal = initProgress (length localRefs)
     , vrExternal = initProgress (length extRefs)
@@ -238,7 +238,7 @@ initVerifyProgress (RepoInfo info) =
   where
     (extRefs, localRefs) =
         L.partition isExternal $
-        map locationType . map rLink . foldMap (_fiReferences) $ toList info
+        map locationType $ map rLink references
 
 showAnalyseProgress :: VerifyMode -> VerifyProgress -> Text
 showAnalyseProgress mode VerifyProgress{..} = mconcat . mconcat $

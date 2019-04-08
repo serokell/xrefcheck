@@ -18,7 +18,8 @@ data Config = Config
 
 -- | Config of repositry traversal.
 data TraversalConfig = TraversalConfig
-    { tcExcluded :: [FilePath]
+    { tcIgnored   :: [FilePath]
+      -- ^ Folders, files in which we completely ignore.
     }
 
 -- | Config of verification.
@@ -26,6 +27,9 @@ data VerifyConfig = VerifyConfig
     { vcAnchorSimilarityThreshold :: Double
     , vcExternalRefCheckTimeout   :: Time Second
     , vcVirtualFiles              :: [CanonicalizedGlobPattern]
+      -- ^ Files which we pretend do exist.
+    , vcNotScanned                :: [FilePath]
+      -- ^ Folders, references in files of which we should not analyze.
     }
 
 -----------------------------------------------------------
@@ -48,6 +52,7 @@ instance Default VerifyConfig where
         { vcAnchorSimilarityThreshold = 0.5
         , vcExternalRefCheckTimeout = sec 3
         , vcVirtualFiles = []
+        , vcNotScanned = []
         }
 
 -----------------------------------------------------------

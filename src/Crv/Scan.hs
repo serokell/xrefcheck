@@ -45,7 +45,7 @@ gatherRepoInfo
 gatherRepoInfo rw formatsSupport config root = do
     putTextRewrite rw "Scanning repository..."
     _ Tree.:/ repoTree <- liftIO $ Tree.readDirectoryWithL processFile rootNE
-    let fileInfos = filter (\(path, _) -> not $ isExcluded path) $
+    let fileInfos = filter (\(path, _) -> not $ isIgnored path) $
                     dropSndMaybes . F.toList $
                     Tree.zipPaths . (dirOfRoot Tree.:/) $
                     filterExcludedDirs root repoTree
@@ -55,16 +55,17 @@ gatherRepoInfo rw formatsSupport config root = do
     dirOfRoot = if root == "" || root == "." then "" else takeDirectory root
     processFile file = do
         let ext = takeExtension file
-        forM (formatsSupport ext) $ \scanFile ->
+        let mscanner = formatsSupport ext
+        forM mscanner $ \scanFile ->
             scanFile file
     dropSndMaybes l = [(a, b) | (a, Just b) <- l]
 
-    excluded = map (root </>) (tcExcluded config)
-    isExcluded path = any (`isPrefixOf` path) excluded
+    ignored = map (root </>) (tcIgnored config)
+    isIgnored path = any (`isPrefixOf` path) ignored
     filterExcludedDirs cur = \case
         Tree.Dir name subfiles ->
             let subfiles' =
-                  if isExcluded cur
+                  if isIgnored cur
                   then []
                   else map visitRec subfiles
                 visitRec sub = filterExcludedDirs (cur </> Tree.name sub) sub

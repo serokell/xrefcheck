@@ -29,6 +29,7 @@ toPosition = Position . \case
         | startLine == endLine -> Just $
             startLine |+ ":" +| startColumn |+ "-" +| endColumn |+ ""
         | otherwise -> Just $
+            " " +|
             startLine |+ ":" +| startColumn |+ " - " +|
             endLine |+ ":" +| endColumn |+ ""
 

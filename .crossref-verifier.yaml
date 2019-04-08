@@ -2,6 +2,9 @@
 traversal:
   # Folders which we pretend do not exist.
   ignored:
+    # Git files
+    - .git
+
     # Stack files
     - .stack-work
 

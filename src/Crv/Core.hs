@@ -201,11 +201,18 @@ shouldCheckExternal = \case
 -- | Convert section header name to an anchor refering it.
 -- Conversion rules: https://docs.gitlab.com/ee/user/markdown.html#header-ids-and-links
 headerToAnchor :: Text -> Text
-headerToAnchor =
-    T.filter (\c -> isAlphaNum c || c == '-') .
-    T.replace " " "-" .
-    T.replace "+" "-" .
-    T.toLower
+headerToAnchor t = t
+    & T.toLower
+    & T.replace "+" tmp
+    & T.replace " " tmp
+    & joinSyms tmp
+    & T.replace (tmp <> "-") "-"
+    & T.replace ("-" <> tmp) "-"
+    & T.replace tmp "-"
+    & T.filter (\c -> isAlphaNum c || c == '_' || c == '-')
+  where
+    joinSyms sym = T.intercalate sym . filter (not . null) . T.splitOn sym
+    tmp = "\0"
 
 -- | When there are several anchors with the same name, github automatically attaches
 -- "-<number>" suffixes to duplications to make them referable unambiguously.

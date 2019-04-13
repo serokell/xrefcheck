@@ -14,7 +14,6 @@ module Crv.Progress
     ) where
 
 import Data.Ratio ((%))
-import GHC.IO.Handle.Text (hPutStr)
 import System.Console.Pretty (Color (..), Style (..), color, style)
 import Time (ms, threadDelay)
 

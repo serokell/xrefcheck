@@ -167,7 +167,8 @@ verifyReference config@VerifyConfig{..} mode progressRef (RepoInfo repoInfo)
         res <- case locType of
             LocalLoc    -> checkRef rAnchor fileWithReference
             RelativeLoc -> checkRef rAnchor
-                          (takeDirectory fileWithReference </> toString rLink)
+                          (takeDirectory fileWithReference
+                            </> toString (canonizeLocalRef rLink))
             AbsoluteLoc -> checkRef rAnchor (root <> toString rLink)
             ExternalLoc -> checkExternalResource config rLink
             OtherLoc    -> verifying pass

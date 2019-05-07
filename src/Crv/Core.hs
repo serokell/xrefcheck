@@ -1,3 +1,5 @@
+{-# LANGUAGE PatternSynonyms #-}
+
 -- | Various primitives.
 
 module Crv.Core where
@@ -12,6 +14,7 @@ import qualified Data.Map as M
 import qualified Data.Text as T
 import Fmt (Buildable (..), blockListF, blockListF', nameF, (+|), (|+))
 import System.Console.Pretty (Color (..), Style (..), color, style)
+import System.FilePath.Posix (isPathSeparator, pathSeparator)
 import Text.Numeral.Roman (toRoman)
 
 import Crv.Progress
@@ -129,6 +132,9 @@ instance Buildable RepoInfo where
 -- Analysing
 -----------------------------------------------------------
 
+pattern PathSep :: Char
+pattern PathSep <- (isPathSeparator -> True)
+
 -- | Type of reference.
 data LocationType
     = LocalLoc
@@ -169,13 +175,13 @@ isLocal = \case
 -- | Get type of reference.
 locationType :: Text -> LocationType
 locationType location = case toString location of
-    []                  -> LocalLoc
-    '/' : _             -> AbsoluteLoc
-    '.' : '/' : _       -> RelativeLoc
-    '.' : '.' : '/' : _ -> RelativeLoc
-    _ | hasUrlProtocol  -> ExternalLoc
-      | hasProtocol     -> OtherLoc
-      | otherwise       -> RelativeLoc
+    []                      -> LocalLoc
+    PathSep : _             -> AbsoluteLoc
+    '.' : PathSep : _       -> RelativeLoc
+    '.' : '.' : PathSep : _ -> RelativeLoc
+    _ | hasUrlProtocol      -> ExternalLoc
+      | hasProtocol         -> OtherLoc
+      | otherwise           -> RelativeLoc
   where
     hasUrlProtocol = "://" `T.isInfixOf` (T.take 10 location)
     hasProtocol = ":" `T.isInfixOf` (T.take 10 location)
@@ -226,6 +232,15 @@ stripAnchorDupNo t = do
     let strippedNo = T.dropWhileEnd C.isNumber t
     guard (length strippedNo < length t)
     T.stripSuffix "-" strippedNo
+
+-- | Strip './' prefix from local references.
+canonizeLocalRef :: Text -> Text
+canonizeLocalRef ref =
+    case T.stripPrefix localPrefix ref of
+      Nothing -> ref
+      Just r  -> canonizeLocalRef r
+  where
+    localPrefix = T.pack ['.', pathSeparator]
 
 -----------------------------------------------------------
 -- Visualisation

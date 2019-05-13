@@ -41,6 +41,7 @@ import Crv.Progress
 import Crv.System
 
 {-# ANN module ("HLint: ignore Use uncurry" :: Text) #-}
+{-# ANN module ("HLint: ignore Use 'runExceptT' from Universum" :: Text) #-}
 
 -----------------------------------------------------------
 -- General verification

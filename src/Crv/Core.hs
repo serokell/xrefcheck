@@ -183,8 +183,8 @@ locationType location = case toString location of
       | hasProtocol         -> OtherLoc
       | otherwise           -> RelativeLoc
   where
-    hasUrlProtocol = "://" `T.isInfixOf` (T.take 10 location)
-    hasProtocol = ":" `T.isInfixOf` (T.take 10 location)
+    hasUrlProtocol = "://" `T.isInfixOf` T.take 10 location
+    hasProtocol = ":" `T.isInfixOf` T.take 10 location
 
 -- | Which parts of verification do we perform.
 data VerifyMode
@@ -240,7 +240,7 @@ canonizeLocalRef ref =
       Nothing -> ref
       Just r  -> canonizeLocalRef r
   where
-    localPrefix = T.pack ['.', pathSeparator]
+    localPrefix = toText ['.', pathSeparator]
 
 -----------------------------------------------------------
 -- Visualisation
@@ -260,7 +260,7 @@ initVerifyProgress references =
   where
     (extRefs, localRefs) =
         L.partition isExternal $
-        map locationType $ map rLink references
+        map (locationType . rLink) references
 
 showAnalyseProgress :: VerifyMode -> VerifyProgress -> Text
 showAnalyseProgress mode VerifyProgress{..} = mconcat . mconcat $

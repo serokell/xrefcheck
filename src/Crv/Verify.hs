@@ -18,7 +18,7 @@ module Crv.Verify
     ) where
 
 import Control.Concurrent.Async (forConcurrently, withAsync)
-import Control.Monad.Except (ExceptT (..), MonadError (..))
+import Control.Monad.Except (ExceptT, MonadError (..))
 import Data.Default (def)
 import qualified Data.Map as M
 import qualified Data.Text as T
@@ -32,14 +32,15 @@ import Network.HTTP.Types.Status (Status, statusCode, statusMessage)
 import System.Console.Pretty (Style (..), style)
 import System.Directory (canonicalizePath, doesDirectoryExist, doesFileExist)
 import qualified System.FilePath.Glob as Glob
-import System.FilePath.Posix (takeDirectory)
-import System.FilePath.Posix ((</>))
+import System.FilePath.Posix (takeDirectory, (</>))
 import Time (RatioNat, Second, Time (..), ms, threadDelay, timeout)
 
 import Crv.Config
 import Crv.Core
 import Crv.Progress
 import Crv.System
+
+{-# ANN module ("HLint: ignore Use uncurry" :: Text) #-}
 
 -----------------------------------------------------------
 -- General verification
@@ -111,7 +112,8 @@ instance Buildable CrvVerifyError where
         ExternalResourceUnavailable status ->
             "⛂  Resource unavailable (" +| statusCode status |+ " " +|
             decodeUtf8 @Text (statusMessage status) |+ ")"
-        ExternalResourceSomeError err -> "⛂  " +| build err |+ "\n\n"
+        ExternalResourceSomeError err ->
+            "⛂  " +| build err |+ "\n\n"
       where
         anchorHints = \case
             []  -> "\n"

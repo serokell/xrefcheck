@@ -6,12 +6,13 @@ module Crv.CLI
     , shouldCheckExternal
     , Options (..)
     , getOptions
+    , defaultConfigPath
     ) where
 
 import Data.Version (showVersion)
 import Options.Applicative (Parser, ReadM, eitherReader, execParser, fullDesc, help, helper, info,
-                            infoOption, long, metavar, option, progDesc, short, strOption, switch,
-                            value)
+                            infoOption, long, metavar, option, progDesc, short, showDefault,
+                            strOption, switch, value)
 import Paths_crossref_verifier (version)
 
 import Crv.Core
@@ -39,6 +40,9 @@ data Options = Options
     , oShowProgressBar :: Bool
     }
 
+defaultConfigPath :: FilePath
+defaultConfigPath = ".crossref-verifier.yaml"
+
 optionsParser :: Parser Options
 optionsParser = do
     oConfig <- strOption $
@@ -46,7 +50,8 @@ optionsParser = do
         long "config" <>
         metavar "FILEPATH" <>
         help "Path to configuration file." <>
-        value ".crossref-verifier.yaml"
+        value defaultConfigPath <>
+        showDefault
     oRoot <- strOption $
         short 'r' <>
         long "root" <>
@@ -60,7 +65,8 @@ optionsParser = do
         value LocalOnlyMode <>
         help "Which parts of verification to invoke. \
              \You can enable only verification of repository-local references, \
-             \only verification of external references or both."
+             \only verification of external references or both. \
+             \Default value: local-only."
     oVerbose <- switch $
         short 'v' <>
         long "verbose" <>
@@ -80,4 +86,5 @@ getOptions = do
     execParser $
         info (helper <*> versionOption <*> optionsParser) $
         fullDesc <>
-        progDesc "Github repository cross-references verifier."
+        progDesc "Cross-references verifier for markdown documentation in \
+                 \Git repositories."

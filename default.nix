@@ -3,9 +3,8 @@ let
   nixpkgs = import sources.nixpkgs {
     overlays = [ (import "${sources.serokell-closure}/pkgs") ];
   };
-  stackToNix = nixpkgs.callPackage sources.stack-to-nix { };
   hlib = nixpkgs.haskell.lib;
-in (stackToNix {
+in (nixpkgs.stackToNix {
   root = nixpkgs.constGitIgnore "crossref-verifier" ./. [ ];
   overrides = (final: previous: {
     tasty-hedgehog = null;

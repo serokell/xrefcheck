@@ -19,15 +19,14 @@ module Crv.Verify
 
 import Control.Concurrent.Async (forConcurrently, withAsync)
 import Control.Monad.Except (ExceptT, MonadError (..))
-import Data.Default (def)
 import qualified Data.Map as M
 import qualified Data.Text as T
 import Data.Text.Metrics (damerauLevenshteinNorm)
 import Fmt (Buildable (..), blockListF', listF, (+|), (|+))
 import qualified GHC.Exts as Exts
 import Network.HTTP.Client (HttpException (..), HttpExceptionContent (..), responseStatus)
-import Network.HTTP.Req (GET (..), HEAD (..), HttpException (..), NoReqBody (..), ignoreResponse,
-                         parseUrl, req, runReq)
+import Network.HTTP.Req (GET (..), HEAD (..), HttpException (..), NoReqBody (..), defaultHttpConfig,
+                         ignoreResponse, parseUrl, req, runReq)
 import Network.HTTP.Types.Status (Status, statusCode, statusMessage)
 import System.Console.Pretty (Style (..), style)
 import System.Directory (canonicalizePath, doesDirectoryExist, doesFileExist)
@@ -256,9 +255,11 @@ checkExternalResource VerifyConfig{..} link
                    & maybe (throwError ExternalResourceInvalidUri) pure
         let reqLink = case parsedUrl of
                 Left (url, option) ->
-                    runReq def $ req method url NoReqBody ignoreResponse option
+                    runReq defaultHttpConfig $
+                    req method url NoReqBody ignoreResponse option
                 Right (url, option) ->
-                    runReq def $ req method url NoReqBody ignoreResponse option
+                    runReq defaultHttpConfig $
+                    req method url NoReqBody ignoreResponse option
 
         let maxTime = Time @Second $ unTime vcExternalRefCheckTimeout * timeoutFrac
 

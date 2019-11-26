@@ -69,15 +69,14 @@ dependencies:
   - lens
   - loot-prelude
   - pretty-terminal
-  - network-uri
   - mtl
   - o-clock
   - optparse-applicative
   - req
   - roman-numerals
+  - template-haskell
   - text
   - text-metrics
-  - template-haskell
   - th-lift-instances
   - th-utilities
   - yaml

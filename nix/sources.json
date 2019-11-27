@@ -1,38 +1,38 @@
 {
-    "niv": {
+    "haskell.nix": {
         "branch": "master",
-        "description": "Easy dependency management for Nix projects",
-        "homepage": "https://github.com/nmattia/niv",
-        "owner": "nmattia",
-        "repo": "niv",
-        "rev": "8b7b70465c130d8d7a98fba1396ad1481daee518",
-        "sha256": "0fgdrxn2vzpnzr6pxaiyn5zzbd812c6f7xjjhfir0kpzamjnxwwl",
+        "description": "Alternative Haskell Infrastructure for Nixpkgs",
+        "homepage": "https://input-output-hk.github.io/haskell.nix",
+        "owner": "input-output-hk",
+        "repo": "haskell.nix",
+        "rev": "9345c4a1824292c30f2dbb08d22cb1688a0121a6",
+        "sha256": "1q94azhis5acq8bcxjq1i78dr9jzw1x3j8z1hihx59xzjwskzjls",
         "type": "tarball",
-        "url": "https://github.com/nmattia/niv/archive/8b7b70465c130d8d7a98fba1396ad1481daee518.tar.gz",
+        "url": "https://github.com/input-output-hk/haskell.nix/archive/9345c4a1824292c30f2dbb08d22cb1688a0121a6.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
+    "lootbox": {
+        "branch": "master",
+        "description": "Toolbox for your cool project",
+        "homepage": "",
+        "owner": "serokell",
+        "repo": "lootbox",
+        "rev": "34e389808e34f1cfa56f456773682325bed56d17",
+        "sha256": "19b51x0yml13wpvj0b967vgg5y62av94izjr9sfwxr6sww2wgk29",
+        "type": "tarball",
+        "url": "https://github.com/serokell/lootbox/archive/34e389808e34f1cfa56f456773682325bed56d17.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "nixpkgs": {
-        "branch": "nixos-19.03",
+        "branch": "nixos-19.09",
         "description": "A read-only mirror of NixOS/nixpkgs tracking the released channels. Send issues and PRs to",
         "homepage": "https://github.com/NixOS/nixpkgs",
         "owner": "NixOS",
         "repo": "nixpkgs-channels",
-        "rev": "e02148563af765625be323465fb7a1d22072d88c",
-        "sha256": "1fa84bf9gpd5n1lc0ifxda44hbdkg8ka720yxsg6h8plsqjjxzs8",
+        "rev": "4ad6f1404a8cd69a11f16edba09cc569e5012e42",
+        "sha256": "1pclh0hvma66g3yxrrh9rlzpscqk5ylypnmiczz1bwwrl8n21q3h",
         "type": "tarball",
-        "url": "https://github.com/NixOS/nixpkgs-channels/archive/e02148563af765625be323465fb7a1d22072d88c.tar.gz",
-        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
-    },
-    "serokell-closure": {
-        "branch": "master",
-        "description": "Overlaid Nixpkgs closure for Serokell build systems",
-        "homepage": "",
-        "owner": "serokell",
-        "repo": "serokell-closure",
-        "rev": "e1396d1c321cfa9f329c3ba769c9bfbbcdaba687",
-        "sha256": "1lajalzgpy19pwcb0qcblpn5hikmfz2ixg1aw7z2jjf145qw4zq4",
-        "type": "tarball",
-        "url": "https://github.com/serokell/serokell-closure/archive/e1396d1c321cfa9f329c3ba769c9bfbbcdaba687.tar.gz",
+        "url": "https://github.com/NixOS/nixpkgs-channels/archive/4ad6f1404a8cd69a11f16edba09cc569e5012e42.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     }
 }

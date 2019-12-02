@@ -1,14 +1,14 @@
 {
     "haskell.nix": {
-        "branch": "master",
+        "branch": "fix-309",
         "description": "Alternative Haskell Infrastructure for Nixpkgs",
         "homepage": "https://input-output-hk.github.io/haskell.nix",
-        "owner": "input-output-hk",
+        "owner": "serokell",
         "repo": "haskell.nix",
-        "rev": "9345c4a1824292c30f2dbb08d22cb1688a0121a6",
-        "sha256": "1q94azhis5acq8bcxjq1i78dr9jzw1x3j8z1hihx59xzjwskzjls",
+        "rev": "f547471b739a47244aaff3e23c0e543f9613653e",
+        "sha256": "0swfklgm86kvd1sbdm4xivcfjzf2w3dpfh5zamxaq3vpg7prschk",
         "type": "tarball",
-        "url": "https://github.com/input-output-hk/haskell.nix/archive/9345c4a1824292c30f2dbb08d22cb1688a0121a6.tar.gz",
+        "url": "https://github.com/serokell/haskell.nix/archive/f547471b739a47244aaff3e23c0e543f9613653e.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "lootbox": {
@@ -29,10 +29,10 @@
         "homepage": "https://github.com/NixOS/nixpkgs",
         "owner": "NixOS",
         "repo": "nixpkgs-channels",
-        "rev": "4ad6f1404a8cd69a11f16edba09cc569e5012e42",
-        "sha256": "1pclh0hvma66g3yxrrh9rlzpscqk5ylypnmiczz1bwwrl8n21q3h",
+        "rev": "dae3575cee5b88de966d06b11861c602975cb23a",
+        "sha256": "0zv948jsw313fmwz3rbwna92hijq8ji3dqlzhliwkvxl1adh8pbg",
         "type": "tarball",
-        "url": "https://github.com/NixOS/nixpkgs-channels/archive/4ad6f1404a8cd69a11f16edba09cc569e5012e42.tar.gz",
+        "url": "https://github.com/NixOS/nixpkgs-channels/archive/dae3575cee5b88de966d06b11861c602975cb23a.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     }
 }

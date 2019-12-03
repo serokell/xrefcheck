@@ -4,15 +4,15 @@ module Crv.CLI
     ( VerifyMode (..)
     , shouldCheckLocal
     , shouldCheckExternal
+    , Command (..)
     , Options (..)
-    , getOptions
-    , defaultConfigPath
+    , getCommand
     ) where
 
 import Data.Version (showVersion)
-import Options.Applicative (Parser, ReadM, eitherReader, execParser, fullDesc, help, helper, info,
-                            infoOption, long, metavar, option, progDesc, short, showDefault,
-                            strOption, switch, value)
+import Options.Applicative (Parser, ReadM, command, eitherReader, execParser, fullDesc, help,
+                            helper, hsubparser, info, infoOption, long, metavar, option, progDesc,
+                            short, strOption, switch, value)
 import Paths_crossref_verifier (version)
 
 import Crv.Core
@@ -32,26 +32,25 @@ modeReadM = eitherReader $ \s ->
         , ("full", FullMode)
         ]
 
+data Command
+  = DefaultCommand Options
+  | DumpConfig FilePath
+
 data Options = Options
-    { oConfig          :: FilePath
+    { oConfigPath      :: Maybe FilePath
     , oRoot            :: FilePath
     , oMode            :: VerifyMode
     , oVerbose         :: Bool
     , oShowProgressBar :: Bool
     }
 
-defaultConfigPath :: FilePath
-defaultConfigPath = ".crossref-verifier.yaml"
-
 optionsParser :: Parser Options
 optionsParser = do
-    oConfig <- strOption $
+    oConfigPath <- optional . strOption $
         short 'c' <>
         long "config" <>
         metavar "FILEPATH" <>
-        help "Path to configuration file." <>
-        value defaultConfigPath <>
-        showDefault
+        help "Path to configuration file."
     oRoot <- strOption $
         short 'r' <>
         long "root" <>
@@ -62,11 +61,11 @@ optionsParser = do
         short 'm' <>
         long "mode" <>
         metavar "KEYWORD" <>
-        value LocalOnlyMode <>
+        value FullMode <>
         help "Which parts of verification to invoke. \
              \You can enable only verification of repository-local references, \
              \only verification of external references or both. \
-             \Default value: local-only."
+             \Default mode: full."
     oVerbose <- switch $
         short 'v' <>
         long "verbose" <>
@@ -76,15 +75,34 @@ optionsParser = do
         help "Do not display progress bar during verification."
     return Options{..}
 
+dumpConfigOptions :: Parser FilePath
+dumpConfigOptions = hsubparser $
+  command "dump-config" $
+    info parser $
+    progDesc "Dump default configuration into a file."
+  where
+    parser = strOption $
+      short 'o' <>
+      long "output" <>
+      metavar "FILEPATH" <>
+      value ".crossref-verifier.yaml" <>
+      help "Name of created config file."
+
+totalParser :: Parser Command
+totalParser = asum
+  [ DefaultCommand <$> optionsParser
+  , DumpConfig <$> dumpConfigOptions
+  ]
+
 versionOption :: Parser (a -> a)
 versionOption = infoOption ("crossref-verify-" <> (showVersion version)) $
     long "version" <>
     help "Show version."
 
-getOptions :: IO Options
-getOptions = do
+getCommand :: IO Command
+getCommand = do
     execParser $
-        info (helper <*> versionOption <*> optionsParser) $
+        info (helper <*> versionOption <*> totalParser) $
         fullDesc <>
         progDesc "Cross-references verifier for markdown documentation in \
                  \Git repositories."

@@ -8,6 +8,7 @@ copyright:           "2018 Martoon"
 
 extra-source-files:
 - README.md
+- src-files/*
 
 description:         Please see the README on GitHub at <https://github.com/serokell/crossref-verifier#readme>
 
@@ -76,6 +77,9 @@ dependencies:
   - roman-numerals
   - text
   - text-metrics
+  - template-haskell
+  - th-lift-instances
+  - th-utilities
   - yaml
 
 library:

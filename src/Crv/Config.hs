@@ -2,11 +2,14 @@
 
 module Crv.Config where
 
-import Data.Aeson (FromJSON (..), withText)
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveFromJSON)
-import Data.Default (Default (..))
-import Time (KnownRatName, Second, Time, sec, unitsP)
+import Data.Yaml (FromJSON (..), decodeEither', prettyPrintParseException, withText)
+import Instances.TH.Lift ()
+import qualified Language.Haskell.TH.Syntax as TH
+import System.FilePath.Posix ((</>))
+import TH.RelativePaths (qReadFileBS)
+import Time (KnownRatName, Second, Time, unitsP)
 
 import Crv.System (CanonicalizedGlobPattern)
 
@@ -33,27 +36,21 @@ data VerifyConfig = VerifyConfig
     }
 
 -----------------------------------------------------------
--- Default instances
+-- Default config
 -----------------------------------------------------------
 
-instance Default Config where
-    def =
-        Config
-        { cTraversal = def
-        , cVerification = def
-        }
+-- | Default config in textual representation.
+--
+-- Sometimes you cannot just use 'defConfig' because clarifying comments
+-- would be lost.
+defConfigText :: ByteString
+defConfigText =
+  $(TH.lift =<< qReadFileBS ("src-files" </> "def-config.yaml"))
 
-instance Default TraversalConfig where
-    def = TraversalConfig []
-
-instance Default VerifyConfig where
-    def =
-        VerifyConfig
-        { vcAnchorSimilarityThreshold = 0.5
-        , vcExternalRefCheckTimeout = sec 3
-        , vcVirtualFiles = []
-        , vcNotScanned = []
-        }
+defConfig :: HasCallStack => Config
+defConfig =
+  either (error . toText . prettyPrintParseException) id $
+  decodeEither' defConfigText
 
 -----------------------------------------------------------
 -- Yaml instances

@@ -1,5 +1,6 @@
 module Main where
 
+import qualified Data.ByteString as BS
 import Data.Yaml (decodeFileEither, prettyPrintParseException)
 import Fmt (blockListF', build, fmt, fmtLn, indentF)
 
@@ -15,9 +16,8 @@ formats = specificFormatsSupport
     [ markdownSupport
     ]
 
-main :: IO ()
-main = do
-    Options{..} <- getOptions
+defaultAction :: Options -> IO ()
+defaultAction Options{..} = do
     let root = oRoot
 
     config <- case oConfigPath of
@@ -42,3 +42,12 @@ main = do
                   indentF 2 (blockListF' "➥ " build errs)
             fmtLn $ "Invalid references dumped, " <> build (length errs) <> " in total."
             exitFailure
+
+main :: IO ()
+main = do
+    command <- getCommand
+    case command of
+      DefaultCommand options ->
+        defaultAction options
+      DumpConfig path ->
+        BS.writeFile path defConfigText

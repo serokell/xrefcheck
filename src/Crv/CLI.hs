@@ -4,14 +4,15 @@ module Crv.CLI
     ( VerifyMode (..)
     , shouldCheckLocal
     , shouldCheckExternal
+    , Command (..)
     , Options (..)
-    , getOptions
+    , getCommand
     ) where
 
 import Data.Version (showVersion)
-import Options.Applicative (Parser, ReadM, eitherReader, execParser, fullDesc, help, helper, info,
-                            infoOption, long, metavar, option, progDesc, short, strOption, switch,
-                            value)
+import Options.Applicative (Parser, ReadM, command, eitherReader, execParser, fullDesc, help,
+                            helper, hsubparser, info, infoOption, long, metavar, option, progDesc,
+                            short, strOption, switch, value)
 import Paths_crossref_verifier (version)
 
 import Crv.Core
@@ -30,6 +31,10 @@ modeReadM = eitherReader $ \s ->
         , ("external-only", ExternalOnlyMode)
         , ("full", FullMode)
         ]
+
+data Command
+  = DefaultCommand Options
+  | DumpConfig FilePath
 
 data Options = Options
     { oConfigPath      :: Maybe FilePath
@@ -70,15 +75,34 @@ optionsParser = do
         help "Do not display progress bar during verification."
     return Options{..}
 
+dumpConfigOptions :: Parser FilePath
+dumpConfigOptions = hsubparser $
+  command "dump-config" $
+    info parser $
+    progDesc "Dump default configuration into a file."
+  where
+    parser = strOption $
+      short 'o' <>
+      long "output" <>
+      metavar "FILEPATH" <>
+      value ".crossref-verifier.yaml" <>
+      help "Name of created config file."
+
+totalParser :: Parser Command
+totalParser = asum
+  [ DefaultCommand <$> optionsParser
+  , DumpConfig <$> dumpConfigOptions
+  ]
+
 versionOption :: Parser (a -> a)
 versionOption = infoOption ("crossref-verify-" <> (showVersion version)) $
     long "version" <>
     help "Show version."
 
-getOptions :: IO Options
-getOptions = do
+getCommand :: IO Command
+getCommand = do
     execParser $
-        info (helper <*> versionOption <*> optionsParser) $
+        info (helper <*> versionOption <*> totalParser) $
         fullDesc <>
         progDesc "Cross-references verifier for markdown documentation in \
                  \Git repositories."

@@ -22,8 +22,6 @@ By default, only repo-local references are verified; to include references to ex
 stack exec crossref-verify -- -root <repository> --mode full
 ```
 
-This tool requires configuration file (`./.crossref-verifier.yaml` is used by default) where you can specify external links checker timeout, list of excluded files and other parameters.
-
 ## Issue tracker [↑](#crossref-verifier)
 
 We use [YouTrack](https://issues.serokell.io/issues/INT) as our issue

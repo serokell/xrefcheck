@@ -6,13 +6,12 @@ module Crv.CLI
     , shouldCheckExternal
     , Options (..)
     , getOptions
-    , defaultConfigPath
     ) where
 
 import Data.Version (showVersion)
 import Options.Applicative (Parser, ReadM, eitherReader, execParser, fullDesc, help, helper, info,
-                            infoOption, long, metavar, option, progDesc, short, showDefault,
-                            strOption, switch, value)
+                            infoOption, long, metavar, option, progDesc, short, strOption, switch,
+                            value)
 import Paths_crossref_verifier (version)
 
 import Crv.Core
@@ -33,25 +32,20 @@ modeReadM = eitherReader $ \s ->
         ]
 
 data Options = Options
-    { oConfig          :: FilePath
+    { oConfigPath      :: Maybe FilePath
     , oRoot            :: FilePath
     , oMode            :: VerifyMode
     , oVerbose         :: Bool
     , oShowProgressBar :: Bool
     }
 
-defaultConfigPath :: FilePath
-defaultConfigPath = ".crossref-verifier.yaml"
-
 optionsParser :: Parser Options
 optionsParser = do
-    oConfig <- strOption $
+    oConfigPath <- optional . strOption $
         short 'c' <>
         long "config" <>
         metavar "FILEPATH" <>
-        help "Path to configuration file." <>
-        value defaultConfigPath <>
-        showDefault
+        help "Path to configuration file."
     oRoot <- strOption $
         short 'r' <>
         long "root" <>

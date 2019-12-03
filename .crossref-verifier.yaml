@@ -1,8 +1,6 @@
-<!--
-   - SPDX-FileCopyrightText: 2019 Serokell <https://serokell.io>
-   -
-   - SPDX-License-Identifier: Unlicense
-   -->
+# SPDX-FileCopyrightText: 2019 Serokell <https://serokell.io>
+#
+# SPDX-License-Identifier: Unlicense
 
 # Parameters of repository traversal.
 traversal:

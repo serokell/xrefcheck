@@ -1,14 +1,14 @@
 {
     "haskell.nix": {
-        "branch": "fix-309",
+        "branch": "master",
         "description": "Alternative Haskell Infrastructure for Nixpkgs",
         "homepage": "https://input-output-hk.github.io/haskell.nix",
-        "owner": "serokell",
+        "owner": "input-output-hk",
         "repo": "haskell.nix",
-        "rev": "f547471b739a47244aaff3e23c0e543f9613653e",
-        "sha256": "0swfklgm86kvd1sbdm4xivcfjzf2w3dpfh5zamxaq3vpg7prschk",
+        "rev": "5065fe9aaea869e76ca0f11d7b7864aa3ca79553",
+        "sha256": "0x7kjdcxhjy1jfr6dh6blji1vb8x7k8yxz23d8bby4akxr43ws46",
         "type": "tarball",
-        "url": "https://github.com/serokell/haskell.nix/archive/f547471b739a47244aaff3e23c0e543f9613653e.tar.gz",
+        "url": "https://github.com/input-output-hk/haskell.nix/archive/5065fe9aaea869e76ca0f11d7b7864aa3ca79553.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "lootbox": {

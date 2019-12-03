@@ -61,11 +61,11 @@ optionsParser = do
         short 'm' <>
         long "mode" <>
         metavar "KEYWORD" <>
-        value LocalOnlyMode <>
+        value FullMode <>
         help "Which parts of verification to invoke. \
              \You can enable only verification of repository-local references, \
              \only verification of external references or both. \
-             \Default value: local-only."
+             \Default mode: full."
     oVerbose <- switch $
         short 'v' <>
         long "verbose" <>

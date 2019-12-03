@@ -6,20 +6,20 @@ For now, support for markdown files only is provided.
 
 ## Build instructions [↑](#crossref-verifier)
 
-Run `stack build` to build everything.
+Run `stack install` to build everything and install executable.
 
 ## Usage [↑](#crossref-verifier)
 
 To find all broken links in repository run
 
 ```sh
-stack exec crossref-verify -- --root <repository>
+crossref-verify --root <repository>
 ```
 
-By default, only repo-local references are verified; to include references to external resources provide corresponding value for `--mode` parameter:
+For description of other options
 
 ```sh
-stack exec crossref-verify -- -root <repository> --mode full
+crossref-verify --help
 ```
 
 ## Issue tracker [↑](#crossref-verifier)

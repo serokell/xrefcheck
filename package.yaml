@@ -104,3 +104,5 @@ tests:
     - crossref-verifier
     - hspec
     - QuickCheck
+    build-tools:
+    - hspec-discover

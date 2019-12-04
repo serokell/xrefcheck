@@ -8,6 +8,20 @@ For now, support for markdown files only is provided.
 
 Run `stack install` to build everything and install executable.
 
+### CI and nix [↑](#crossref-verifier)
+
+CI uses `nix-build` to build the project.
+It is based on the [`haskell.nix`](https://input-output-hk.github.io/haskell.nix/) project.
+You can do that too if you want.
+
+There is a [bug](https://github.com/input-output-hk/haskell.nix/issues/335) which causes us to put some redundancy into Nix files:
+1. [`nix/sources.json`](nix/sources.json) lists all such dependencies that we obtain using `git`.
+It specifies concrete git revisions and SHA256 checksums.
+2. [`default.nix`](default.nix) lists all such dependencies as well, but without revisions.
+
+As a consequence, you may have to update these files when you update [`stack.yaml`](stack.yaml).
+You can use [`niv update`](https://github.com/nmattia/niv#update) to update [`nix/sources.json`](nix/sources.json).
+
 ## Usage [↑](#crossref-verifier)
 
 To find all broken links in repository run

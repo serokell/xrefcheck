@@ -23,9 +23,9 @@ import Time (ms, threadDelay)
 
 -- | Processing progress of any thing.
 data Progress a = Progress
-    { pCurrent
+    { pCurrent :: a
       -- ^ How much has been completed.
-    , pTotal
+    , pTotal :: a
       -- ^ Overall amount of work.
     , pErrors :: !a
       -- ^ How many of the completed work finished with an error.

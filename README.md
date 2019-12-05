@@ -4,7 +4,13 @@
 
 Tool for verifying local and external references in repository documentation.
 
-For now, support for markdown files only is provided.
+<img src="https://user-images.githubusercontent.com/5394217/70820564-06b06e00-1dea-11ea-9680-27f661ca2a58.png" alt="Output sample" width="600"/>
+
+### Aims
+
+Comparing to alternative solutions, this tool tries to achieve the following points.
+
+<img src="https://imgur.com/2w8FVIH.png" alt="Output sample" width="600"/>
 
 ## Build instructions [↑](#crossref-verifier)
 

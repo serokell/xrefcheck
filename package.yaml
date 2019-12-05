@@ -95,6 +95,7 @@ executables:
     - -O2
     dependencies:
     - crossref-verifier
+    - yaml
 
 tests:
   crossref-verifier-tests:

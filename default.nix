@@ -17,4 +17,4 @@ in (hn.stackProject {
     url = "https://github.com/${lootbox.owner}/${lootbox.repo}.git";
     subdir = "code/prelude";
   }];
-}).crossref-verifier
+}).crossref-verifier.components.exes

@@ -71,10 +71,10 @@ You can use [`niv update`](https://github.com/nmattia/niv#update) to update [`ni
 
 ## Usage [↑](#crossref-verifier)
 
-To find all broken links in repository run
+To find all broken links in repository run from within its folder
 
 ```sh
-crossref-verify --root <repository>
+crossref-verify
 ```
 
 To also display all found links and anchors

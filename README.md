@@ -1,5 +1,7 @@
 # Crossref-verifier
 
+[![Build status](https://badge.buildkite.com/75461331a6058b334383cdfca1071dc1f908b70cf069d857b7.svg?branch=master)](https://buildkite.com/serokell/crossref-verifier)
+
 Tool for verifying local and external references in repository documentation.
 
 For now, support for markdown files only is provided.

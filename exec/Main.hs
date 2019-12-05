@@ -3,6 +3,7 @@ module Main where
 import qualified Data.ByteString as BS
 import Data.Yaml (decodeFileEither, prettyPrintParseException)
 import Fmt (blockListF', build, fmt, fmtLn, indentF)
+import System.Directory (doesFileExist)
 
 import Crv.CLI
 import Crv.Config
@@ -21,10 +22,16 @@ defaultAction Options{..} = do
     let root = oRoot
 
     config <- case oConfigPath of
-      Nothing -> pure defConfig
-      Just configPath ->
-        decodeFileEither configPath
-        >>= either (error . toText . prettyPrintParseException) pure
+      Nothing -> do
+        mConfigPath <- findFirstExistingFile defaultConfigPaths
+        case mConfigPath of
+          Nothing -> do
+            hPutStrLn @Text stderr "Configuration file not found, using default config\n"
+            pure defConfig
+          Just configPath ->
+            readConfig configPath
+      Just configPath -> do
+        readConfig configPath
 
     repoInfo <- allowRewrite oShowProgressBar $ \rw ->
         gatherRepoInfo rw formats (cTraversal config) root
@@ -42,6 +49,18 @@ defaultAction Options{..} = do
                   indentF 2 (blockListF' "➥ " build errs)
             fmtLn $ "Invalid references dumped, " <> build (length errs) <> " in total."
             exitFailure
+  where
+    findFirstExistingFile :: [FilePath] -> IO (Maybe FilePath)
+    findFirstExistingFile = \case
+      [] -> pure Nothing
+      (file : files) -> do
+        exists <- doesFileExist file
+        if exists then pure (Just file) else findFirstExistingFile files
+
+    readConfig :: FilePath -> IO Config
+    readConfig path =
+      decodeFileEither path
+      >>= either (error . toText . prettyPrintParseException) pure
 
 main :: IO ()
 main = do

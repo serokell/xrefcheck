@@ -6,6 +6,7 @@ module Crv.CLI
     , shouldCheckExternal
     , Command (..)
     , Options (..)
+    , defaultConfigPaths
     , getCommand
     ) where
 
@@ -44,13 +45,21 @@ data Options = Options
     , oShowProgressBar :: Bool
     }
 
+-- | Where to try to seek configuration if specific path is not set.
+defaultConfigPaths :: [FilePath]
+defaultConfigPaths = ["./crossref-verifier.yaml", "./.crossref-verifier.yaml"]
+
 optionsParser :: Parser Options
 optionsParser = do
     oConfigPath <- optional . strOption $
         short 'c' <>
         long "config" <>
         metavar "FILEPATH" <>
-        help "Path to configuration file."
+        help ("Path to configuration file. \
+             \If not specified, tries to read config from one of " <>
+             (mconcat . intersperse ", " $ map show defaultConfigPaths) <> ". \
+             \If none of these files exist, default configuration is used."
+             )
     oRoot <- strOption $
         short 'r' <>
         long "root" <>

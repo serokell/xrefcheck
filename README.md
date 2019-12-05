@@ -55,7 +55,7 @@ Please see [CONTRIBUTING.md](/.github/CONTRIBUTING.md) for more information.
 
 ## About Serokell [↑](#crossref-verifier)
 
-Crossref-verifier is maintained by [Serokell](https://serokell.io/).
+Crossref-verifier is maintained and funded with ❤️ by [Serokell](https://serokell.io/).
+The names and logo for Serokell are trademark of Serokell OÜ.
 
-We love open source software.
-See which [services](https://serokell.io/#services) we provide and [drop us a line](mailto:hi@serokell.io) if you are interested.
+We love open source software! See [our other projects](https://serokell.io/community?utm_source=github) or [hire us](https://serokell.io/hire-us?utm_source=github) to design, develop and grow your idea!

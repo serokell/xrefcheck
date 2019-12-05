@@ -109,9 +109,8 @@ Currently supported options include:
 
 ## Issue tracker [↑](#crossref-verifier)
 
-We use [YouTrack](https://issues.serokell.io/issues/INT) as our issue
-tracker. You can login using your GitHub account to leave a comment or
-create a new issue.
+We use GitHub issues as our issue tracker.
+You can login using your GitHub account to leave a comment or create a new issue.
 
 ## For Contributors [↑](#crossref-verifier)
 

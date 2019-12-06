@@ -106,12 +106,12 @@ instance Buildable CrvVerifyError where
             "Similar anchors are:\n" +|
                 blockListF' "    -" build fileAnchors |+ "" +|
             "   Use of such anchors is discouraged because referenced object\n\
-            \   can change silently whereas the document containing it evolves."
+            \   can change silently whereas the document containing it evolves.\n"
         ExternalResourceInvalidUri ->
             "⛂  Bad url (expected 'http' or 'https')\n"
         ExternalResourceUnavailable status ->
             "⛂  Resource unavailable (" +| statusCode status |+ " " +|
-            decodeUtf8 @Text (statusMessage status) |+ ")"
+            decodeUtf8 @Text (statusMessage status) |+ ")\n"
         ExternalResourceSomeError err ->
             "⛂  " +| build err |+ "\n\n"
       where

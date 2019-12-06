@@ -27,10 +27,13 @@ verification:
   notScanned:
     # GitHub-specific files
     - .github/pull_request_template.md
-    - docs/pull_request_template.md
+    - .github/issue_template.md
+    - .github/PULL_REQUEST_TEMPLATE
+    - .github/ISSUE_TEMPLATE
 
     # GitLab-specific files
     - .gitlab/merge_request_templates/
+    - .gitlab/issue_templates/
 
   # Glob patterns describing the files which do not physically exist in the
   # repository but should be treated as existing nevertheless.

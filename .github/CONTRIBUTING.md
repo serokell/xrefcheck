@@ -2,7 +2,7 @@
 
 ## Reporting issues
 
-Please [open an issue](../../../issues/new/choose) if you find a bug or have a feature request.
+Please [open an issue](/../../issues/new/choose) if you find a bug or have a feature request.
 Note: you need to login (e. g. using your GitHub account) first.
 Before submitting a bug report or feature request, check to make sure it hasn't already been submitted
 

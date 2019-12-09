@@ -1,0 +1,5 @@
+steps:
+  - command: nix-build crossref-verifier.nix
+    label: build everything
+  - command: nix run -f. -c crossref-verify
+    label: crossref-verify itself (import as if done externally)

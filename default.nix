@@ -1,1 +1,1 @@
-(import ./crossref-verifier.nix).components.exes
+(import ./crossref-verifier.nix).components.exes.crossref-verify

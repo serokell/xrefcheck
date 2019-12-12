@@ -1,0 +1,3 @@
+steps:
+  - command: curl https://raw.githubusercontent.com/serokell/scratch/master/scripts/update-niv.sh | GITHUB_TOKEN=$(cat ~/niv-bot-token) bash
+    label: Update niv

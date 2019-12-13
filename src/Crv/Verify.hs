@@ -81,7 +81,7 @@ data WithReferenceLoc a = WithReferenceLoc
 
 instance Buildable a => Buildable (WithReferenceLoc a) where
     build WithReferenceLoc{..} =
-        "In file " +| style Faint wrlFile |+ "\nbad " +| wrlReference |+ "\n"
+        "In file " +| style Faint (style Bold wrlFile) |+ "\nbad " +| wrlReference |+ "\n"
         +| wrlItem |+ "\n\n"
 
 data CrvVerifyError

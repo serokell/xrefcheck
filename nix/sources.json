@@ -17,10 +17,10 @@
         "homepage": "",
         "owner": "serokell",
         "repo": "lootbox",
-        "rev": "4700376b8493f6ac164461715cb72a0259148ac2",
-        "sha256": "0yh1xi9p7ky5bm40pqjs0ygxqcbds226sj481r1cagnk0lp5vl3f",
+        "rev": "18ced0d493348b4d6bae8517dff7ee6de6e0c9d9",
+        "sha256": "0y8gfdivjxx0jj8g651k5nzzwjg8mj9qw2s3v75vbpr8p008ymnr",
         "type": "tarball",
-        "url": "https://github.com/serokell/lootbox/archive/4700376b8493f6ac164461715cb72a0259148ac2.tar.gz",
+        "url": "https://github.com/serokell/lootbox/archive/18ced0d493348b4d6bae8517dff7ee6de6e0c9d9.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "nixpkgs": {

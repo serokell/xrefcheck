@@ -10,6 +10,6 @@ extra-deps:
 - o-clock-1.1.0
 
 - git: https://github.com/serokell/lootbox.git
-  commit: 4700376b8493f6ac164461715cb72a0259148ac2 # master
+  commit: 18ced0d493348b4d6bae8517dff7ee6de6e0c9d9 # master
   subdirs:
     - code/prelude

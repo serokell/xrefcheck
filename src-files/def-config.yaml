@@ -15,8 +15,8 @@ traversal:
 
 # Verification parameters.
 verification:
-  # On 'anchor not found' error, how much similar anchors should be displayed as hint.
-  # Number should be between 0 and 1, larger value means stricter filter.
+  # On 'anchor not found' error, how much similar anchors should be displayed as
+  # hint. Number should be between 0 and 1, larger value means stricter filter.
   anchorSimilarityThreshold: 0.5
 
   # When checking external references, how long to wait on request before
@@ -25,15 +25,27 @@ verification:
 
   # File prefixes, references in which should not be analyzed.
   notScanned:
-    # Github-specific files
+    # GitHub-specific files
     - .github/pull_request_template.md
-    - docs/pull_request_template.md
+    - .github/issue_template.md
+    - .github/PULL_REQUEST_TEMPLATE
+    - .github/ISSUE_TEMPLATE
 
-  # Glob patterns describing the files which do not physically exist in the repository
-  # but should be treated as existing nevertheless.
+    # GitLab-specific files
+    - .gitlab/merge_request_templates/
+    - .gitlab/issue_templates/
+
+  # Glob patterns describing the files which do not physically exist in the
+  # repository but should be treated as existing nevertheless.
   virtualFiles:
-    # Github pages
+    # GitHub pages
+    - ../../../issues
+    - ../../../issues/*
+    - ../../../pulls
+    - ../../../pulls/*
+
+    # GitLab pages
     - ../../issues
     - ../../issues/*
-    - ../../pulls
-    - ../../pulls/*
+    - ../../merge_requests
+    - ../../merge_requests/*

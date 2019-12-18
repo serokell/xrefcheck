@@ -2,8 +2,13 @@
 #
 # SPDX-License-Identifier: MPL-2.0
 
+env:
+  NIX_PATH: nixpkgs=https://github.com/nixos/nixpkgs/archive/b640dbd00877f51616750e347a32fbcb49d2968c.tar.gz
+
 steps:
   - command: nix-build crossref-verifier.nix
     label: build everything
   - command: nix run -f. -c crossref-verify
     label: crossref-verify itself (import as if done externally)
+  - command: nix run nixpkgs.reuse -c reuse lint
+    label: reuse lint

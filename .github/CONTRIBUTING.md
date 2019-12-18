@@ -1,3 +1,9 @@
+<!--
+ - SPDX-FileCopyrightText: 2019 Serokell <https://serokell.io>
+ -
+ - SPDX-License-Identifier: Unlicense
+ -->
+
 # Contribution Guidelines
 
 ## Reporting issues

@@ -2,7 +2,7 @@
 
 [![Build status](https://badge.buildkite.com/75461331a6058b334383cdfca1071dc1f908b70cf069d857b7.svg?branch=master)](https://buildkite.com/serokell/crossref-verifier)
 
-Crossref-verifier is a tool for verifying local and external references in repository documentation that is quick, easy to setup, and can be added to CI.
+Crossref-verifier is a tool for verifying local and external references in repository documentation that is quick, easy to setup, and suitable to be added to CI.
 
 <img src="https://user-images.githubusercontent.com/5394217/70820564-06b06e00-1dea-11ea-9680-27f661ca2a58.png" alt="Output sample" width="600"/>
 
@@ -15,7 +15,7 @@ As the project evolves, links in documentation have a tendency to get broken. Th
 
 This tool will help you to keep references in order.
 
-### Advantages
+### Aims
 
 Comparing to alternative solutions, this tool tries to achieve the following points:
 

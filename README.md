@@ -2,24 +2,22 @@
 
 [![Build status](https://badge.buildkite.com/75461331a6058b334383cdfca1071dc1f908b70cf069d857b7.svg?branch=master)](https://buildkite.com/serokell/crossref-verifier)
 
-Tool for verifying local and external references in repository documentation.
+Crossref-verifier is a tool for verifying local and external references in repository documentation that is quick, easy to setup, and can be added to CI.
 
 <img src="https://user-images.githubusercontent.com/5394217/70820564-06b06e00-1dea-11ea-9680-27f661ca2a58.png" alt="Output sample" width="600"/>
 
 ### Motivation
 
-Comparing to alternative solutions, this tool tries to achieve the following points.
-
-As project evolves, links in documentation have tention to get broken. This is usually induced by
-1. Files movements;
-2. Markdown headers renames;
+As the project evolves, links in documentation have a tendency to get broken. This is usually because of: 
+1. File movements;
+2. Markdown header renames;
 3. Outer sites ceasing their existence.
 
 This tool will help you to keep references in order.
 
-### Aims
+### Advantages
 
-Comparing to alternative solutions, this tool tries to achieve the following points.
+Comparing to alternative solutions, this tool tries to achieve the following points:
 
 * Quickness - local references are verified instantly even for moderately-sized repositories.
 * Easy setup - no extra actions required, just run the tool in the repository root.
@@ -28,22 +26,22 @@ Both relative and absolute local links are supported out of the box.
 
 ### A comparison with other solutions
 
-* [linky](https://github.com/mattias-p/linky) - a well-configurable verifier written on Rust, scans one file at a time and works good in pair with system utilities like `find`.
+* [linky](https://github.com/mattias-p/linky) - a well-configurable verifier written in Rust, scans one file at a time and works good in pair with system utilities like `find`.
   This tool requires some configuring before it can be applied to a repository or added to CI.
-* [awesome_bot](https://github.com/dkhamsing/awesome_bot) - a solution written on Ruby, can be easily included in CI or integrated into GitHub.
-  Its features include duplicated URLs detection, specifying allowed HTTP error codes and reports generation.
+* [awesome_bot](https://github.com/dkhamsing/awesome_bot) - a solution written in Ruby that can be easily included in CI or integrated into GitHub.
+  Its features include duplicated URLs detection, specifying allowed HTTP error codes and reporting generation.
   At the moment of writting, it scans only external references and checking anchors is not possible.
 * [remark-validate-links](https://github.com/remarkjs/remark-validate-links) and [remark-lint-no-dead-urls](https://github.com/davidtheclark/remark-lint-no-dead-urls) - highly configurable Javascript solution for checking local and remote links resp.
-  It is able of checking multiple repositores at once if they are gathered in one folder.
-  Being written on JavaScript, it becomes fairly slow on large repositories.
-* [markdown-link-check](https://github.com/tcort/markdown-link-check) - another checker written on JavaScript, scans one file at a time.
-  Supports `mailto:` links resolution.
+  It is able to check multiple repositores at once if they are gathered in one folder.
+  Being written on JavaScript, it is fairly slow on large repositories.
+* [markdown-link-check](https://github.com/tcort/markdown-link-check) - another checker written in JavaScript, scans one file at a time.
+  Supports `mailto:` link resolution.
 * [url-checker](https://github.com/paramt/url-checker) - GitHub action which checks links in specified files.
 * [broken-link-checker](https://github.com/stevenvachon/broken-link-checker) - advanced checker for `HTML` files.
 
 ## Build instructions [↑](#crossref-verifier)
 
-Run `stack install` to build everything and install executable.
+Run `stack install` to build everything and install the executable.
 
 ### CI and nix [↑](#crossref-verifier)
 
@@ -52,9 +50,9 @@ To build only the executables, run `nix-build`. You can use this line on your CI
 nix run -f https://github.com/serokell/crossref-verifier/archive/master.tar.gz -c crossref-verify
 ```
 
-Our CI uses `nix-build crossref-verifier.nix` to build the whole project including tests and haddock.
+Our CI uses `nix-build crossref-verifier.nix` to build the whole project, including tests and Haddock.
 It is based on the [`haskell.nix`](https://input-output-hk.github.io/haskell.nix/) project.
-You can do that too if you want.
+You can do that too if you wish.
 
 <details>
   <summary>Details</summary>
@@ -71,19 +69,19 @@ You can use [`niv update`](https://github.com/nmattia/niv#update) to update [`ni
 
 ## Usage [↑](#crossref-verifier)
 
-To find all broken links in repository run from within its folder
+To find all broken links in a repository, run from within its folder:
 
 ```sh
 crossref-verify
 ```
 
-To also display all found links and anchors
+To also display all found links and anchors:
 
 ```sh
 crossref-verify -v
 ```
 
-For description of other options
+For description of other options:
 
 ```sh
 crossref-verify --help
@@ -91,7 +89,7 @@ crossref-verify --help
 
 ## Configuring
 
-Configuration template with all options explained can be dumped with
+Configuration template (with all options explained) can be dumped with:
 
 ```sh
 crossref-verify dump-config
@@ -104,8 +102,8 @@ Currently supported options include:
 ## For further work [↑](#crossref-verifier)
 
 - [ ] Support for non-Unix systems.
-- [ ] Support links detection in different languages, not only Markdown.
-  - [ ] Haskell haddock is first in turn.
+- [ ] Support link detection in different languages, not only Markdown.
+  - [ ] Haskell Haddock is first in turn.
 
 ## Issue tracker [↑](#crossref-verifier)
 

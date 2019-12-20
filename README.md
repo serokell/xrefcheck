@@ -1,3 +1,9 @@
+<!--
+ - SPDX-FileCopyrightText: 2018-2019 Serokell <https://serokell.io>
+ -
+ - SPDX-License-Identifier: MPL-2.0
+ -->
+
 # Crossref-verifier
 
 [![Build status](https://badge.buildkite.com/75461331a6058b334383cdfca1071dc1f908b70cf069d857b7.svg?branch=master)](https://buildkite.com/serokell/crossref-verifier)

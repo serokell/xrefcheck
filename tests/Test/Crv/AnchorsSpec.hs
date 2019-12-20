@@ -1,3 +1,8 @@
+{- SPDX-FileCopyrightText: 2019 Serokell <https://serokell.io>
+ -
+ - SPDX-License-Identifier: MPL-2.0
+ -}
+
 module Test.Crv.AnchorsSpec where
 
 import Test.Hspec (Spec, describe, it)

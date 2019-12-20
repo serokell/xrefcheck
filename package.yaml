@@ -1,10 +1,15 @@
+# SPDX-FileCopyrightText: 2018-2019 Serokell <https://serokell.io>
+#
+# SPDX-License-Identifier: MPL-2.0
+
 name:                crossref-verifier
 version:             0.1.0.0
-github:              "githubuser/crossref-verifier"
-license:             MIT
-author:              "Kostya Ivanov"
-maintainer:          "martoon.hsk@gmail.com"
-copyright:           "2018 Martoon"
+github:              serokell/crossref-verifier
+license:             MPL-2.0
+license-file:        LICENSE
+author:              Kostya Ivanov, Serokell
+maintainer:          Serokell <hi@serokell.io>
+copyright:           2018-2019 Serokell <https://serokell.io>
 
 extra-source-files:
 - README.md

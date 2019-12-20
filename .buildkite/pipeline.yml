@@ -1,5 +1,11 @@
+# SPDX-FileCopyrightText: 2019 Serokell <https://serokell.io>
+#
+# SPDX-License-Identifier: MPL-2.0
+
 steps:
   - command: nix-build crossref-verifier.nix
     label: build everything
   - command: nix run -f. -c crossref-verify
     label: crossref-verify itself (import as if done externally)
+  - command: nix run -f $(nix eval -f nix/sources.nix --raw nixpkgs) reuse -c reuse lint
+    label: reuse lint

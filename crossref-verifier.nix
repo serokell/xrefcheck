@@ -6,7 +6,10 @@
 let
   sources = import ./nix/sources.nix;
   nixpkgs = import sources.nixpkgs (import sources."haskell.nix");
-  hn = if static then nixpkgs.pkgsCross.musl64.haskell-nix else nixpkgs.haskell-nix;
+  hn = if static then
+    nixpkgs.pkgsCross.musl64.haskell-nix
+  else
+    nixpkgs.haskell-nix;
   project = hn.stackProject {
     src = hn.haskellLib.cleanGit { src = ./.; };
     modules = [{

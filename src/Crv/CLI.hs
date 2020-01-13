@@ -19,7 +19,7 @@ import Data.Version (showVersion)
 import Options.Applicative (Parser, ReadM, command, eitherReader, execParser, fullDesc, help,
                             helper, hsubparser, info, infoOption, long, metavar, option, progDesc,
                             short, strOption, switch, value)
-import Paths_crossref_verifier (version)
+import Paths_xrefcheck (version)
 
 import Crv.Core
 
@@ -52,7 +52,7 @@ data Options = Options
 
 -- | Where to try to seek configuration if specific path is not set.
 defaultConfigPaths :: [FilePath]
-defaultConfigPaths = ["./crossref-verifier.yaml", "./.crossref-verifier.yaml"]
+defaultConfigPaths = ["./xrefcheck.yaml", "./.xrefcheck.yaml"]
 
 optionsParser :: Parser Options
 optionsParser = do
@@ -99,7 +99,7 @@ dumpConfigOptions = hsubparser $
       short 'o' <>
       long "output" <>
       metavar "FILEPATH" <>
-      value ".crossref-verifier.yaml" <>
+      value ".xrefcheck.yaml" <>
       help "Name of created config file."
 
 totalParser :: Parser Command
@@ -109,7 +109,7 @@ totalParser = asum
   ]
 
 versionOption :: Parser (a -> a)
-versionOption = infoOption ("crossref-verify-" <> (showVersion version)) $
+versionOption = infoOption ("xrefcheck-" <> (showVersion version)) $
     long "version" <>
     help "Show version."
 

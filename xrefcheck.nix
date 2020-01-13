@@ -13,12 +13,12 @@ let
   project = hn.stackProject {
     src = hn.haskellLib.cleanGit { src = ./.; };
     modules = [{
-      packages.crossref-verifier = {
+      packages.xrefcheck = {
         # More failures during CI == Less failures in runtime!
         postHaddock = ''
           [[ -z "$(ls -A dist/doc/html)" ]] && exit 1 || echo "haddock successfully generated documentation"'';
         package.ghcOptions = "-Werror";
-        components.exes.crossref-verify.configureFlags =
+        components.exes.xrefcheck.configureFlags =
           with nixpkgs.pkgsStatic;
           lib.optionals static [
             "--disable-executable-dynamic"
@@ -42,4 +42,4 @@ let
       subdir = "code/prelude";
     }];
   };
-in project.crossref-verifier
+in project.xrefcheck

@@ -2,9 +2,9 @@
 #
 # SPDX-License-Identifier: MPL-2.0
 
-name:                crossref-verifier
+name:                xrefcheck
 version:             0.1.0.0
-github:              serokell/crossref-verifier
+github:              serokell/xrefcheck
 license:             MPL-2.0
 license-file:        LICENSE
 author:              Kostya Ivanov, Serokell
@@ -15,7 +15,7 @@ extra-source-files:
 - README.md
 - src-files/*
 
-description:         Please see the README on GitHub at <https://github.com/serokell/crossref-verifier#readme>
+description:         Please see the README on GitHub at <https://github.com/serokell/xrefcheck#readme>
 
 default-extensions:
   - AllowAmbiguousTypes
@@ -90,7 +90,7 @@ library:
   source-dirs: src
 
 executables:
-  crossref-verify:
+  xrefcheck:
     main:                Main.hs
     source-dirs:         exec
     ghc-options:
@@ -99,14 +99,14 @@ executables:
     - -with-rtsopts=-N
     - -O2
     dependencies:
-    - crossref-verifier
+    - xrefcheck
 
 tests:
-  crossref-verifier-tests:
+  xrefcheck-tests:
     main:                Main.hs
     source-dirs:         tests
     dependencies:
-    - crossref-verifier
+    - xrefcheck
     - hspec
     - QuickCheck
     build-tools:

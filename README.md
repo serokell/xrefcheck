@@ -4,17 +4,17 @@
  - SPDX-License-Identifier: MPL-2.0
  -->
 
-# Crossref-verifier
+# Xrefcheck
 
-[![Build status](https://badge.buildkite.com/75461331a6058b334383cdfca1071dc1f908b70cf069d857b7.svg?branch=master)](https://buildkite.com/serokell/crossref-verifier)
+[![Build status](https://badge.buildkite.com/75461331a6058b334383cdfca1071dc1f908b70cf069d857b7.svg?branch=master)](https://buildkite.com/serokell/xrefcheck)
 
-Crossref-verifier is a tool for verifying local and external references in repository documentation that is quick, easy to setup, and suitable to be added to CI.
+Xrefcheck is a tool for verifying local and external references in repository documentation that is quick, easy to setup, and suitable to be added to CI.
 
 <img src="https://user-images.githubusercontent.com/5394217/70820564-06b06e00-1dea-11ea-9680-27f661ca2a58.png" alt="Output sample" width="600"/>
 
 ### Motivation
 
-As the project evolves, links in documentation have a tendency to get broken. This is usually because of: 
+As the project evolves, links in documentation have a tendency to get broken. This is usually because of:
 1. File movements;
 2. Markdown header renames;
 3. Outer sites ceasing their existence.
@@ -45,18 +45,18 @@ Both relative and absolute local links are supported out of the box.
 * [url-checker](https://github.com/paramt/url-checker) - GitHub action which checks links in specified files.
 * [broken-link-checker](https://github.com/stevenvachon/broken-link-checker) - advanced checker for `HTML` files.
 
-## Build instructions [↑](#crossref-verifier)
+## Build instructions [↑](#xrefcheck)
 
 Run `stack install` to build everything and install the executable.
 
-### CI and nix [↑](#crossref-verifier)
+### CI and nix [↑](#xrefcheck)
 
-To build only the executables, run `nix-build`. You can use this line on your CI to use crossref-verifier:
+To build only the executables, run `nix-build`. You can use this line on your CI to use xrefcheck:
 ```
-nix run -f https://github.com/serokell/crossref-verifier/archive/master.tar.gz -c crossref-verify
+nix run -f https://github.com/serokell/xrefcheck/archive/master.tar.gz -c xrefcheck
 ```
 
-Our CI uses `nix-build crossref-verifier.nix` to build the whole project, including tests and Haddock.
+Our CI uses `nix-build xrefcheck.nix` to build the whole project, including tests and Haddock.
 It is based on the [`haskell.nix`](https://input-output-hk.github.io/haskell.nix/) project.
 You can do that too if you wish.
 
@@ -66,31 +66,31 @@ You can do that too if you wish.
 There is a [bug](https://github.com/input-output-hk/haskell.nix/issues/335) which causes us to put some redundancy into Nix files:
 1. [`nix/sources.json`](nix/sources.json) lists all such dependencies that we obtain using `git`.
 It specifies concrete git revisions and SHA256 checksums.
-2. [`crossref-verifier.nix`](crossref-verifier.nix) lists all such dependencies as well, but without revisions.
+2. [`xrefcheck.nix`](xrefcheck.nix) lists all such dependencies as well, but without revisions.
 
 As a consequence, you may have to update these files when you update [`stack.yaml`](stack.yaml).
 You can use [`niv update`](https://github.com/nmattia/niv#update) to update [`nix/sources.json`](nix/sources.json).
 
 </details>
 
-## Usage [↑](#crossref-verifier)
+## Usage [↑](#xrefcheck)
 
 To find all broken links in a repository, run from within its folder:
 
 ```sh
-crossref-verify
+xrefcheck
 ```
 
 To also display all found links and anchors:
 
 ```sh
-crossref-verify -v
+xrefcheck -v
 ```
 
 For description of other options:
 
 ```sh
-crossref-verify --help
+xrefcheck --help
 ```
 
 ## Configuring
@@ -98,31 +98,31 @@ crossref-verify --help
 Configuration template (with all options explained) can be dumped with:
 
 ```sh
-crossref-verify dump-config
+xrefcheck dump-config
 ```
 
 Currently supported options include:
 * Timeout for checking external references;
 * List of ignored folders.
 
-## For further work [↑](#crossref-verifier)
+## For further work [↑](#xrefcheck)
 
 - [ ] Support for non-Unix systems.
 - [ ] Support link detection in different languages, not only Markdown.
   - [ ] Haskell Haddock is first in turn.
 
-## Issue tracker [↑](#crossref-verifier)
+## Issue tracker [↑](#xrefcheck)
 
 We use GitHub issues as our issue tracker.
 You can login using your GitHub account to leave a comment or create a new issue.
 
-## For Contributors [↑](#crossref-verifier)
+## For Contributors [↑](#xrefcheck)
 
 Please see [CONTRIBUTING.md](/.github/CONTRIBUTING.md) for more information.
 
-## About Serokell [↑](#crossref-verifier)
+## About Serokell [↑](#xrefcheck)
 
-Crossref-verifier is maintained and funded with ❤️ by [Serokell](https://serokell.io/).
+Xrefcheck is maintained and funded with ❤️ by [Serokell](https://serokell.io/).
 The names and logo for Serokell are trademark of Serokell OÜ.
 
 We love open source software! See [our other projects](https://serokell.io/community?utm_source=github) or [hire us](https://serokell.io/hire-us?utm_source=github) to design, develop and grow your idea!

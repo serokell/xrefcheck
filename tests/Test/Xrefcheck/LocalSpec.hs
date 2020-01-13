@@ -3,12 +3,12 @@
  - SPDX-License-Identifier: MPL-2.0
  -}
 
-module Test.Crv.LocalSpec where
+module Test.Xrefcheck.LocalSpec where
 
 import Test.Hspec (Spec, describe, it)
 import Test.QuickCheck ((===))
 
-import Crv.Core (canonizeLocalRef)
+import Xrefcheck.Core (canonizeLocalRef)
 
 spec :: Spec
 spec = do

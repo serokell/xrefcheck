@@ -7,7 +7,7 @@
 
 -- | Various primitives.
 
-module Crv.Core where
+module Xrefcheck.Core where
 
 import Control.DeepSeq (NFData)
 import Control.Lens (makeLenses, (%=))
@@ -22,8 +22,8 @@ import System.Console.Pretty (Color (..), Style (..), color, style)
 import System.FilePath.Posix (isPathSeparator, pathSeparator)
 import Text.Numeral.Roman (toRoman)
 
-import Crv.Progress
-import Crv.Util
+import Xrefcheck.Progress
+import Xrefcheck.Util
 
 -----------------------------------------------------------
 -- Types

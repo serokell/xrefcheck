@@ -5,7 +5,7 @@
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Crv.Util
+module Xrefcheck.Util
     ( nameF'
     , paren
     ) where

@@ -3,12 +3,12 @@
  - SPDX-License-Identifier: MPL-2.0
  -}
 
-module Test.Crv.AnchorsSpec where
+module Test.Xrefcheck.AnchorsSpec where
 
 import Test.Hspec (Spec, describe, it)
 import Test.QuickCheck ((===))
 
-import Crv.Core (headerToAnchor)
+import Xrefcheck.Core (headerToAnchor)
 
 spec :: Spec
 spec = do

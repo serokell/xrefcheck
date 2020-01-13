@@ -10,12 +10,12 @@ import Data.Yaml (decodeFileEither, prettyPrintParseException)
 import Fmt (blockListF', build, fmt, fmtLn, indentF)
 import System.Directory (doesFileExist)
 
-import Crv.CLI
-import Crv.Config
-import Crv.Progress
-import Crv.Scan
-import Crv.Scanners
-import Crv.Verify
+import Xrefcheck.CLI
+import Xrefcheck.Config
+import Xrefcheck.Progress
+import Xrefcheck.Scan
+import Xrefcheck.Scanners
+import Xrefcheck.Verify
 
 formats :: FormatsSupport
 formats = specificFormatsSupport

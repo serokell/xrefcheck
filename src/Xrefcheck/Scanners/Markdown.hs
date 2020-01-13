@@ -7,7 +7,7 @@
 
 -- | Markdown documents markdownScanner.
 
-module Crv.Scanners.Markdown
+module Xrefcheck.Scanners.Markdown
     ( markdownScanner
     , markdownSupport
     ) where
@@ -21,8 +21,8 @@ import qualified Data.Text.Lazy as LT
 import Fmt (Buildable (..), blockListF, nameF, (+|), (|+))
 import GHC.Conc (par)
 
-import Crv.Core
-import Crv.Scan
+import Xrefcheck.Core
+import Xrefcheck.Scan
 
 instance Buildable Node where
     build (Node _mpos ty subs) = nameF (show ty) $ blockListF subs

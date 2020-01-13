@@ -5,7 +5,7 @@
 
 -- | Generalised repo scanner and analyser.
 
-module Crv.Scan
+module Xrefcheck.Scan
     ( Extension
     , ScanAction
     , FormatsSupport
@@ -21,10 +21,10 @@ import GHC.Err (errorWithoutStackTrace)
 import qualified System.Directory.Tree as Tree
 import System.FilePath.Posix (takeDirectory, takeExtension, (</>))
 
-import Crv.Config
-import Crv.Core
-import Crv.Progress
-import Crv.Util ()
+import Xrefcheck.Config
+import Xrefcheck.Core
+import Xrefcheck.Progress
+import Xrefcheck.Util ()
 
 -- | File extension, dot included.
 type Extension = String

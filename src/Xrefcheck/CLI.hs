@@ -5,7 +5,7 @@
 
 {-# LANGUAGE ApplicativeDo #-}
 
-module Crv.CLI
+module Xrefcheck.CLI
     ( VerifyMode (..)
     , shouldCheckLocal
     , shouldCheckExternal
@@ -21,7 +21,7 @@ import Options.Applicative (Parser, ReadM, command, eitherReader, execParser, fu
                             short, strOption, switch, value)
 import Paths_xrefcheck (version)
 
-import Crv.Core
+import Xrefcheck.Core
 
 modeReadM :: ReadM VerifyMode
 modeReadM = eitherReader $ \s ->
@@ -109,7 +109,7 @@ totalParser = asum
   ]
 
 versionOption :: Parser (a -> a)
-versionOption = infoOption ("xrefcheck-" <> (showVersion version)) $
+versionOption = infoOption ("xrefcheck-" <> showVersion version) $
     long "version" <>
     help "Show version."
 

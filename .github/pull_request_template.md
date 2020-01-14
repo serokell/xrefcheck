@@ -38,6 +38,8 @@ checkmark indicating that you are sure it is dealt with (be that by irrelevance)
 - Public contracts
   - [ ] Any modifications of public contracts comply with the [Evolution
   of Public Contracts](https://www.notion.so/serokell/Evolution-of-Public-Contracts-2a3bf7971abe4806a24f63c84e7076c5) policy.
+  - [ ] I added an entry to the [changelog](/CHANGES.md) if my changes are visible to the users
+        and
   - [ ] provided a migration guide for breaking changes if possible
 
 #### Stylistic guide (mandatory)

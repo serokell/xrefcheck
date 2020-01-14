@@ -13,6 +13,7 @@ copyright:           2018-2019 Serokell <https://serokell.io>
 
 extra-source-files:
 - README.md
+- CHANGES.md
 - src-files/*
 
 description:         Please see the README on GitHub at <https://github.com/serokell/xrefcheck#readme>

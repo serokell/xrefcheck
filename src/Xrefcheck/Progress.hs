@@ -4,7 +4,7 @@
  -}
 
 -- | Printing progress bars.
-module Crv.Progress
+module Xrefcheck.Progress
     ( -- * Progress
       Progress (..)
     , initProgress
@@ -30,9 +30,9 @@ import Time (ms, threadDelay)
 data Progress a = Progress
     { pCurrent :: a
       -- ^ How much has been completed.
-    , pTotal :: a
+    , pTotal   :: a
       -- ^ Overall amount of work.
-    , pErrors :: !a
+    , pErrors  :: !a
       -- ^ How many of the completed work finished with an error.
     } deriving (Show)
 

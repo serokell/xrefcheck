@@ -3,12 +3,12 @@
  - SPDX-License-Identifier: MPL-2.0
  -}
 
-module Test.Crv.ConfigSpec where
+module Test.Xrefcheck.ConfigSpec where
 
 import Test.Hspec (Spec, it)
 import Test.QuickCheck (ioProperty, once)
 
-import Crv.Config
+import Xrefcheck.Config
 
 spec :: Spec
 spec =

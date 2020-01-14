@@ -3,7 +3,7 @@
  - SPDX-License-Identifier: MPL-2.0
  -}
 
-module Crv.System
+module Xrefcheck.System
     ( readingSystem
     , CanonicalizedGlobPattern (..)
     ) where

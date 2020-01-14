@@ -5,7 +5,7 @@
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Crv.Config where
+module Xrefcheck.Config where
 
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveFromJSON)
@@ -16,7 +16,7 @@ import System.FilePath.Posix ((</>))
 import TH.RelativePaths (qReadFileBS)
 import Time (KnownRatName, Second, Time, unitsP)
 
-import Crv.System (CanonicalizedGlobPattern)
+import Xrefcheck.System (CanonicalizedGlobPattern)
 
 -- | Overall config.
 data Config = Config

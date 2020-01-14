@@ -7,7 +7,7 @@
 {-# LANGUAGE PartialTypeSignatures #-}
 {-# OPTIONS_GHC -Wno-partial-type-signatures #-}
 
-module Crv.Verify
+module Xrefcheck.Verify
     ( -- * General verification
       VerifyResult (..)
     , verifyOk
@@ -17,7 +17,7 @@ module Crv.Verify
     , WithReferenceLoc (..)
 
       -- * Cross-references validation
-    , CrvVerifyError (..)
+    , VerifyError (..)
     , verifyRepo
     , checkExternalResource
     ) where
@@ -39,10 +39,10 @@ import qualified System.FilePath.Glob as Glob
 import System.FilePath.Posix (takeDirectory, (</>))
 import Time (RatioNat, Second, Time (..), ms, threadDelay, timeout)
 
-import Crv.Config
-import Crv.Core
-import Crv.Progress
-import Crv.System
+import Xrefcheck.Config
+import Xrefcheck.Core
+import Xrefcheck.Progress
+import Xrefcheck.System
 
 {-# ANN module ("HLint: ignore Use uncurry" :: Text) #-}
 {-# ANN module ("HLint: ignore Use 'runExceptT' from Universum" :: Text) #-}
@@ -89,7 +89,7 @@ instance Buildable a => Buildable (WithReferenceLoc a) where
         "In file " +| style Faint (style Bold wrlFile) |+ "\nbad " +| wrlReference |+ "\n"
         +| wrlItem |+ "\n\n"
 
-data CrvVerifyError
+data VerifyError
     = FileDoesNotExist FilePath
     | AnchorDoesNotExist Text [Anchor]
     | AmbiguousAnchorRef FilePath Text (NonEmpty Anchor)
@@ -98,7 +98,7 @@ data CrvVerifyError
     | ExternalResourceSomeError Text
     deriving (Show)
 
-instance Buildable CrvVerifyError where
+instance Buildable VerifyError where
     build = \case
         FileDoesNotExist file ->
             "⛀  File does not exist:\n   " +| file |+ "\n"
@@ -131,7 +131,7 @@ verifyRepo
     -> VerifyMode
     -> FilePath
     -> RepoInfo
-    -> IO (VerifyResult $ WithReferenceLoc CrvVerifyError)
+    -> IO (VerifyResult $ WithReferenceLoc VerifyError)
 verifyRepo rw config@VerifyConfig{..} mode root repoInfo'@(RepoInfo repoInfo) = do
     let toScan = do
           (file, fileInfo) <- M.toList repoInfo
@@ -163,7 +163,7 @@ verifyReference
     -> FilePath
     -> FilePath
     -> Reference
-    -> IO (VerifyResult $ WithReferenceLoc CrvVerifyError)
+    -> IO (VerifyResult $ WithReferenceLoc VerifyError)
 verifyReference config@VerifyConfig{..} mode progressRef (RepoInfo repoInfo)
                 root fileWithReference ref@Reference{..} = do
 
@@ -244,7 +244,7 @@ verifyReference config@VerifyConfig{..} mode progressRef (RepoInfo repoInfo)
 
 checkExternalResource :: VerifyConfig
                       -> Text
-                      -> IO (VerifyResult CrvVerifyError)
+                      -> IO (VerifyResult VerifyError)
 checkExternalResource VerifyConfig{..} link
     | doesReferLocalhost = return mempty
     | otherwise = fmap toVerifyRes $ do
@@ -254,7 +254,7 @@ checkExternalResource VerifyConfig{..} link
   where
     doesReferLocalhost = any (`T.isInfixOf` link) ["://localhost", "://127.0.0.1"]
 
-    makeRequest :: _ => method -> RatioNat -> IO (Either CrvVerifyError ())
+    makeRequest :: _ => method -> RatioNat -> IO (Either VerifyError ())
     makeRequest method timeoutFrac = runExceptT $ do
         parsedUrl <- parseUrl (encodeUtf8 link)
                    & maybe (throwError ExternalResourceInvalidUri) pure

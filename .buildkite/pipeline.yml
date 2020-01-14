@@ -3,14 +3,14 @@
 # SPDX-License-Identifier: MPL-2.0
 
 steps:
-  - command: nix-build crossref-verifier.nix
+  - command: nix-build xrefcheck.nix
     label: Library and tests
   - command: nix-build
     label: Executable
     artifact_paths:
-      - "result/bin/crossref-verify"
-  - command: nix run -f. -c crossref-verify
-    label: Crossref-verify itself
+      - "result/bin/xrefcheck"
+  - command: nix run -f. -c xrefcheck
+    label: Xrefcheck itself
   - command: nix run -f $(nix eval -f nix/sources.nix --raw nixpkgs) reuse -c reuse lint
     label: REUSE lint
   - command:

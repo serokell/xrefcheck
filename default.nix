@@ -2,4 +2,4 @@
 #
 # SPDX-License-Identifier: MPL-2.0
 
-(import ./crossref-verifier.nix {}).components.exes.crossref-verify
+(import ./xrefcheck.nix {}).components.exes.xrefcheck

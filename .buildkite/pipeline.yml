@@ -14,6 +14,6 @@ steps:
   - command: nix run -f $(nix eval -f nix/sources.nix --raw nixpkgs) reuse -c reuse lint
     label: REUSE lint
   - command:
-      - GITHUB_TOKEN=$(cat ~/niv-bot-token) NIX_PATH=nixpkgs=$(nix eval --raw '(import ./nix/sources.nix).nixpkgs') nix-shell -p curl git gitAndTools.hub --run "curl https://raw.githubusercontent.com/serokell/scratch/release-binary/scripts/release-binary.sh | bash"
+      - NIX_PATH=nixpkgs=$(nix eval --raw '(import ./nix/sources.nix).nixpkgs') nix-shell -p curl git gitAndTools.hub --run "curl https://raw.githubusercontent.com/serokell/scratch/release-binary/scripts/release-binary.sh | bash"
     label: Create a pre-release
     branches: master

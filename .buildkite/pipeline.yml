@@ -11,7 +11,7 @@ steps:
       - "result/bin/xrefcheck"
   - command: nix run -f. -c xrefcheck
     label: Xrefcheck itself
-  - command: nix run -f $(nix eval -f nix/sources.nix --raw nixpkgs) reuse -c reuse lint
+  - command: nix run -f $(nix eval --raw '((import ./nix/sources.nix).nixpkgs)') reuse -c reuse lint
     label: REUSE lint
   - command:
       - NIX_PATH=nixpkgs=$(nix eval --raw '(import ./nix/sources.nix).nixpkgs') nix-shell -p curl git gitAndTools.hub --run "curl https://raw.githubusercontent.com/serokell/scratch/release-binary/scripts/release-binary.sh | bash"

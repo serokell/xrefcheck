@@ -12,13 +12,14 @@ let
     nixpkgs.haskell-nix;
   project = hn.stackProject {
     src = hn.haskellLib.cleanGit { src = ./.; };
-    modules = [{
+    modules = [
+      {
       packages.xrefcheck = {
         # More failures during CI == Less failures in runtime!
         postHaddock = ''
           [[ -z "$(ls -A dist/doc/html)" ]] && exit 1 || echo "haddock successfully generated documentation"'';
         package.ghcOptions = "-Werror";
-        components.exes.xrefcheck.configureFlags =
+        configureFlags =
           with nixpkgs.pkgsStatic;
           lib.optionals static [
             "--disable-executable-dynamic"
@@ -34,12 +35,6 @@ let
             "--ghc-option=-optl=-L${libffi}/lib"
           ];
       };
-    }];
-    cache = with sources; [{
-      name = "loot-prelude";
-      inherit (lootbox) sha256 rev;
-      url = "https://github.com/${lootbox.owner}/${lootbox.repo}.git";
-      subdir = "code/prelude";
     }];
   };
 in project.xrefcheck

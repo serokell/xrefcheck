@@ -11,18 +11,6 @@
         "url": "https://github.com/input-output-hk/haskell.nix/archive/64a27464a7a59901f011971df5716c05aab9bd58.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
-    "lootbox": {
-        "branch": "master",
-        "description": "Toolbox for your cool project",
-        "homepage": "",
-        "owner": "serokell",
-        "repo": "lootbox",
-        "rev": "18ced0d493348b4d6bae8517dff7ee6de6e0c9d9",
-        "sha256": "0y8gfdivjxx0jj8g651k5nzzwjg8mj9qw2s3v75vbpr8p008ymnr",
-        "type": "tarball",
-        "url": "https://github.com/serokell/lootbox/archive/18ced0d493348b4d6bae8517dff7ee6de6e0c9d9.tar.gz",
-        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
-    },
     "nixpkgs": {
         "branch": "nixos-19.09",
         "description": "A read-only mirror of NixOS/nixpkgs tracking the released channels. Send issues and PRs to",

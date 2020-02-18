@@ -60,19 +60,6 @@ Our CI uses `nix-build xrefcheck.nix` to build the whole project, including test
 It is based on the [`haskell.nix`](https://input-output-hk.github.io/haskell.nix/) project.
 You can do that too if you wish.
 
-<details>
-  <summary>Details</summary>
-
-There is a [bug](https://github.com/input-output-hk/haskell.nix/issues/335) which causes us to put some redundancy into Nix files:
-1. [`nix/sources.json`](nix/sources.json) lists all such dependencies that we obtain using `git`.
-It specifies concrete git revisions and SHA256 checksums.
-2. [`xrefcheck.nix`](xrefcheck.nix) lists all such dependencies as well, but without revisions.
-
-As a consequence, you may have to update these files when you update [`stack.yaml`](stack.yaml).
-You can use [`niv update`](https://github.com/nmattia/niv#update) to update [`nix/sources.json`](nix/sources.json).
-
-</details>
-
 ## Usage [↑](#xrefcheck)
 
 To find all broken links in a repository, run from within its folder:

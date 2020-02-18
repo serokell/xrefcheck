@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: MPL-2.0
 
-{ static ? true }:
+{ static ? false }:
 let
   sources = import ./nix/sources.nix;
   nixpkgs = import sources.nixpkgs (import sources."haskell.nix");
@@ -15,9 +15,6 @@ let
     modules = [
       {
       packages.xrefcheck = {
-        # More failures during CI == Less failures in runtime!
-        postHaddock = ''
-          [[ -z "$(ls -A dist/doc/html)" ]] && exit 1 || echo "haddock successfully generated documentation"'';
         package.ghcOptions = "-Werror";
         configureFlags =
           with nixpkgs.pkgsStatic;

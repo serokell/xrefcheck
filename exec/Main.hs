@@ -39,8 +39,9 @@ defaultAction Options{..} = do
       Just configPath -> do
         readConfig configPath
 
-    repoInfo <- allowRewrite oShowProgressBar $ \rw ->
-        gatherRepoInfo rw formats (cTraversal config) root
+    repoInfo <- allowRewrite oShowProgressBar $ \rw -> do
+        let fullConfig = addTraversalOptions (cTraversal config) oTraversalOptions
+        gatherRepoInfo rw formats fullConfig root
 
     when oVerbose $
         fmtLn $ "Repository data:\n\n" <> indentF 2 (build repoInfo)

@@ -23,7 +23,7 @@ verification:
   # declaring "Response timeout".
   externalRefCheckTimeout: 10s
 
-  # File prefixes, references in which should not be analyzed.
+  # Prefixes of files, references in which should not be analyzed.
   notScanned:
     # GitHub-specific files
     - .github/pull_request_template.md

@@ -37,7 +37,7 @@ data VerifyConfig = VerifyConfig
     , vcVirtualFiles              :: [CanonicalizedGlobPattern]
       -- ^ Files which we pretend do exist.
     , vcNotScanned                :: [FilePath]
-      -- ^ Folders, references in files of which we should not analyze.
+      -- ^ Prefixes of files, references in which we should not analyze.
     }
 
 -----------------------------------------------------------

@@ -44,7 +44,7 @@ defaultAction Options{..} = do
         gatherRepoInfo rw formats fullConfig root
 
     when oVerbose $
-        fmtLn $ "Repository data:\n\n" <> indentF 2 (build repoInfo)
+        fmtLn $ "=== Repository data ===\n\n" <> indentF 2 (build repoInfo)
 
     verifyRes <- allowRewrite oShowProgressBar $ \rw ->
         verifyRepo rw (cVerification config) oMode root repoInfo
@@ -52,7 +52,7 @@ defaultAction Options{..} = do
         Nothing ->
             fmtLn "All repository links are valid."
         Just (toList -> errs) -> do
-            fmt $ "Invalid references found:\n\n" <>
+            fmt $ "=== Invalid references found ===\n\n" <>
                   indentF 2 (blockListF' "➥ " build errs)
             fmtLn $ "Invalid references dumped, " <> build (length errs) <> " in total."
             exitFailure

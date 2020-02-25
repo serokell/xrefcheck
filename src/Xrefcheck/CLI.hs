@@ -110,7 +110,7 @@ traversalOptionsParser = do
     toIgnored <- many . strOption $
         long "ignored" <>
         metavar "FILEPATH" <>
-        help "Files of files which we pretend do not exist."
+        help "Files and folders which we pretend do not exist."
     return TraversalOptions{..}
 
 dumpConfigOptions :: Parser FilePath

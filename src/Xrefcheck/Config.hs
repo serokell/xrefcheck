@@ -27,7 +27,7 @@ data Config = Config
 -- | Config of repositry traversal.
 data TraversalConfig = TraversalConfig
     { tcIgnored   :: [FilePath]
-      -- ^ Folders, files in which we completely ignore.
+      -- ^ Files and folders, files in which we completely ignore.
     }
 
 -- | Config of verification.

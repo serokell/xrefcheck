@@ -66,7 +66,7 @@ gatherRepoInfo rw formatsSupport config root = do
     dropSndMaybes l = [(a, b) | (a, Just b) <- l]
 
     ignored = map (root </>) (tcIgnored config)
-    isIgnored path = any (`isPrefixOf` path) ignored
+    isIgnored path = path `elem` ignored
     filterExcludedDirs cur = \case
         Tree.Dir name subfiles ->
             let subfiles' =

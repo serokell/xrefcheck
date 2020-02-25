@@ -16,7 +16,7 @@ import System.FilePath.Posix ((</>))
 import TH.RelativePaths (qReadFileBS)
 import Time (KnownRatName, Second, Time, unitsP)
 
-import Xrefcheck.System (CanonicalizedGlobPattern)
+import Xrefcheck.System (RelGlobPattern)
 
 -- | Overall config.
 data Config = Config
@@ -34,7 +34,7 @@ data TraversalConfig = TraversalConfig
 data VerifyConfig = VerifyConfig
     { vcAnchorSimilarityThreshold :: Double
     , vcExternalRefCheckTimeout   :: Time Second
-    , vcVirtualFiles              :: [CanonicalizedGlobPattern]
+    , vcVirtualFiles              :: [RelGlobPattern]
       -- ^ Files which we pretend do exist.
     , vcNotScanned                :: [FilePath]
       -- ^ Prefixes of files, references in which we should not analyze.

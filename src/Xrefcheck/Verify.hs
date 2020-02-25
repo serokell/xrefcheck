@@ -207,7 +207,8 @@ verifyReference config@VerifyConfig{..} mode progressRef (RepoInfo repoInfo)
         let cfile = readingSystem $ canonicalizePath file
         let isVirtual = or
                 [ Glob.match pat cfile
-                | CanonicalizedGlobPattern pat <- vcVirtualFiles ]
+                | virtualFile <- vcVirtualFiles
+                , let pat = bindGlobPattern root virtualFile ]
 
         unless (fileExists || dirExists || isVirtual) $
             throwError (FileDoesNotExist file)

@@ -8,6 +8,7 @@ module Main where
 import qualified Data.ByteString as BS
 import Data.Yaml (decodeFileEither, prettyPrintParseException)
 import Fmt (blockListF', build, fmt, fmtLn, indentF)
+import Main.Utf8 (withUtf8)
 import System.Directory (doesFileExist)
 
 import Xrefcheck.CLI
@@ -68,7 +69,7 @@ defaultAction Options{..} = do
       >>= either (error . toText . prettyPrintParseException) pure
 
 main :: IO ()
-main = do
+main = withUtf8 $ do
     command <- getCommand
     case command of
       DefaultCommand options ->

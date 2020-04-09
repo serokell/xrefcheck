@@ -86,6 +86,7 @@ dependencies:
   - th-lift-instances
   - th-utilities
   - yaml
+  - with-utf8
 
 library:
   source-dirs: src

@@ -2,4 +2,6 @@
 #
 # SPDX-License-Identifier: MPL-2.0
 
-(import ./xrefcheck.nix { static = true; }).components.exes.xrefcheck
+{ platform ? "linux-static" }:
+
+(import ./xrefcheck.nix { ${platform} = true; }).components.exes.xrefcheck

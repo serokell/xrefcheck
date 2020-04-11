@@ -11,9 +11,11 @@ import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveFromJSON)
 import Data.Yaml (FromJSON (..), decodeEither', prettyPrintParseException, withText)
 import Instances.TH.Lift ()
-import qualified Language.Haskell.TH.Syntax as TH
-import System.FilePath ((</>))
-import TH.RelativePaths (qReadFileBS)
+
+-- FIXME: Use </> from System.FilePath
+-- </> from Posix is used only because we cross-compile to Windows and \ doesn't work on Linux
+import System.FilePath.Posix ((</>))
+import Data.FileEmbed (embedFile)
 import Time (KnownRatName, Second, Time, unitsP)
 
 import Xrefcheck.System (RelGlobPattern)
@@ -50,7 +52,7 @@ data VerifyConfig = VerifyConfig
 -- would be lost.
 defConfigText :: ByteString
 defConfigText =
-  $(TH.lift =<< qReadFileBS ("src-files" </> "def-config.yaml"))
+  $(embedFile ("src-files" </> "def-config.yaml"))
 
 defConfig :: HasCallStack => Config
 defConfig =

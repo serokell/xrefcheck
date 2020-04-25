@@ -7,6 +7,9 @@
 Unreleased
 ==========
 
+0.1.1
+=======
+
 * [#19](https://github.com/serokell/xrefcheck/pull/24)
   + Make `ignored` in config consider only exact matches.
   + Improve virtual files consideration.

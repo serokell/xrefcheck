@@ -35,8 +35,8 @@ import Network.HTTP.Req (GET (..), HEAD (..), HttpException (..), NoReqBody (..)
 import Network.HTTP.Types.Status (Status, statusCode, statusMessage)
 import System.Console.Pretty (Style (..), style)
 import System.Directory (canonicalizePath, doesDirectoryExist, doesFileExist)
+import System.FilePath (takeDirectory, (</>))
 import qualified System.FilePath.Glob as Glob
-import System.FilePath.Posix (takeDirectory, (</>))
 import Time (RatioNat, Second, Time (..), ms, threadDelay, timeout)
 
 import Xrefcheck.Config
@@ -207,7 +207,8 @@ verifyReference config@VerifyConfig{..} mode progressRef (RepoInfo repoInfo)
         let cfile = readingSystem $ canonicalizePath file
         let isVirtual = or
                 [ Glob.match pat cfile
-                | CanonicalizedGlobPattern pat <- vcVirtualFiles ]
+                | virtualFile <- vcVirtualFiles
+                , let pat = bindGlobPattern root virtualFile ]
 
         unless (fileExists || dirExists || isVirtual) $
             throwError (FileDoesNotExist file)

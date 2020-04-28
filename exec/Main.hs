@@ -39,11 +39,12 @@ defaultAction Options{..} = do
       Just configPath -> do
         readConfig configPath
 
-    repoInfo <- allowRewrite oShowProgressBar $ \rw ->
-        gatherRepoInfo rw formats (cTraversal config) root
+    repoInfo <- allowRewrite oShowProgressBar $ \rw -> do
+        let fullConfig = addTraversalOptions (cTraversal config) oTraversalOptions
+        gatherRepoInfo rw formats fullConfig root
 
     when oVerbose $
-        fmtLn $ "Repository data:\n\n" <> indentF 2 (build repoInfo)
+        fmtLn $ "=== Repository data ===\n\n" <> indentF 2 (build repoInfo)
 
     verifyRes <- allowRewrite oShowProgressBar $ \rw ->
         verifyRepo rw (cVerification config) oMode root repoInfo
@@ -51,7 +52,7 @@ defaultAction Options{..} = do
         Nothing ->
             fmtLn "All repository links are valid."
         Just (toList -> errs) -> do
-            fmt $ "Invalid references found:\n\n" <>
+            fmt $ "=== Invalid references found ===\n\n" <>
                   indentF 2 (blockListF' "➥ " build errs)
             fmtLn $ "Invalid references dumped, " <> build (length errs) <> " in total."
             exitFailure

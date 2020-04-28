@@ -4,7 +4,7 @@
 
 # Parameters of repository traversal.
 traversal:
-  # Folders which we pretend do not exist
+  # Files and folders which we pretend do not exist
   # (so they are neither analyzed nor can be referenced).
   ignored:
     # Git files
@@ -23,7 +23,7 @@ verification:
   # declaring "Response timeout".
   externalRefCheckTimeout: 10s
 
-  # File prefixes, references in which should not be analyzed.
+  # Prefixes of files, references in which should not be analyzed.
   notScanned:
     # GitHub-specific files
     - .github/pull_request_template.md

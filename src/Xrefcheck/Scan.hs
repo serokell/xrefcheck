@@ -19,7 +19,7 @@ import qualified Data.Foldable as F
 import qualified Data.Map as M
 import GHC.Err (errorWithoutStackTrace)
 import qualified System.Directory.Tree as Tree
-import System.FilePath.Posix (takeDirectory, takeExtension, (</>))
+import System.FilePath (takeDirectory, takeExtension, (</>))
 
 import Xrefcheck.Config
 import Xrefcheck.Core
@@ -66,7 +66,7 @@ gatherRepoInfo rw formatsSupport config root = do
     dropSndMaybes l = [(a, b) | (a, Just b) <- l]
 
     ignored = map (root </>) (tcIgnored config)
-    isIgnored path = any (`isPrefixOf` path) ignored
+    isIgnored path = path `elem` ignored
     filterExcludedDirs cur = \case
         Tree.Dir name subfiles ->
             let subfiles' =

@@ -11,6 +11,8 @@ module Xrefcheck.CLI
     , shouldCheckExternal
     , Command (..)
     , Options (..)
+    , TraversalOptions (..)
+    , addTraversalOptions
     , defaultConfigPaths
     , getCommand
     ) where
@@ -21,6 +23,7 @@ import Options.Applicative (Parser, ReadM, command, eitherReader, execParser, fu
                             short, strOption, switch, value)
 import Paths_xrefcheck (version)
 
+import Xrefcheck.Config
 import Xrefcheck.Core
 
 modeReadM :: ReadM VerifyMode
@@ -43,12 +46,24 @@ data Command
   | DumpConfig FilePath
 
 data Options = Options
-    { oConfigPath      :: Maybe FilePath
-    , oRoot            :: FilePath
-    , oMode            :: VerifyMode
-    , oVerbose         :: Bool
-    , oShowProgressBar :: Bool
+    { oConfigPath       :: Maybe FilePath
+    , oRoot             :: FilePath
+    , oMode             :: VerifyMode
+    , oVerbose          :: Bool
+    , oShowProgressBar  :: Bool
+    , oTraversalOptions :: TraversalOptions
     }
+
+data TraversalOptions = TraversalOptions
+    { toIgnored :: [FilePath]
+    }
+
+addTraversalOptions :: TraversalConfig -> TraversalOptions -> TraversalConfig
+addTraversalOptions TraversalConfig{..} (TraversalOptions ignored) =
+  TraversalConfig
+  { tcIgnored = tcIgnored ++ ignored
+  , ..
+  }
 
 -- | Where to try to seek configuration if specific path is not set.
 defaultConfigPaths :: [FilePath]
@@ -87,7 +102,16 @@ optionsParser = do
     oShowProgressBar <- fmap not . switch $
         long "no-progress" <>
         help "Do not display progress bar during verification."
+    oTraversalOptions <- traversalOptionsParser
     return Options{..}
+
+traversalOptionsParser :: Parser TraversalOptions
+traversalOptionsParser = do
+    toIgnored <- many . strOption $
+        long "ignored" <>
+        metavar "FILEPATH" <>
+        help "Files and folders which we pretend do not exist."
+    return TraversalOptions{..}
 
 dumpConfigOptions :: Parser FilePath
 dumpConfigOptions = hsubparser $

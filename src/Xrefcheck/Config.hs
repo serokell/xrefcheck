@@ -12,11 +12,11 @@ import Data.Aeson.TH (deriveFromJSON)
 import Data.Yaml (FromJSON (..), decodeEither', prettyPrintParseException, withText)
 import Instances.TH.Lift ()
 import qualified Language.Haskell.TH.Syntax as TH
-import System.FilePath.Posix ((</>))
+import System.FilePath ((</>))
 import TH.RelativePaths (qReadFileBS)
 import Time (KnownRatName, Second, Time, unitsP)
 
-import Xrefcheck.System (CanonicalizedGlobPattern)
+import Xrefcheck.System (RelGlobPattern)
 
 -- | Overall config.
 data Config = Config
@@ -27,17 +27,17 @@ data Config = Config
 -- | Config of repositry traversal.
 data TraversalConfig = TraversalConfig
     { tcIgnored   :: [FilePath]
-      -- ^ Folders, files in which we completely ignore.
+      -- ^ Files and folders, files in which we completely ignore.
     }
 
 -- | Config of verification.
 data VerifyConfig = VerifyConfig
     { vcAnchorSimilarityThreshold :: Double
     , vcExternalRefCheckTimeout   :: Time Second
-    , vcVirtualFiles              :: [CanonicalizedGlobPattern]
+    , vcVirtualFiles              :: [RelGlobPattern]
       -- ^ Files which we pretend do exist.
     , vcNotScanned                :: [FilePath]
-      -- ^ Folders, references in files of which we should not analyze.
+      -- ^ Prefixes of files, references in which we should not analyze.
     }
 
 -----------------------------------------------------------

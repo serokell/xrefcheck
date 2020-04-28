@@ -19,7 +19,7 @@ import qualified Data.Map as M
 import qualified Data.Text as T
 import Fmt (Buildable (..), blockListF, blockListF', nameF, (+|), (|+))
 import System.Console.Pretty (Color (..), Style (..), color, style)
-import System.FilePath.Posix (isPathSeparator, pathSeparator)
+import System.FilePath (isPathSeparator, pathSeparator)
 import Text.Numeral.Roman (toRoman)
 
 import Xrefcheck.Progress

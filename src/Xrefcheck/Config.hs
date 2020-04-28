@@ -12,7 +12,7 @@ import Data.Aeson.TH (deriveFromJSON)
 import Data.Yaml (FromJSON (..), decodeEither', prettyPrintParseException, withText)
 import Instances.TH.Lift ()
 import qualified Language.Haskell.TH.Syntax as TH
-import System.FilePath.Posix ((</>))
+import System.FilePath ((</>))
 import TH.RelativePaths (qReadFileBS)
 import Time (KnownRatName, Second, Time, unitsP)
 

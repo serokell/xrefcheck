@@ -12,8 +12,8 @@ module Xrefcheck.System
 import Data.Aeson (FromJSON (..), withText)
 import GHC.IO.Unsafe (unsafePerformIO)
 import System.Directory (canonicalizePath)
+import System.FilePath ((</>))
 import qualified System.FilePath.Glob as Glob
-import System.FilePath.Posix ((</>))
 
 -- | We can quite safely treat surrounding filesystem as frozen,
 -- so IO reading operations can be turned into pure values.

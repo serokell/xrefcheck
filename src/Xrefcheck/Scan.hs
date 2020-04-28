@@ -19,7 +19,7 @@ import qualified Data.Foldable as F
 import qualified Data.Map as M
 import GHC.Err (errorWithoutStackTrace)
 import qualified System.Directory.Tree as Tree
-import System.FilePath.Posix (takeDirectory, takeExtension, (</>))
+import System.FilePath (takeDirectory, takeExtension, (</>))
 
 import Xrefcheck.Config
 import Xrefcheck.Core

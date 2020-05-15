@@ -33,21 +33,12 @@ packages:
   original:
     hackage: o-clock-1.1.0
 - completed:
-    subdir: code/prelude
-    cabal-file:
-      size: 898
-      sha256: 57621e886108b62e43236c4a9d562a0330a714188193a9cc50ced8024bd138eb
-    name: loot-prelude
-    version: 0.0.0.0
-    git: https://github.com/serokell/lootbox.git
+    hackage: with-utf8-1.0.0.0@sha256:686e47588986d8080451b4e617118b579487dd4e085bba7bb36fac4198c90ae6,2480
     pantry-tree:
-      size: 264
-      sha256: 47da19ed2f317b2f7c6f70a8517c275e7bd8bf25bd628cf271d08d6b5bc5b8ec
-    commit: 18ced0d493348b4d6bae8517dff7ee6de6e0c9d9
+      size: 905
+      sha256: 39176872f0dde9f9e09c9cb9496e2b7b10fa17cb9a6eca8d40ca4b2dcaaacc11
   original:
-    subdir: code/prelude
-    git: https://github.com/serokell/lootbox.git
-    commit: 18ced0d493348b4d6bae8517dff7ee6de6e0c9d9
+    hackage: with-utf8-1.0.0.0
 snapshots:
 - completed:
     size: 524804

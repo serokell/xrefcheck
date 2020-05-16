@@ -13,8 +13,3 @@ extra-deps:
 - aeson-options-0.1.0
 - o-clock-1.1.0
 - with-utf8-1.0.0.0
-
-- git: https://github.com/serokell/lootbox.git
-  commit: 18ced0d493348b4d6bae8517dff7ee6de6e0c9d9 # master
-  subdirs:
-    - code/prelude

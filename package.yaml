@@ -2,8 +2,10 @@
 #
 # SPDX-License-Identifier: MPL-2.0
 
+spec-version: 0.31.0
+
 name:                xrefcheck
-version:             0.1.1
+version:             0.1.1.1
 github:              serokell/xrefcheck
 license:             MPL-2.0
 license-file:        LICENSE
@@ -73,7 +75,6 @@ dependencies:
   - http-client
   - http-types
   - lens
-  - loot-prelude
   - pretty-terminal
   - mtl
   - o-clock
@@ -85,6 +86,8 @@ dependencies:
   - text-metrics
   - th-lift-instances
   - th-utilities
+  - name: universum
+    mixin: [(Universum as Prelude), (Universum.Unsafe as Unsafe)]
   - yaml
   - with-utf8
 

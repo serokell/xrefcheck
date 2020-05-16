@@ -7,6 +7,13 @@
 Unreleased
 ==========
 
+
+0.1.1.1
+=======
+
+* [#30](https://github.com/serokell/xrefcheck/pull/32)
+  + Do not depend on `loot-prelude` package.
+
 0.1.1
 =======
 

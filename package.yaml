@@ -94,10 +94,15 @@ dependencies:
 library:
   source-dirs: src
 
+  generated-other-modules:
+  - Paths_xrefcheck
+
 executables:
   xrefcheck:
     main:                Main.hs
     source-dirs:         exec
+    generated-other-modules:
+    - Paths_xrefcheck
     ghc-options:
     - -threaded
     - -rtsopts
@@ -110,6 +115,8 @@ tests:
   xrefcheck-tests:
     main:                Main.hs
     source-dirs:         tests
+    generated-other-modules:
+    - Paths_xrefcheck
     dependencies:
     - xrefcheck
     - hspec

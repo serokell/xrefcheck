@@ -7,6 +7,11 @@
 Unreleased
 ==========
 
+0.1.1.2
+=======
+
+* [#34](https://github.com/serokell/xrefcheck/pull/34)
+  + Do not depend on `autoexporter` and `base-noprelude`.
 
 0.1.1.1
 =======

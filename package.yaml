@@ -1,11 +1,11 @@
-# SPDX-FileCopyrightText: 2018-2019 Serokell <https://serokell.io>
+# SPDX-FileCopyrightText: 2018-2020 Serokell <https://serokell.io>
 #
 # SPDX-License-Identifier: MPL-2.0
 
 spec-version: 0.31.0
 
 name:                xrefcheck
-version:             0.1.1.1
+version:             0.1.1.2
 github:              serokell/xrefcheck
 license:             MPL-2.0
 license-file:        LICENSE
@@ -50,9 +50,6 @@ default-extensions:
   - TypeApplications
   - TypeOperators
 
-build-tools:
-  - autoexporter
-
 ghc-options:
   - -Wall
   - -Wincomplete-record-updates
@@ -61,7 +58,8 @@ dependencies:
   - aeson
   - aeson-options
   - async
-  - base-noprelude
+  - name: base
+    mixin: [hiding (Prelude)]
   - bytestring
   - containers
   - cmark-gfm

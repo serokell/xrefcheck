@@ -50,9 +50,6 @@ default-extensions:
   - TypeApplications
   - TypeOperators
 
-build-tools:
-  - autoexporter
-
 ghc-options:
   - -Wall
   - -Wincomplete-record-updates

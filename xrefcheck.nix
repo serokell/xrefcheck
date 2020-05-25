@@ -5,7 +5,7 @@
 { static ? false }:
 let
   sources = import ./nix/sources.nix;
-  nixpkgs = import sources.nixpkgs (import sources."haskell.nix");
+  nixpkgs = import sources.nixpkgs (import sources."haskell.nix" {}).nixpkgsArgs;
   pkgs = if static then nixpkgs.pkgsCross.musl64 else nixpkgs;
   project = pkgs.haskell-nix.stackProject {
     src = pkgs.haskell-nix.haskellLib.cleanGit { src = ./.; };

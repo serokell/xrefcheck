@@ -15,6 +15,7 @@ let
         configureFlags = with pkgs;
           lib.optionals static [
             "--ghc-option=-optl=-L${zlib.static}/lib"
+            "--ghc-option=-optl=-L${nixpkgs.pkgsStatic.numactl}/lib"
           ];
       };
     }];

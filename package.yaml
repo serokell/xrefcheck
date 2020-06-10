@@ -33,7 +33,6 @@ default-extensions:
   - FunctionalDependencies
   - GeneralizedNewtypeDeriving
   - LambdaCase
-  - MonadFailDesugaring
   - MultiParamTypeClasses
   - MultiWayIf
   - NamedFieldPuns
@@ -74,6 +73,7 @@ dependencies:
   - http-types
   - lens
   - pretty-terminal
+  - modern-uri
   - mtl
   - o-clock
   - optparse-applicative

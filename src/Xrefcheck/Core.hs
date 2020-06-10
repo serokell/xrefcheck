@@ -1,4 +1,4 @@
-{- SPDX-FileCopyrightText: 2018-2019 Serokell <https://serokell.io>
+{- SPDX-FileCopyrightText: 2018-2020 Serokell <https://serokell.io>
  -
  - SPDX-License-Identifier: MPL-2.0
  -}
@@ -9,7 +9,6 @@
 
 module Xrefcheck.Core where
 
-import Control.DeepSeq (NFData)
 import Control.Lens (makeLenses, (%=))
 import Data.Char (isAlphaNum)
 import qualified Data.Char as C

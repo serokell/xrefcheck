@@ -26,22 +26,22 @@ packages:
   original:
     hackage: aeson-options-0.1.0
 - completed:
-    hackage: o-clock-1.1.0@sha256:941ac2bc1732e6622b165831c4badb1a8e846f451620bd028064339f5b284224,5043
-    pantry-tree:
-      size: 1043
-      sha256: 177f9923edf9494c6a1bb1c02bbf38e6bd3675e2245effaeaa9a7f76c893d7a6
-  original:
-    hackage: o-clock-1.1.0
-- completed:
     hackage: with-utf8-1.0.0.0@sha256:686e47588986d8080451b4e617118b579487dd4e085bba7bb36fac4198c90ae6,2480
     pantry-tree:
       size: 905
       sha256: 39176872f0dde9f9e09c9cb9496e2b7b10fa17cb9a6eca8d40ca4b2dcaaacc11
   original:
     hackage: with-utf8-1.0.0.0
+- completed:
+    hackage: th-utilities-0.2.4.0@sha256:ba19cd8441aa43dbaed40e9055bb5a7cbd7cf9e154f5253c6bf9293af8b1f96b,1869
+    pantry-tree:
+      size: 882
+      sha256: 8c577d112a8398a5542aa4205b2e8a470a66d57590e6606d752d71e75d7425ea
+  original:
+    hackage: th-utilities-0.2.4.0@sha256:ba19cd8441aa43dbaed40e9055bb5a7cbd7cf9e154f5253c6bf9293af8b1f96b,1869
 snapshots:
 - completed:
-    size: 524804
-    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/14/16.yaml
-    sha256: 4d1519a4372d051d47a5eae2241cf3fb54e113d7475f89707ddb6ec06add2888
-  original: lts-14.16
+    size: 496112
+    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/15/13.yaml
+    sha256: 75a1a0f870e1876898b117b0e443f911b3fa2985bfabb53158c81ab5765beda5
+  original: lts-15.13

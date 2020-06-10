@@ -23,7 +23,7 @@ module Xrefcheck.Verify
     ) where
 
 import Control.Concurrent.Async (forConcurrently, withAsync)
-import Control.Monad.Except (ExceptT, MonadError (..))
+import Control.Monad.Except (MonadError (..))
 import qualified Data.Map as M
 import qualified Data.Text as T
 import Data.Text.Metrics (damerauLevenshteinNorm)
@@ -31,12 +31,13 @@ import Fmt (Buildable (..), blockListF', listF, (+|), (|+))
 import qualified GHC.Exts as Exts
 import Network.HTTP.Client (HttpException (..), HttpExceptionContent (..), responseStatus)
 import Network.HTTP.Req (GET (..), HEAD (..), HttpException (..), NoReqBody (..), defaultHttpConfig,
-                         ignoreResponse, parseUrl, req, runReq)
+                         ignoreResponse, req, runReq, useURI)
 import Network.HTTP.Types.Status (Status, statusCode, statusMessage)
 import System.Console.Pretty (Style (..), style)
 import System.Directory (canonicalizePath, doesDirectoryExist, doesFileExist)
 import System.FilePath (takeDirectory, (</>))
 import qualified System.FilePath.Glob as Glob
+import Text.URI (mkURI)
 import Time (RatioNat, Second, Time (..), ms, threadDelay, timeout)
 
 import Xrefcheck.Config
@@ -94,6 +95,7 @@ data VerifyError
     | AnchorDoesNotExist Text [Anchor]
     | AmbiguousAnchorRef FilePath Text (NonEmpty Anchor)
     | ExternalResourceInvalidUri
+    | ExternalResourceUnknownProtocol
     | ExternalResourceUnavailable Status
     | ExternalResourceSomeError Text
     deriving (Show)
@@ -113,6 +115,8 @@ instance Buildable VerifyError where
             "   Use of such anchors is discouraged because referenced object\n\
             \   can change silently whereas the document containing it evolves.\n"
         ExternalResourceInvalidUri ->
+            "⛂  Invalid url\n"
+        ExternalResourceUnknownProtocol ->
             "⛂  Bad url (expected 'http' or 'https')\n"
         ExternalResourceUnavailable status ->
             "⛂  Resource unavailable (" +| statusCode status |+ " " +|
@@ -257,8 +261,10 @@ checkExternalResource VerifyConfig{..} link
 
     makeRequest :: _ => method -> RatioNat -> IO (Either VerifyError ())
     makeRequest method timeoutFrac = runExceptT $ do
-        parsedUrl <- parseUrl (encodeUtf8 link)
-                   & maybe (throwError ExternalResourceInvalidUri) pure
+        uri <- mkURI link
+             & maybe (throwError ExternalResourceInvalidUri) pure
+        parsedUrl <- useURI uri
+                   & maybe (throwError ExternalResourceUnknownProtocol) pure
         let reqLink = case parsedUrl of
                 Left (url, option) ->
                     runReq defaultHttpConfig $

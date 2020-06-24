@@ -3,6 +3,8 @@
 # SPDX-License-Identifier: MPL-2.0
 
 steps:
+  - command: env
+    label: See env
   - command: nix-build xrefcheck.nix
     label: Library and tests
   - command: nix-build

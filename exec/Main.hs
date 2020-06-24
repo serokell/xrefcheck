@@ -8,8 +8,10 @@ module Main where
 import qualified Data.ByteString as BS
 import Data.Yaml (decodeFileEither, prettyPrintParseException)
 import Fmt (blockListF', build, fmt, fmtLn, indentF)
+import GHC.IO.Handle (hIsTerminalDevice)
 import Main.Utf8 (withUtf8)
 import System.Directory (doesFileExist)
+import System.Environment (lookupEnv)
 
 import Xrefcheck.CLI
 import Xrefcheck.Config
@@ -39,14 +41,20 @@ defaultAction Options{..} = do
       Just configPath -> do
         readConfig configPath
 
-    repoInfo <- allowRewrite oShowProgressBar $ \rw -> do
+    isTerminal <- hIsTerminalDevice stderr
+    termVar <- lookupEnv "TERM"
+    putTextLn $ "Terminal: " <> show isTerminal
+    putTextLn $ "TERM var: " <> show termVar
+    let showProgressBar = oShowProgressBar && isTerminal
+
+    repoInfo <- allowRewrite showProgressBar $ \rw -> do
         let fullConfig = addTraversalOptions (cTraversal config) oTraversalOptions
         gatherRepoInfo rw formats fullConfig root
 
     when oVerbose $
         fmtLn $ "=== Repository data ===\n\n" <> indentF 2 (build repoInfo)
 
-    verifyRes <- allowRewrite oShowProgressBar $ \rw ->
+    verifyRes <- allowRewrite showProgressBar $ \rw ->
         verifyRepo rw (cVerification config) oMode root repoInfo
     case verifyErrors verifyRes of
         Nothing ->

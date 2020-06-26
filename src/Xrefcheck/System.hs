@@ -5,13 +5,16 @@
 
 module Xrefcheck.System
     ( readingSystem
+    , askWithinCI
     , RelGlobPattern (..)
     , bindGlobPattern
     ) where
 
 import Data.Aeson (FromJSON (..), withText)
+import qualified Data.Char as C
 import GHC.IO.Unsafe (unsafePerformIO)
 import System.Directory (canonicalizePath)
+import System.Environment (lookupEnv)
 import System.FilePath ((</>))
 import qualified System.FilePath.Glob as Glob
 
@@ -19,6 +22,14 @@ import qualified System.FilePath.Glob as Glob
 -- so IO reading operations can be turned into pure values.
 readingSystem :: IO a -> a
 readingSystem = unsafePerformIO
+
+-- | Heuristics to check whether we are running within CI.
+-- Check the respective env variable which is usually set in all CIs.
+askWithinCI :: IO Bool
+askWithinCI = lookupEnv "CI" <&> \case
+  Just "1"                       -> True
+  Just (map C.toLower -> "true") -> True
+  _                              -> False
 
 -- | Glob pattern relative to repository root.
 newtype RelGlobPattern = RelGlobPattern FilePath

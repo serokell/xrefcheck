@@ -7,6 +7,13 @@
 Unreleased
 ==========
 
+0.1.2
+=======
+
+* [#44](https://github.com/serokell/xrefcheck/pull/44)
+  + Decide whether to show progress bar by default depending on `CI` env variable.
+  + Added `--progress` option.
+
 0.1.1.2
 =======
 

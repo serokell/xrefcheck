@@ -18,7 +18,7 @@ module Xrefcheck.CLI
     ) where
 
 import Data.Version (showVersion)
-import Options.Applicative (Parser, ReadM, command, eitherReader, execParser, fullDesc, help,
+import Options.Applicative (Parser, ReadM, command, eitherReader, execParser, flag', fullDesc, help,
                             helper, hsubparser, info, infoOption, long, metavar, option, progDesc,
                             short, strOption, switch, value)
 import Paths_xrefcheck (version)
@@ -50,7 +50,7 @@ data Options = Options
     , oRoot             :: FilePath
     , oMode             :: VerifyMode
     , oVerbose          :: Bool
-    , oShowProgressBar  :: Bool
+    , oShowProgressBar  :: Maybe Bool
     , oTraversalOptions :: TraversalOptions
     }
 
@@ -99,9 +99,16 @@ optionsParser = do
         short 'v' <>
         long "verbose" <>
         help "Report repository scan and verification details."
-    oShowProgressBar <- fmap not . switch $
-        long "no-progress" <>
-        help "Do not display progress bar during verification."
+    oShowProgressBar <- asum
+        [ flag' (Just True) $
+            long "progress" <>
+            help "Display progress bar during verification. \
+                 \This is enabled by default unless `CI` env var is set to true."
+        , flag' (Just False) $
+            long "no-progress" <>
+            help "Do not display progress bar during verification."
+        , pure Nothing
+        ]
     oTraversalOptions <- traversalOptionsParser
     return Options{..}
 

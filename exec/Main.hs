@@ -16,6 +16,7 @@ import Xrefcheck.Config
 import Xrefcheck.Progress
 import Xrefcheck.Scan
 import Xrefcheck.Scanners
+import Xrefcheck.System
 import Xrefcheck.Verify
 
 formats :: FormatsSupport
@@ -39,14 +40,17 @@ defaultAction Options{..} = do
       Just configPath -> do
         readConfig configPath
 
-    repoInfo <- allowRewrite oShowProgressBar $ \rw -> do
+    withinCI <- askWithinCI
+    let showProgressBar = oShowProgressBar ?: not withinCI
+
+    repoInfo <- allowRewrite showProgressBar $ \rw -> do
         let fullConfig = addTraversalOptions (cTraversal config) oTraversalOptions
         gatherRepoInfo rw formats fullConfig root
 
     when oVerbose $
         fmtLn $ "=== Repository data ===\n\n" <> indentF 2 (build repoInfo)
 
-    verifyRes <- allowRewrite oShowProgressBar $ \rw ->
+    verifyRes <- allowRewrite showProgressBar $ \rw ->
         verifyRepo rw (cVerification config) oMode root repoInfo
     case verifyErrors verifyRes of
         Nothing ->

@@ -45,22 +45,16 @@ Both relative and absolute local links are supported out of the box.
 * [url-checker](https://github.com/paramt/url-checker) - GitHub action which checks links in specified files.
 * [broken-link-checker](https://github.com/stevenvachon/broken-link-checker) - advanced checker for `HTML` files.
 
-## Build instructions [↑](#xrefcheck)
-
-Run `stack install` to build everything and install the executable.
-
-### CI and nix [↑](#xrefcheck)
-
-To build only the executables, run `nix-build`. You can use this line on your CI to use xrefcheck:
-```
-nix run -f https://github.com/serokell/xrefcheck/archive/master.tar.gz -c xrefcheck
-```
-
-Our CI uses `nix-build xrefcheck.nix` to build the whole project, including tests and Haddock.
-It is based on the [`haskell.nix`](https://input-output-hk.github.io/haskell.nix/) project.
-You can do that too if you wish.
 
 ## Usage [↑](#xrefcheck)
+
+We provide the following ways for you to use xrefcheck:
+
+- [statically linked binaries](https://github.com/serokell/xrefcheck/releases)
+- [Docker image](https://hub.docker.com/r/serokell/xrefcheck)
+- [building from source](#build-instructions-)
+
+If none of those are suitable for you, please open an issue!
 
 To find all broken links in a repository, run from within its folder:
 
@@ -91,6 +85,21 @@ xrefcheck dump-config
 Currently supported options include:
 * Timeout for checking external references;
 * List of ignored folders.
+
+## Build instructions [↑](#xrefcheck)
+
+Run `stack install` to build everything and install the executable.
+
+### CI and nix [↑](#xrefcheck)
+
+To build only the executables, run `nix-build`. You can use this line on your CI to use xrefcheck:
+```
+nix run -f https://github.com/serokell/xrefcheck/archive/master.tar.gz -c xrefcheck
+```
+
+Our CI uses `nix-build xrefcheck.nix` to build the whole project, including tests and Haddock.
+It is based on the [`haskell.nix`](https://input-output-hk.github.io/haskell.nix/) project.
+You can do that too if you wish.
 
 ## For further work [↑](#xrefcheck)
 

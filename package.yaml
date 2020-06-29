@@ -59,6 +59,7 @@ dependencies:
   - async
   - name: base
     mixin: [hiding (Prelude)]
+    version: "< 4.15"
   - bytestring
   - containers
   - cmark-gfm

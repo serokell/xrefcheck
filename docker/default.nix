@@ -13,6 +13,6 @@ let
   '';
 in pkgs.dockerTools.buildImage {
   name = "xrefcheck";
-  contents = [ binOnly pkgs.cacert ];
+  contents = [ binOnly pkgs.cacert pkgs.bash ];
   config.Entrypoint = "xrefcheck";
 }

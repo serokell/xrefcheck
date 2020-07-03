@@ -11,8 +11,8 @@ let
     cp ${executable}/bin/xrefcheck $out/bin
     ${pkgs.nukeReferences}/bin/nuke-refs $out/bin/xrefcheck
   '';
-in pkgs.dockerTools.buildImage {
+in pkgs.dockerTools.buildLayeredImage {
   name = "xrefcheck";
-  contents = [ binOnly pkgs.cacert pkgs.bash ];
+  contents = [ binOnly pkgs.cacert pkgs.pkgsStatic.bash ];
   config.Entrypoint = "xrefcheck";
 }

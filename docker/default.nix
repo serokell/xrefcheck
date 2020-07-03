@@ -5,7 +5,7 @@
 { pkgs ? import (import ../nix/sources.nix).nixpkgs { } }:
 let
   executable =
-    (import ../xrefcheck.nix { linux-static = true; }).components.exes.xrefcheck;
+    (import ../xrefcheck.nix { linux = true; }).components.exes.xrefcheck;
   binOnly = pkgs.runCommand "xrefcheck-bin" { } ''
     mkdir -p $out/bin
     cp ${executable}/bin/xrefcheck $out/bin

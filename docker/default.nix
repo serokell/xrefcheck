@@ -13,6 +13,6 @@ let
   '';
 in pkgs.dockerTools.buildLayeredImage {
   name = "xrefcheck";
-  contents = [ binOnly pkgs.cacert pkgs.pkgsStatic.bash ];
+  contents = [ binOnly pkgs.cacert pkgs.busybox ];
   config.Entrypoint = "xrefcheck";
 }

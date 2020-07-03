@@ -68,6 +68,7 @@ dependencies:
   - directory-tree
   - directory
   - filepath
+  - file-embed
   - fmt
   - Glob
   - http-client

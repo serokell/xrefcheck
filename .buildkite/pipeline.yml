@@ -9,6 +9,10 @@ steps:
     label: Executable
     artifact_paths:
       - "result/bin/xrefcheck"
+  - command: nix-build --argstr platform windows
+    label: Windows executable
+    artifact_paths:
+      - "result/bin/*"
   - command: nix run -f. -c xrefcheck
     label: Xrefcheck itself
   - command: nix run -f $(nix eval --raw '((import ./nix/sources.nix).nixpkgs)') reuse -c reuse lint

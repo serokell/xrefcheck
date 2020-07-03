@@ -25,7 +25,7 @@ steps:
       - nix-build docker
       - NIX_PATH=nixpkgs=$(nix eval --raw '(import ./nix/sources.nix).nixpkgs') nix run nixpkgs.skopeo -c skopeo copy --dest-creds "serokell:${DOCKERHUB_PASSWORD}" "docker-archive:$(readlink result)" "docker://docker.io/serokell/xrefcheck:latest"
     label: Push to dockerhub
-    branches: master
+    # branches: master
   - command:
       - nix-build docker
       - NIX_PATH=nixpkgs=$(nix eval --raw '(import ./nix/sources.nix).nixpkgs') nix run nixpkgs.skopeo -c skopeo copy --dest-creds "serokell:${DOCKERHUB_PASSWORD}" "docker-archive:$(readlink result)" "docker://docker.io/serokell/xrefcheck:${BUILDKITE_BRANCH}"

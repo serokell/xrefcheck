@@ -15,11 +15,6 @@ let
     modules = [{
       packages.xrefcheck = {
         package.ghcOptions = "-Werror";
-        configureFlags = with pkgs;
-          lib.optionals linux-static [
-            "--ghc-option=-optl=-L${zlib.static}/lib"
-            "--ghc-option=-optl=-L${nixpkgs.pkgsStatic.numactl}/lib"
-          ];
       };
     }];
   };

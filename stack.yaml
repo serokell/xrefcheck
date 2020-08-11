@@ -2,6 +2,8 @@
 #
 # SPDX-License-Identifier: MPL-2.0
 
+# To update hackage and stackage indexes used by CI run:
+# $ niv update hackage.nix; niv update stackage.nix
 resolver: lts-15.13
 
 packages:

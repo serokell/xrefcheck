@@ -6,7 +6,7 @@
 let
   sources = import ./nix/sources.nix;
   haskell-nix = import sources."haskell.nix" {
-    sourceOverrides = { hackage = sources."hackage.nix"; stackage = sources."stackage.nix"; };
+    sourcesOverride = { hackage = sources."hackage.nix"; stackage = sources."stackage.nix"; };
   };
   nixpkgs = import sources.nixpkgs haskell-nix.nixpkgsArgs;
   pkgs = if linux-static then nixpkgs.pkgsCross.musl64 else if windows then nixpkgs.pkgsCross.mingwW64 else nixpkgs;

@@ -17,10 +17,10 @@
         "homepage": "https://input-output-hk.github.io/haskell.nix",
         "owner": "input-output-hk",
         "repo": "haskell.nix",
-        "rev": "f4136211c933b444ab2e0f358abd223929970220",
-        "sha256": "1b9nxzkg29hwczr6pb6a7arxka8z0swzq7b2bqyxqzr4qvpcjlc1",
+        "rev": "bd45da822d2dccdbb3f65d0b52dd2a91fd65ca4e",
+        "sha256": "0cdlqfvjd8nijbq9353h4g5j89qfhskpbb23vjp40pzqddljazi9",
         "type": "tarball",
-        "url": "https://github.com/input-output-hk/haskell.nix/archive/f4136211c933b444ab2e0f358abd223929970220.tar.gz",
+        "url": "https://github.com/input-output-hk/haskell.nix/archive/bd45da822d2dccdbb3f65d0b52dd2a91fd65ca4e.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "nixpkgs": {
@@ -29,10 +29,10 @@
         "homepage": "",
         "owner": "serokell",
         "repo": "nixpkgs",
-        "rev": "ec2598d025b7670472175413748ce688a60712b9",
-        "sha256": "0b1acpgy9jbf57zxqk0zqza7yk2a70q8mrhd519rq8kmgc95dw1x",
+        "rev": "66a26e65eb7f9b6cb3f773052da0cd3ac52f015c",
+        "sha256": "09ab1wywcwhqlwy566y00h6q8c7x64qvdk2b82jvadixbanx46wh",
         "type": "tarball",
-        "url": "https://github.com/serokell/nixpkgs/archive/ec2598d025b7670472175413748ce688a60712b9.tar.gz",
+        "url": "https://github.com/serokell/nixpkgs/archive/66a26e65eb7f9b6cb3f773052da0cd3ac52f015c.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "stackage.nix": {

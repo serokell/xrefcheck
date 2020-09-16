@@ -24,15 +24,15 @@
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "nixpkgs": {
-        "branch": "master",
+        "branch": "zhenya/revert-mingw-w64",
         "description": "Pinned Nixpkgs tree (master follows nixos-unstable-small, only tags have stable history)",
         "homepage": "",
         "owner": "serokell",
         "repo": "nixpkgs",
-        "rev": "66a26e65eb7f9b6cb3f773052da0cd3ac52f015c",
-        "sha256": "09ab1wywcwhqlwy566y00h6q8c7x64qvdk2b82jvadixbanx46wh",
+        "rev": "1ccf528dbe4f27037c410829c8127a4e56d10b44",
+        "sha256": "1aahi0c139g7anczwcraa3kia4fnisy4r76bz06bl2kylp61zdjc",
         "type": "tarball",
-        "url": "https://github.com/serokell/nixpkgs/archive/66a26e65eb7f9b6cb3f773052da0cd3ac52f015c.tar.gz",
+        "url": "https://github.com/serokell/nixpkgs/archive/1ccf528dbe4f27037c410829c8127a4e56d10b44.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "stackage.nix": {

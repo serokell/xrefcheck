@@ -50,6 +50,7 @@ Both relative and absolute local links are supported out of the box.
 
 We provide the following ways for you to use xrefcheck:
 
+- [GitHub action](https://github.com/marketplace/actions/xrefcheck)
 - [statically linked binaries](https://github.com/serokell/xrefcheck/releases)
 - [Docker image](https://hub.docker.com/r/serokell/xrefcheck)
 - [building from source](#build-instructions-)

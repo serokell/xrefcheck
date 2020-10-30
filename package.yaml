@@ -79,6 +79,7 @@ dependencies:
   - mtl
   - o-clock
   - optparse-applicative
+  - regex-tdfa
   - req
   - roman-numerals
   - template-haskell

@@ -52,6 +52,7 @@ default-extensions:
 ghc-options:
   - -Wall
   - -Wincomplete-record-updates
+  - -Wincomplete-uni-patterns
 
 dependencies:
   - aeson
@@ -87,6 +88,7 @@ dependencies:
   - text-metrics
   - th-lift-instances
   - th-utilities
+  - transformers
   - name: universum
     mixin: [(Universum as Prelude), (Universum.Unsafe as Unsafe)]
   - yaml

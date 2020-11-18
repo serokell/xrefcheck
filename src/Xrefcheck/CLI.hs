@@ -17,12 +17,14 @@ module Xrefcheck.CLI
     , getCommand
     ) where
 
+import qualified Data.List as L
 import Data.Version (showVersion)
-import Options.Applicative (Parser, ReadM, command, eitherReader, execParser, flag', fullDesc, help,
-                            helper, hsubparser, info, infoOption, long, metavar, option, progDesc,
+import Options.Applicative (Parser, ReadM, command, eitherReader, execParser, flag', footerDoc, fullDesc,
+                            help, helper, hsubparser, info, infoOption, long, metavar, option, progDesc,
                             short, strOption, switch, value)
-import Paths_xrefcheck (version)
+import Options.Applicative.Help.Pretty (Doc, displayS, fill, fillSep, indent, renderPretty, text)
 
+import Paths_xrefcheck (version)
 import Xrefcheck.Config
 import Xrefcheck.Core
 
@@ -150,4 +152,32 @@ getCommand = do
         info (helper <*> versionOption <*> totalParser) $
         fullDesc <>
         progDesc "Cross-references verifier for markdown documentation in \
-                 \Git repositories."
+                 \Git repositories." <>
+        (footerDoc $ pure ignoreModesMsg)
+
+ignoreModesMsg :: Doc
+ignoreModesMsg = text $ header <> body
+    where
+        header = "To ignore a link in your markdown, \
+                 \include \"<!-- xrefcheck: ignore <mode> -->\"\n\
+                 \comment with one of these modes:\n"
+        body = displayS (renderPretty pageParam pageWidth doc) ""
+
+        pageWidth = 80
+        pageParam = 1
+
+        doc = fillSep $ map formatDesc modeDescr
+
+        modeDescr =
+            [ ("  \"link\"",      L.words $ "Ignore the link right after the comment.")
+            , ("  \"paragraph\"", L.words $ "Ignore the whole paragraph after the comment.")
+            , ("  \"file\"",      L.words $ "This mode can only be used at the top of markdown \
+                                            \or right after comments at the top.")
+            ]
+            
+        modeIndent = length ("\"paragraph\"" :: String) + 2
+        descrIndent = 27 - modeIndent
+
+        formatDesc (mode, descr) =
+            (fill modeIndent $ text mode) <>
+            (indent descrIndent $ fillSep $ map text descr)

@@ -10,6 +10,7 @@
 module Xrefcheck.Scanners.Markdown
     ( markdownScanner
     , markdownSupport
+    , parseFileInfo
     ) where
 
 import CMarkGFM (Node (..), NodeType (..), PosInfo (..), commonmarkToNode)

@@ -13,6 +13,7 @@ traversal:
     # Stack files
     - .stack-work
 
+
 # Verification parameters.
 verification:
   # On 'anchor not found' error, how much similar anchors should be displayed as

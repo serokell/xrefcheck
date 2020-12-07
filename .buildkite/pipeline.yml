@@ -3,7 +3,11 @@
 # SPDX-License-Identifier: MPL-2.0
 
 steps:
-  - command: nix-build xrefcheck.nix
+  - command:
+    - nix-build xrefcheck.nix
+        -A components.library
+        -A components.library.haddock
+        -A checks.xrefcheck-tests
     label: Library and tests
   - command: nix-build
     label: Executable

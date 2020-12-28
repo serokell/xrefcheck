@@ -75,6 +75,79 @@ For description of other options:
 xrefcheck --help
 ```
 
+
+### Special functionality
+
+<details>
+  <summary>Ignoring external links</summary>
+
+  If you want some external links to not be verified, you can use one of the following ways to ignore those links:
+
+1. Add the regular expression that matches the ignoring link to the optional `ignoreRefs` parameter of your config file.
+
+    For example: 
+    ```yaml
+    ignoreRefs:
+      - https://bad.reference.(org|com)(/?)
+    ```
+    allows to ignore both `https://bad.reference.org` and `https://bad.reference.com` with or without last "/".
+
+2. Add right in-place annotation using one of the following ignoring modes (each mode is just a comment with a certain syntax).
+
+    * Ignore the link:
+
+        There are several ways to add this annotation:
+
+      * Just add it like a regular text before the ignoring link.
+
+        ```markdown
+        Bad ['com' reference](https://bad.reference.com) <!-- xrefcheck: ignore link --> and bad ['org' reference](https://bad.reference.org)
+        ```
+
+      * Separate the ignoring link from the annotation and the following text with single new lines.
+
+        ```markdown
+        Bad ['com' reference](https://bad.reference.com) and bad <!-- xrefcheck: ignore link -->
+        ['org'](https://bad.reference.org)
+        reference
+        ```
+
+        Therefore only `https://bad.reference.org` will be ignored.
+
+      * If the ignoring link is the first in a paragraph, then the annotation can also be added before a paragraph.
+
+        ```markdown
+        <!-- xrefcheck: ignore link -->
+        [Bad 'org' reference](https://bad.reference.org)
+        [Bad 'com' reference](https://bad.reference.com)
+        ```
+
+        It is still the same `https://bad.reference.org` will be ignored in this case.
+
+    * Ignore the paragraph:
+
+        ```markdown
+        <!-- xrefcheck: ignore paragraph -->
+        Bad ['org' reference](https://bad.reference.org)
+        Bad ['com' reference](https://bad.reference.com)
+
+        Bad ['io' reference](https://bad.reference.io)
+        ```
+
+        In this way, `https://bad.reference.org` and `https://bad.reference.com` will be ignored and `https://bad.reference.io` will still be verified.
+
+    * Ignore the whole file:
+        ```markdown
+        <!-- a comment -->
+        <!-- another comment -->
+
+        <!-- xrefcheck: ignore file -->
+        ...the rest of the file...
+        ```
+
+        Using this you can ignore the whole file.
+        </details>
+
 ## Configuring
 
 Configuration template (with all options explained) can be dumped with:

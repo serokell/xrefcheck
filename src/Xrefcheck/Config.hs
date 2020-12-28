@@ -7,6 +7,7 @@
 
 module Xrefcheck.Config where
 
+import Control.Lens (makeLensesWith)
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveFromJSON)
 import Data.Yaml (FromJSON (..), decodeEither', prettyPrintParseException, withText)
@@ -21,6 +22,7 @@ import Data.FileEmbed (embedFile)
 import Time (KnownRatName, Second, Time, unitsP)
 
 import Xrefcheck.System (RelGlobPattern)
+import Xrefcheck.Util (postfixFields)
 
 -- | Overall config.
 data Config = Config
@@ -45,6 +47,9 @@ data VerifyConfig = VerifyConfig
     , vcIgnoreRefs                :: Maybe [Regex]
       -- ^ Regular expressions that match external references we should not verify.
     }
+
+makeLensesWith postfixFields ''Config
+makeLensesWith postfixFields ''VerifyConfig
 
 -----------------------------------------------------------
 -- Default config
@@ -93,7 +98,6 @@ defaultCompOption =
     , lastStarGreedy = False
     }
 
--- Default boolean value according to
--- https://hackage.haskell.org/package/regex-tdfa-1.3.1.0/docs/Text-Regex-TDFA.html#t:ExecOption
+-- ExecOption value to improve speed
 defaultExecOption :: ExecOption
 defaultExecOption = ExecOption {captureGroups = False}

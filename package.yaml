@@ -74,6 +74,7 @@ dependencies:
   - Glob
   - http-client
   - http-types
+  - HUnit
   - lens
   - pretty-terminal
   - modern-uri

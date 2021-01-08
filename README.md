@@ -32,7 +32,7 @@ Both relative and absolute local links are supported out of the box.
 
 ### A comparison with other solutions
 
-* [linky](https://github.com/mattias-p/linky) - a well-configurable verifier written in Rust, scans one file at a time and works good in pair with system utilities like `find`.
+* [linky](https://github.com/mattias-p/linky) - a well-configurable verifier written in Rust, scans one specified file at a time and works good in pair with system utilities like `find`.
   This tool requires some configuring before it can be applied to a repository or added to CI.
 * [awesome_bot](https://github.com/dkhamsing/awesome_bot) - a solution written in Ruby that can be easily included in CI or integrated into GitHub.
   Its features include duplicated URLs detection, specifying allowed HTTP error codes and reporting generation.
@@ -40,10 +40,10 @@ Both relative and absolute local links are supported out of the box.
 * [remark-validate-links](https://github.com/remarkjs/remark-validate-links) and [remark-lint-no-dead-urls](https://github.com/davidtheclark/remark-lint-no-dead-urls) - highly configurable Javascript solution for checking local and remote links resp.
   It is able to check multiple repositores at once if they are gathered in one folder.
   Being written on JavaScript, it is fairly slow on large repositories.
-* [markdown-link-check](https://github.com/tcort/markdown-link-check) - another checker written in JavaScript, scans one file at a time.
+* [markdown-link-check](https://github.com/tcort/markdown-link-check) - another checker written in JavaScript, scans one specific file at a time.
   Supports `mailto:` link resolution.
 * [url-checker](https://github.com/paramt/url-checker) - GitHub action which checks links in specified files.
-* [broken-link-checker](https://github.com/stevenvachon/broken-link-checker) - advanced checker for `HTML` files.
+* [linkcheck](https://github.com/filiph/linkcheck) - advanced site crawler, checks for `HTML` files. There are other solutions for this particular task which we don't mention here.
 
 
 ## Usage [↑](#xrefcheck)

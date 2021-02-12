@@ -19,9 +19,9 @@ import Xrefcheck.Scanners
 import Xrefcheck.System
 import Xrefcheck.Verify
 
-formats :: FormatsSupport
-formats = specificFormatsSupport
-    [ markdownSupport
+formats :: ScannersConfig -> FormatsSupport
+formats ScannersConfig{..} = specificFormatsSupport
+    [ markdownSupport scMarkdown
     ]
 
 defaultAction :: Options -> IO ()
@@ -45,7 +45,7 @@ defaultAction Options{..} = do
 
     repoInfo <- allowRewrite showProgressBar $ \rw -> do
         let fullConfig = addTraversalOptions (cTraversal config) oTraversalOptions
-        gatherRepoInfo rw formats fullConfig root
+        gatherRepoInfo rw (formats $ cScanners config) fullConfig root
 
     when oVerbose $
         fmtLn $ "=== Repository data ===\n\n" <> indentF 2 (build repoInfo)

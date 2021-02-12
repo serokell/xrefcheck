@@ -8,7 +8,9 @@
 -- | Markdown documents markdownScanner.
 
 module Xrefcheck.Scanners.Markdown
-    ( markdownScanner
+    ( MarkdownConfig (..)
+    , defGithubMdConfig
+    , markdownScanner
     , markdownSupport
     , parseFileInfo
     ) where
@@ -16,6 +18,7 @@ module Xrefcheck.Scanners.Markdown
 import CMarkGFM (Node (..), NodeType (..), PosInfo (..), commonmarkToNode)
 import Control.Lens ((%=))
 import Control.Monad.Trans.Except (Except, runExcept, throwE)
+import Data.Aeson.TH (deriveFromJSON)
 import qualified Data.ByteString.Lazy as BSL
 import Data.Char (isSpace)
 import Data.Default (Default (..))
@@ -25,6 +28,18 @@ import Fmt (Buildable (..), blockListF, nameF, (+|), (|+))
 
 import Xrefcheck.Core
 import Xrefcheck.Scan
+import Xrefcheck.Util
+
+data MarkdownConfig = MarkdownConfig
+  { mcFlavor :: Flavor
+  }
+
+deriveFromJSON aesonConfigOption ''MarkdownConfig
+
+defGithubMdConfig :: MarkdownConfig
+defGithubMdConfig = MarkdownConfig
+  { mcFlavor = GitHub
+  }
 
 instance Buildable Node where
     build (Node _mpos ty subs) = nameF (show ty) $ blockListF subs
@@ -57,8 +72,8 @@ data IgnoreMode
     | File
     deriving Eq
 
-nodeExtractInfo :: Node -> Except Text FileInfo
-nodeExtractInfo (Node _ _ docNodes) =
+nodeExtractInfo :: MarkdownConfig -> Node -> Except Text FileInfo
+nodeExtractInfo config (Node _ _ docNodes) =
     if checkIgnoreFile docNodes
     then return def
     else finaliseFileInfo <$> extractionResult
@@ -90,7 +105,8 @@ nodeExtractInfo (Node _ _ docNodes) =
                     HTML_BLOCK _ -> processHtmlNode node pos nodes toIgnore
                     HEADING lvl -> do
                         let aType = HeaderAnchor lvl
-                        let aName = headerToAnchor $ nodeExtractText node
+                        let aName = headerToAnchor (mcFlavor config) $
+                                    nodeExtractText node
                         let aPos = toPosition pos
                         fiAnchors %= (Anchor{..} :)
                         loop nodes toIgnore
@@ -230,17 +246,17 @@ nodeExtractInfo (Node _ _ docNodes) =
                     (loop nodes . pure) $ getIgnoreMode node
                 Nothing -> loop nodes toIgnore
 
-parseFileInfo :: LT.Text -> Either Text FileInfo
-parseFileInfo input = runExcept $ nodeExtractInfo $
+parseFileInfo :: MarkdownConfig -> LT.Text -> Either Text FileInfo
+parseFileInfo config input = runExcept $ nodeExtractInfo config $
     commonmarkToNode [] [] $ toStrict input
 
-markdownScanner :: ScanAction
-markdownScanner path = do
-    errOrInfo <- parseFileInfo . decodeUtf8 <$> BSL.readFile path
+markdownScanner :: MarkdownConfig -> ScanAction
+markdownScanner config path = do
+    errOrInfo <- parseFileInfo config . decodeUtf8 <$> BSL.readFile path
     case errOrInfo of
         Left errTxt -> do
             die $ "Error when scanning " <> path <> ": " <> T.unpack errTxt
         Right fileInfo -> return fileInfo
 
-markdownSupport :: ([Extension], ScanAction)
-markdownSupport = ([".md"], markdownScanner)
+markdownSupport :: MarkdownConfig -> ([Extension], ScanAction)
+markdownSupport config = ([".md"], markdownScanner config)

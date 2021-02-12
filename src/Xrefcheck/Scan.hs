@@ -6,7 +6,8 @@
 -- | Generalised repo scanner and analyser.
 
 module Xrefcheck.Scan
-    ( Extension
+    ( TraversalConfig (..)
+    , Extension
     , ScanAction
     , FormatsSupport
     , RepoInfo (..)
@@ -15,16 +16,24 @@ module Xrefcheck.Scan
     , specificFormatsSupport
     ) where
 
+import Data.Aeson.TH (deriveFromJSON)
 import qualified Data.Foldable as F
 import qualified Data.Map as M
 import GHC.Err (errorWithoutStackTrace)
 import qualified System.Directory.Tree as Tree
 import System.FilePath (takeDirectory, takeExtension, (</>))
 
-import Xrefcheck.Config
 import Xrefcheck.Core
 import Xrefcheck.Progress
-import Xrefcheck.Util ()
+import Xrefcheck.Util (aesonConfigOption)
+
+-- | Config of repositry traversal.
+data TraversalConfig = TraversalConfig
+    { tcIgnored   :: [FilePath]
+      -- ^ Files and folders, files in which we completely ignore.
+    }
+
+deriveFromJSON aesonConfigOption ''TraversalConfig
 
 -- | File extension, dot included.
 type Extension = String

@@ -6,8 +6,8 @@
 module Test.Xrefcheck.IgnoreRegexSpec where
 
 import Data.Yaml (decodeEither')
-import Test.Hspec (Spec, describe, it)
 import Test.HUnit (assertFailure)
+import Test.Hspec (Spec, describe, it)
 import Text.Regex.TDFA (Regex)
 
 import Xrefcheck.Config
@@ -15,15 +15,14 @@ import Xrefcheck.Core
 import Xrefcheck.Progress (allowRewrite)
 import Xrefcheck.Scan (gatherRepoInfo, specificFormatsSupport)
 import Xrefcheck.Scanners.Markdown
-import Xrefcheck.Verify
-    (VerifyError, VerifyResult, WithReferenceLoc(..), verifyErrors, verifyRepo)
+import Xrefcheck.Verify (VerifyError, VerifyResult, WithReferenceLoc (..), verifyErrors, verifyRepo)
 
 spec :: Spec
 spec = do
     describe "Regular expressions performance" $ do
         let root = "tests/markdowns/without-annotations"
         let showProgressBar = False
-        let formats = specificFormatsSupport [markdownSupport]
+        let formats = specificFormatsSupport [markdownSupport defGithubMdConfig]
         let verifyMode = ExternalOnlyMode
 
         let linksTxt =

@@ -56,3 +56,12 @@ verification:
   # It is an optional parameter, so it can be omitted.
   ignoreRefs:
     []
+
+# Parameters of scanners for various file types.
+scanners:
+
+  markdown:
+    # Flavor of markdown, e.g. GitHub-flavor.
+    #
+    # This affects which anchors are generated for headers.
+    flavor: GitHub

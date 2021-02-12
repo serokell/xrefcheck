@@ -19,14 +19,14 @@ module Xrefcheck.CLI
 
 import qualified Data.List as L
 import Data.Version (showVersion)
-import Options.Applicative (Parser, ReadM, command, eitherReader, execParser, flag', footerDoc, fullDesc,
-                            help, helper, hsubparser, info, infoOption, long, metavar, option, progDesc,
-                            short, strOption, switch, value)
+import Options.Applicative
+  (Parser, ReadM, command, eitherReader, execParser, flag', footerDoc, fullDesc, help, helper,
+  hsubparser, info, infoOption, long, metavar, option, progDesc, short, strOption, switch, value)
 import Options.Applicative.Help.Pretty (Doc, displayS, fill, fillSep, indent, renderPretty, text)
 
 import Paths_xrefcheck (version)
-import Xrefcheck.Config
 import Xrefcheck.Core
+import Xrefcheck.Scan
 
 modeReadM :: ReadM VerifyMode
 modeReadM = eitherReader $ \s ->

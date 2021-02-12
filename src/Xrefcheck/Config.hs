@@ -14,12 +14,14 @@ import Instances.TH.Lift ()
 import Text.Regex.TDFA (CompOption (..), ExecOption (..), Regex)
 import Text.Regex.TDFA.Text (compile)
 
-import Data.FileEmbed (embedFile)
 -- FIXME: Use </> from System.FilePath
 -- </> from Posix is used only because we cross-compile to Windows and \ doesn't work on Linux
+import Data.FileEmbed (embedFile)
 import System.FilePath.Posix ((</>))
 import Time (KnownRatName, Second, Time, unitsP)
 
+import Xrefcheck.Scan
+import Xrefcheck.Scanners.Markdown
 import Xrefcheck.System (RelGlobPattern)
 import Xrefcheck.Util (aesonConfigOption, postfixFields)
 
@@ -27,12 +29,7 @@ import Xrefcheck.Util (aesonConfigOption, postfixFields)
 data Config = Config
     { cTraversal    :: TraversalConfig
     , cVerification :: VerifyConfig
-    }
-
--- | Config of repositry traversal.
-data TraversalConfig = TraversalConfig
-    { tcIgnored   :: [FilePath]
-      -- ^ Files and folders, files in which we completely ignore.
+    , cScanners     :: ScannersConfig
     }
 
 -- | Config of verification.
@@ -45,6 +42,11 @@ data VerifyConfig = VerifyConfig
       -- ^ Prefixes of files, references in which we should not analyze.
     , vcIgnoreRefs                :: Maybe [Regex]
       -- ^ Regular expressions that match external references we should not verify.
+    }
+
+-- | Configs for all the supported scanners.
+data ScannersConfig = ScannersConfig
+    { scMarkdown :: MarkdownConfig
     }
 
 makeLensesWith postfixFields ''Config
@@ -72,7 +74,7 @@ defConfig =
 -----------------------------------------------------------
 
 deriveFromJSON aesonConfigOption ''Config
-deriveFromJSON aesonConfigOption ''TraversalConfig
+deriveFromJSON aesonConfigOption ''ScannersConfig
 deriveFromJSON aesonConfigOption ''VerifyConfig
 
 instance KnownRatName unit => FromJSON (Time unit) where

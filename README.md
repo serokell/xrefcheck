@@ -153,7 +153,7 @@ xrefcheck --help
 Configuration template (with all options explained) can be dumped with:
 
 ```sh
-xrefcheck dump-config
+xrefcheck dump-config -t GitHub
 ```
 
 Currently supported options include:

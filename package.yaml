@@ -83,6 +83,7 @@ dependencies:
   - optparse-applicative
   - regex-tdfa
   - req
+  - regex-tdfa
   - roman-numerals
   - template-haskell
   - text

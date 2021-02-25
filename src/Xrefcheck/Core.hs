@@ -38,6 +38,14 @@ data Flavor
   | GitLab
   deriving (Show)
 
+allFlavors :: [Flavor]
+allFlavors = [GitHub, GitLab]
+  where
+    _exhaustivenessCheck = \case
+      GitHub -> ()
+      GitLab -> ()
+      -- if you update this, also update the list above
+
 instance FromJSON Flavor where
   parseJSON = withText "flavor" $ \txt ->
     case T.toLower txt of

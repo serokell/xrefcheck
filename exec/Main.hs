@@ -13,6 +13,7 @@ import System.Directory (doesFileExist)
 
 import Xrefcheck.CLI
 import Xrefcheck.Config
+import Xrefcheck.Core
 import Xrefcheck.Progress
 import Xrefcheck.Scan
 import Xrefcheck.Scanners
@@ -33,8 +34,10 @@ defaultAction Options{..} = do
         mConfigPath <- findFirstExistingFile defaultConfigPaths
         case mConfigPath of
           Nothing -> do
-            hPutStrLn @Text stderr "Configuration file not found, using default config\n"
-            pure defConfig
+            hPutStrLn @Text stderr
+              "Configuration file not found, using default config \
+              \for GitHub repositories\n"
+            pure $ defConfig GitHub
           Just configPath ->
             readConfig configPath
       Just configPath -> do
@@ -79,5 +82,5 @@ main = withUtf8 $ do
     case command of
       DefaultCommand options ->
         defaultAction options
-      DumpConfig path ->
-        BS.writeFile path defConfigText
+      DumpConfig repoType path ->
+        BS.writeFile path (defConfigText repoType)

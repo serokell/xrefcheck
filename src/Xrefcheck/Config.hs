@@ -7,12 +7,19 @@
 
 module Xrefcheck.Config where
 
+import qualified Unsafe
+
+import Control.Exception (assert)
 import Control.Lens (makeLensesWith)
 import Data.Aeson.TH (deriveFromJSON)
+import qualified Data.ByteString as BS
+import qualified Data.Map as Map
 import Data.Yaml (FromJSON (..), decodeEither', prettyPrintParseException, withText)
 import Instances.TH.Lift ()
 import Text.Regex.TDFA (CompOption (..), ExecOption (..), Regex)
-import Text.Regex.TDFA.Text (compile)
+import qualified Text.Regex.TDFA as R
+import Text.Regex.TDFA.ByteString ()
+import qualified Text.Regex.TDFA.Text as R
 
 -- FIXME: Use </> from System.FilePath
 -- </> from Posix is used only because we cross-compile to Windows and \ doesn't work on Linux
@@ -20,10 +27,11 @@ import Data.FileEmbed (embedFile)
 import System.FilePath.Posix ((</>))
 import Time (KnownRatName, Second, Time, unitsP)
 
+import Xrefcheck.Core
 import Xrefcheck.Scan
 import Xrefcheck.Scanners.Markdown
 import Xrefcheck.System (RelGlobPattern)
-import Xrefcheck.Util (aesonConfigOption, postfixFields)
+import Xrefcheck.Util (aesonConfigOption, postfixFields, (-:))
 
 -- | Overall config.
 data Config = Config
@@ -56,18 +64,119 @@ makeLensesWith postfixFields ''VerifyConfig
 -- Default config
 -----------------------------------------------------------
 
+defConfigUnfilled :: ByteString
+defConfigUnfilled =
+  $(embedFile ("src-files" </> "def-config.yaml"))
+
+-- | Picks raw config with @:PLACEHOLDER:<key>:@ and fills the specified fields
+-- in it, picking a replacement suitable for the given key. Only strings and lists
+-- of strings can be filled this way.
+--
+-- This will fail if any placeholder is left unreplaced, however extra keys in
+-- the provided replacement won't cause any warnings or failures.
+fillHoles
+  :: HasCallStack
+  => [(ByteString, Either ByteString [ByteString])] -> ByteString -> ByteString
+fillHoles allReplacements rawConfig =
+  let holesLocs = R.getAllMatches $ holeLineRegex `R.match` rawConfig
+  in mconcat $ replaceHoles 0 holesLocs
+  where
+    showBs :: ByteString -> Text
+    showBs = show @_ @Text . decodeUtf8
+
+    holeLineRegex :: R.Regex
+    holeLineRegex = R.makeRegex ("[ -]+:PLACEHOLDER:[^:]+:" :: Text)
+
+    replacementsMap = Map.fromList allReplacements
+    getReplacement key =
+      Map.lookup key replacementsMap
+      ?: error ("Replacement for key " <> showBs key <> " is not specified")
+
+    pickConfigSubstring :: Int -> Int -> ByteString
+    pickConfigSubstring from len = BS.take len $ BS.drop from rawConfig
+
+    replaceHoles :: Int -> [(R.MatchOffset, R.MatchLength)] -> [ByteString]
+    replaceHoles processedLen [] = one $ BS.drop processedLen rawConfig
+    replaceHoles processedLen ((off, len) : locs) =
+      -- in our case matches here should not overlap
+      assert (off > processedLen) $
+        pickConfigSubstring processedLen (off - processedLen) :
+        replaceHole (pickConfigSubstring off len) ++
+        replaceHoles (off + len) locs
+
+    holeItemRegex :: R.Regex
+    holeItemRegex = R.makeRegex ("(^|:)([ ]*):PLACEHOLDER:([^:]+):" :: Text)
+
+    holeListRegex :: R.Regex
+    holeListRegex = R.makeRegex ("^([ ]*-[ ]*):PLACEHOLDER:([^:]+):" :: Text)
+
+    replaceHole :: ByteString -> [ByteString]
+    replaceHole holeLine = if
+      | Just [_wholeMatch, _beginning, leadingSpaces, key] <-
+        R.getAllTextSubmatches <$> (holeItemRegex `R.matchM` holeLine) ->
+          case getReplacement key of
+            Left replacement -> [leadingSpaces, replacement]
+            Right _ -> error $
+              "Key " <> showBs key <> " requires replacement with an item, \
+              \but list was given"
+
+      | Just [_wholeMatch, leadingChars, key] <-
+        R.getAllTextSubmatches <$> (holeListRegex `R.matchM` holeLine) ->
+          case getReplacement key of
+            Left _ -> error $
+              "Key " <> showBs key <> " requires replacement with a list, \
+              \but an item was given"
+            Right [] ->
+              ["[]"]
+            Right replacements@(_ : _) ->
+              Unsafe.init $ do
+                replacement <- replacements
+                [leadingChars, replacement, "\n"]
+
+      | otherwise ->
+          error $ "Unrecognized placeholder pattern " <> showBs holeLine
+
 -- | Default config in textual representation.
 --
 -- Sometimes you cannot just use 'defConfig' because clarifying comments
 -- would be lost.
-defConfigText :: ByteString
-defConfigText =
-  $(embedFile ("src-files" </> "def-config.yaml"))
+defConfigText :: Flavor -> ByteString
+defConfigText flavor =
+  flip fillHoles defConfigUnfilled
+    [
+      "flavor" -: Left (show flavor)
 
-defConfig :: HasCallStack => Config
-defConfig =
+    , "notScanned" -: Right $ case flavor of
+        GitHub ->
+          [ ".github/pull_request_template.md"
+          , ".github/issue_template.md"
+          , ".github/PULL_REQUEST_TEMPLATE"
+          , ".github/ISSUE_TEMPLATE"
+          ]
+        GitLab ->
+          [ ".gitlab/merge_request_templates/"
+          , ".gitlab/issue_templates/"
+          ]
+
+    , "virtualFiles" -: Right $ case flavor of
+        GitHub ->
+          [ "../../../issues"
+          , "../../../issues/*"
+          , "../../../pulls"
+          , "../../../pulls/*"
+          ]
+        GitLab ->
+          [ "../../issues"
+          , "../../issues/*"
+          , "../../merge_requests"
+          , "../../merge_requests/*"
+          ]
+    ]
+
+defConfig :: HasCallStack => Flavor -> Config
+defConfig flavor =
   either (error . toText . prettyPrintParseException) id $
-  decodeEither' defConfigText
+  decodeEither' (defConfigText flavor)
 
 -----------------------------------------------------------
 -- Yaml instances
@@ -84,7 +193,7 @@ instance KnownRatName unit => FromJSON (Time unit) where
 instance FromJSON Regex where
     parseJSON = withText "regex" $ \val -> do
         let errOrRegex =
-                compile defaultCompOption defaultExecOption val
+                R.compile defaultCompOption defaultExecOption val
         either (error . show) return errOrRegex
 
 -- Default boolean values according to

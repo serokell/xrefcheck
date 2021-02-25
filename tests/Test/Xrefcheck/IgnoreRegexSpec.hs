@@ -30,7 +30,7 @@ spec = do
                 , "https://bad.reference.(org|com)"
                 ]
         let regexs = linksToRegexs linksTxt
-        let config = setIgnoreRefs regexs defConfig
+        let config = setIgnoreRefs regexs (defConfig GitHub)
 
         it "Check that only not matched links are verified" $ do
             repoInfo <- allowRewrite showProgressBar $ \rw ->

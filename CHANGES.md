@@ -6,7 +6,10 @@
 
 Unreleased
 ==========
-
+* [#57](https://github.com/serokell/xrefcheck/pull/57)
+  + Added `flavor` field to config.
+    Also see [config sample](tests/configs/github-config.yaml).
+  + Config generated with `dump-config` CLI command now depends on the provided repository type.
 
 0.1.3
 =======

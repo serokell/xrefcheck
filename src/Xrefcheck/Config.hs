@@ -7,10 +7,13 @@
 
 module Xrefcheck.Config where
 
+import Control.Lens (makeLensesWith)
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveFromJSON)
 import Data.Yaml (FromJSON (..), decodeEither', prettyPrintParseException, withText)
 import Instances.TH.Lift ()
+import Text.Regex.TDFA (CompOption (..), ExecOption (..), Regex)
+import Text.Regex.TDFA.Text (compile)
 
 -- FIXME: Use </> from System.FilePath
 -- </> from Posix is used only because we cross-compile to Windows and \ doesn't work on Linux
@@ -19,6 +22,7 @@ import Data.FileEmbed (embedFile)
 import Time (KnownRatName, Second, Time, unitsP)
 
 import Xrefcheck.System (RelGlobPattern)
+import Xrefcheck.Util (postfixFields)
 
 -- | Overall config.
 data Config = Config
@@ -40,7 +44,12 @@ data VerifyConfig = VerifyConfig
       -- ^ Files which we pretend do exist.
     , vcNotScanned                :: [FilePath]
       -- ^ Prefixes of files, references in which we should not analyze.
+    , vcIgnoreRefs                :: Maybe [Regex]
+      -- ^ Regular expressions that match external references we should not verify.
     }
+
+makeLensesWith postfixFields ''Config
+makeLensesWith postfixFields ''VerifyConfig
 
 -----------------------------------------------------------
 -- Default config
@@ -70,3 +79,25 @@ deriveFromJSON defaultOptions ''VerifyConfig
 instance KnownRatName unit => FromJSON (Time unit) where
     parseJSON = withText "time" $
         maybe (fail "Unknown time") pure . unitsP . toString
+
+instance FromJSON Regex where
+    parseJSON = withText "regex" $ \val -> do
+        let errOrRegex =
+                compile defaultCompOption defaultExecOption val
+        either (error . show) return errOrRegex
+
+-- Default boolean values according to
+-- https://hackage.haskell.org/package/regex-tdfa-1.3.1.0/docs/Text-Regex-TDFA.html#t:CompOption
+defaultCompOption :: CompOption
+defaultCompOption =
+    CompOption
+    { caseSensitive = True
+    , multiline = True
+    , rightAssoc = True
+    , newSyntax = True
+    , lastStarGreedy = False
+    }
+
+-- ExecOption value to improve speed
+defaultExecOption :: ExecOption
+defaultExecOption = ExecOption {captureGroups = False}

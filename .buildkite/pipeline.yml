@@ -13,7 +13,7 @@ steps:
     label: Windows executable
     artifact_paths:
       - "result/bin/*"
-  - command: nix run -f. -c xrefcheck
+  - command: nix run -f. -c xrefcheck --ignored tests/markdowns
     label: Xrefcheck itself
   - command: nix run -f $(nix eval --raw '((import ./nix/sources.nix).nixpkgs)') reuse -c reuse lint
     label: REUSE lint

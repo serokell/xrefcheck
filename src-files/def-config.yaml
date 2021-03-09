@@ -13,6 +13,7 @@ traversal:
     # Stack files
     - .stack-work
 
+
 # Verification parameters.
 verification:
   # On 'anchor not found' error, how much similar anchors should be displayed as
@@ -49,3 +50,9 @@ verification:
     - ../../issues/*
     - ../../merge_requests
     - ../../merge_requests/*
+
+  # POSIX extended regular expressions that match external references
+  # that have to be ignored (not verified).
+  # It is an optional parameter, so it can be omitted. 
+  ignoreRefs:
+    []

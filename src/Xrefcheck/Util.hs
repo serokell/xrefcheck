@@ -8,8 +8,10 @@
 module Xrefcheck.Util
     ( nameF'
     , paren
+    , postfixFields
     ) where
 
+import Control.Lens (LensRules, lensField, lensRules, mappingNamer)
 import Fmt (Builder, build, fmt, nameF)
 import System.Console.Pretty (Pretty (..), Style (Faint))
 
@@ -24,3 +26,6 @@ paren :: Builder -> Builder
 paren a
     | a == "" = ""
     | otherwise = "(" <> a <> ")"
+
+postfixFields :: LensRules
+postfixFields = lensRules & lensField .~ mappingNamer (\n -> [n ++ "L"])

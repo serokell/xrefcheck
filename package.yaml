@@ -52,6 +52,7 @@ default-extensions:
 ghc-options:
   - -Wall
   - -Wincomplete-record-updates
+  - -Wincomplete-uni-patterns
 
 dependencies:
   - aeson
@@ -73,12 +74,14 @@ dependencies:
   - Glob
   - http-client
   - http-types
+  - HUnit
   - lens
   - pretty-terminal
   - modern-uri
   - mtl
   - o-clock
   - optparse-applicative
+  - regex-tdfa
   - req
   - roman-numerals
   - template-haskell
@@ -86,6 +89,7 @@ dependencies:
   - text-metrics
   - th-lift-instances
   - th-utilities
+  - transformers
   - name: universum
     mixin: [(Universum as Prelude), (Universum.Unsafe as Unsafe)]
   - yaml

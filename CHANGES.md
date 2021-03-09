@@ -7,6 +7,13 @@
 Unreleased
 ==========
 
+* [#53](https://github.com/serokell/xrefcheck/pull/53)
+  + Make possible to include a regular expression in
+  `ignoreRefs` parameter of config to ignore external
+  references.
+  + Add support of right in-place ignoring annotations
+  such as `ignore file`, `ignore paragraph` and `ignore link`.
+
 0.1.2
 =======
 

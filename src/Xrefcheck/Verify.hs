@@ -37,6 +37,7 @@ import System.Console.Pretty (Style (..), style)
 import System.Directory (canonicalizePath, doesDirectoryExist, doesFileExist)
 import System.FilePath (takeDirectory, (</>))
 import qualified System.FilePath.Glob as Glob
+import Text.Regex.TDFA.Text (Regex, regexec)
 import Text.URI (mkURI)
 import Time (RatioNat, Second, Time (..), ms, threadDelay, timeout)
 
@@ -251,13 +252,25 @@ checkExternalResource :: VerifyConfig
                       -> Text
                       -> IO (VerifyResult VerifyError)
 checkExternalResource VerifyConfig{..} link
+    | isIgnored = return mempty
     | doesReferLocalhost = return mempty
     | otherwise = fmap toVerifyRes $ do
         makeRequest HEAD 0.3 >>= \case
             Right () -> return $ Right ()
             Left   _ -> makeRequest GET 0.7
   where
+    isIgnored =
+        let maybeIsIgnored = (doesMatchAnyRegex link) <$> vcIgnoreRefs
+        in fromMaybe False maybeIsIgnored
     doesReferLocalhost = any (`T.isInfixOf` link) ["://localhost", "://127.0.0.1"]
+
+    doesMatchAnyRegex :: Text -> ([Regex] -> Bool)
+    doesMatchAnyRegex src = any $ \regex ->
+        case regexec regex src of
+            Right res -> case res of
+                Just (before, match, after, _) -> null before && null after && not (null match)
+                Nothing -> False
+            Left _ -> False 
 
     makeRequest :: _ => method -> RatioNat -> IO (Either VerifyError ())
     makeRequest method timeoutFrac = runExceptT $ do

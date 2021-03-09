@@ -19,13 +19,6 @@ packages:
   original:
     hackage: roman-numerals-0.5.1.5
 - completed:
-    hackage: aeson-options-0.1.0@sha256:2d0c25afbb2d038bd5b57de8d042e319ea1a5ec7d7b92810d8a0cf0777882b6a,1244
-    pantry-tree:
-      size: 277
-      sha256: 4a3ddbdaa61d788155aac6e7601d429a8820441f7b5e31d417b2dbdbf9748be2
-  original:
-    hackage: aeson-options-0.1.0
-- completed:
     hackage: with-utf8-1.0.0.0@sha256:686e47588986d8080451b4e617118b579487dd4e085bba7bb36fac4198c90ae6,2480
     pantry-tree:
       size: 905

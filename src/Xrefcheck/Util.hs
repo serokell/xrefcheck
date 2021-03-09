@@ -9,9 +9,12 @@ module Xrefcheck.Util
     ( nameF'
     , paren
     , postfixFields
+    , aesonConfigOption
     ) where
 
 import Control.Lens (LensRules, lensField, lensRules, mappingNamer)
+import qualified Data.Aeson as Aeson
+import Data.Aeson.Casing (aesonPrefix, camelCase)
 import Fmt (Builder, build, fmt, nameF)
 import System.Console.Pretty (Pretty (..), Style (Faint))
 
@@ -29,3 +32,7 @@ paren a
 
 postfixFields :: LensRules
 postfixFields = lensRules & lensField .~ mappingNamer (\n -> [n ++ "L"])
+
+-- | Options that we use to derive JSON instances for config types.
+aesonConfigOption :: Aeson.Options
+aesonConfigOption = aesonPrefix camelCase

@@ -14,7 +14,7 @@ let
     src = pkgs.haskell-nix.haskellLib.cleanGit { src = ./.; };
     modules = [{
       packages.xrefcheck = {
-        package.ghcOptions = "-Werror";
+        ghcOptions = [ "-Werror" ];
       };
     }];
   };

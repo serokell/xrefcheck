@@ -56,7 +56,7 @@ ghc-options:
 
 dependencies:
   - aeson
-  - aeson-options
+  - aeson-casing
   - async
   - name: base
     mixin: [hiding (Prelude)]

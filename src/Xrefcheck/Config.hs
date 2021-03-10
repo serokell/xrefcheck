@@ -8,21 +8,20 @@
 module Xrefcheck.Config where
 
 import Control.Lens (makeLensesWith)
-import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveFromJSON)
 import Data.Yaml (FromJSON (..), decodeEither', prettyPrintParseException, withText)
 import Instances.TH.Lift ()
 import Text.Regex.TDFA (CompOption (..), ExecOption (..), Regex)
 import Text.Regex.TDFA.Text (compile)
 
+import Data.FileEmbed (embedFile)
 -- FIXME: Use </> from System.FilePath
 -- </> from Posix is used only because we cross-compile to Windows and \ doesn't work on Linux
 import System.FilePath.Posix ((</>))
-import Data.FileEmbed (embedFile)
 import Time (KnownRatName, Second, Time, unitsP)
 
 import Xrefcheck.System (RelGlobPattern)
-import Xrefcheck.Util (postfixFields)
+import Xrefcheck.Util (aesonConfigOption, postfixFields)
 
 -- | Overall config.
 data Config = Config
@@ -72,9 +71,9 @@ defConfig =
 -- Yaml instances
 -----------------------------------------------------------
 
-deriveFromJSON defaultOptions ''Config
-deriveFromJSON defaultOptions ''TraversalConfig
-deriveFromJSON defaultOptions ''VerifyConfig
+deriveFromJSON aesonConfigOption ''Config
+deriveFromJSON aesonConfigOption ''TraversalConfig
+deriveFromJSON aesonConfigOption ''VerifyConfig
 
 instance KnownRatName unit => FromJSON (Time unit) where
     parseJSON = withText "time" $

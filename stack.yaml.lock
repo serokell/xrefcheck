@@ -19,19 +19,12 @@ packages:
   original:
     hackage: roman-numerals-0.5.1.5
 - completed:
-    hackage: aeson-options-0.1.0@sha256:2d0c25afbb2d038bd5b57de8d042e319ea1a5ec7d7b92810d8a0cf0777882b6a,1244
+    hackage: with-utf8-1.0.2.2@sha256:42eed140390b3e93d9482b084d1d0150e8774667f39c33bd47e84815751fad09,3057
     pantry-tree:
-      size: 277
-      sha256: 4a3ddbdaa61d788155aac6e7601d429a8820441f7b5e31d417b2dbdbf9748be2
+      size: 1051
+      sha256: 4b06e9ee43909239a813ccd972eeb444e541efd72aeb0d343206449169227286
   original:
-    hackage: aeson-options-0.1.0
-- completed:
-    hackage: with-utf8-1.0.0.0@sha256:686e47588986d8080451b4e617118b579487dd4e085bba7bb36fac4198c90ae6,2480
-    pantry-tree:
-      size: 905
-      sha256: 39176872f0dde9f9e09c9cb9496e2b7b10fa17cb9a6eca8d40ca4b2dcaaacc11
-  original:
-    hackage: with-utf8-1.0.0.0
+    hackage: with-utf8-1.0.2.2
 - completed:
     hackage: th-utilities-0.2.4.0@sha256:ba19cd8441aa43dbaed40e9055bb5a7cbd7cf9e154f5253c6bf9293af8b1f96b,1869
     pantry-tree:
@@ -41,7 +34,7 @@ packages:
     hackage: th-utilities-0.2.4.0@sha256:ba19cd8441aa43dbaed40e9055bb5a7cbd7cf9e154f5253c6bf9293af8b1f96b,1869
 snapshots:
 - completed:
-    size: 496112
-    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/15/13.yaml
-    sha256: 75a1a0f870e1876898b117b0e443f911b3fa2985bfabb53158c81ab5765beda5
-  original: lts-15.13
+    size: 563099
+    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/17/3.yaml
+    sha256: 1e9f31ec160a144f796bc49b91dfc2bab5eca88b1dcc93da569108febaf5b382
+  original: lts-17.3

@@ -3,32 +3,32 @@
 # SPDX-License-Identifier: MPL-2.0
 
 steps:
-  - command: nix-build xrefcheck.nix
+  - command: nix-build ci.nix -A xrefcheck-lib-and-tests
     label: Library and tests
-  - command: nix-build
+  - command: nix-build ci.nix -A xrefcheck-static
     label: Executable
     artifact_paths:
       - "result/bin/xrefcheck"
-  - command: nix-build --argstr platform windows
+  - command: nix-build ci.nix -A xrefcheck-windows
     label: Windows executable
     artifact_paths:
       - "result/bin/*"
-  - command: nix run -f. -c xrefcheck --ignored tests/markdowns
+  - command: nix run -f ci.nix xrefcheck-static -c xrefcheck --ignored tests/markdowns
     label: Xrefcheck itself
-  - command: nix run -f $(nix eval --raw '((import ./nix/sources.nix).nixpkgs)') reuse -c reuse lint
+  - command: nix run -f ci.nix pkgs.reuse -c reuse lint
     label: REUSE lint
   - command:
-      - NIX_PATH=nixpkgs=$(nix eval --raw '(import ./nix/sources.nix).nixpkgs') nix-shell -p curl git gitAndTools.hub --run "curl https://raw.githubusercontent.com/serokell/scratch/release-binary/scripts/release-binary.sh | bash"
+      - nix run -f ci.nix pkgs.gitAndTools.hub -c bash -c "curl https://raw.githubusercontent.com/serokell/scratch/release-binary/scripts/release-binary.sh | bash"
     label: Create a pre-release
     branches: master
   - command:
       - nix-build docker
-      - NIX_PATH=nixpkgs=$(nix eval --raw '(import ./nix/sources.nix).nixpkgs') nix run nixpkgs.skopeo -c skopeo --insecure-policy copy --dest-creds "serokell:${DOCKERHUB_PASSWORD}" "docker-archive:$(readlink result)" "docker://docker.io/serokell/xrefcheck:latest"
+      - nix run -f ci.nix pkgs.skopeo -c skopeo --insecure-policy copy --dest-creds "serokell:${DOCKERHUB_PASSWORD}" "docker-archive:$(readlink result)" "docker://docker.io/serokell/xrefcheck:latest"
     label: Push to dockerhub
     branches: master
   - command:
       - nix-build docker
-      - NIX_PATH=nixpkgs=$(nix eval --raw '(import ./nix/sources.nix).nixpkgs') nix run nixpkgs.skopeo -c skopeo --insecure-policy copy --dest-creds "serokell:${DOCKERHUB_PASSWORD}" "docker-archive:$(readlink result)" "docker://docker.io/serokell/xrefcheck:${BUILDKITE_BRANCH}"
+      - nix run -f ci.nix pkgs.skopeo -c skopeo --insecure-policy copy --dest-creds "serokell:${DOCKERHUB_PASSWORD}" "docker-archive:$(readlink result)" "docker://docker.io/serokell/xrefcheck:${BUILDKITE_BRANCH}"
     label: Push release to dockerhub
     if: |
       build.branch =~ /^v[0-9]+.*/

@@ -37,7 +37,7 @@ spec = do
             , "tests/markdowns/with-annotations/unexpected_ignore_file.md"
             , "tests/markdowns/with-annotations/unrecognised_option.md"
             ]
-        
+
         parse :: FilePath -> IO (Either Text FileInfo)
         parse path = parseFileInfo . decodeUtf8 <$> BSL.readFile path
 
@@ -45,9 +45,9 @@ spec = do
         getFI path =
             let errOrFI = parse path
             in either error id <$> errOrFI
-        
+
         getRefs :: FileInfo -> [Text]
-        getRefs fi = map rName $ fi ^. fiReferences 
+        getRefs fi = map rName $ fi ^. fiReferences
 
         isIncorrectMD :: FilePath -> IO Bool
         isIncorrectMD path = do

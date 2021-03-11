@@ -270,7 +270,7 @@ checkExternalResource VerifyConfig{..} link
             Right res -> case res of
                 Just (before, match, after, _) -> null before && null after && not (null match)
                 Nothing -> False
-            Left _ -> False 
+            Left _ -> False
 
     makeRequest :: _ => method -> RatioNat -> IO (Either VerifyError ())
     makeRequest method timeoutFrac = runExceptT $ do

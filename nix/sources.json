@@ -35,6 +35,18 @@
         "url": "https://github.com/serokell/nixpkgs/archive/cc2f27a5b70d89cbb987027d86c477befadfd08f.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
+    "serokell.nix": {
+        "branch": "master",
+        "description": "Serokell Nix infrastructure library",
+        "homepage": null,
+        "owner": "serokell",
+        "repo": "serokell.nix",
+        "rev": "652105c5fc5564f5d8e682d61bdc0d51bbc1f939",
+        "sha256": "19zkjhyjbksf2fw32h7m3x0v8nvgdy2qkjkxg2qzzb25as245vmj",
+        "type": "tarball",
+        "url": "https://github.com/serokell/serokell.nix/archive/652105c5fc5564f5d8e682d61bdc0d51bbc1f939.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
     "stackage.nix": {
         "branch": "master",
         "description": "Automatically generated Nix expressions of Stackage snapshots",

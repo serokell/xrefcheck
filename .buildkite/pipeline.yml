@@ -3,6 +3,8 @@
 # SPDX-License-Identifier: MPL-2.0
 
 steps:
+  - command: nix-build ci.nix -A trailing-whitespace-check
+    label: Check trailing whitespaces
   - command: nix-build ci.nix -A xrefcheck-lib-and-tests
     label: Library and tests
   - command: nix-build ci.nix -A xrefcheck-static

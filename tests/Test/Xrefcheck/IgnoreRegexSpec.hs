@@ -69,7 +69,7 @@ spec = do
 
     where
         pickBrokenLinks :: VerifyResult (WithReferenceLoc VerifyError) -> [Text]
-        pickBrokenLinks verifyRes = 
+        pickBrokenLinks verifyRes =
             case verifyErrors verifyRes of
                 Just neWithRefLoc -> map (rLink . wrlReference) $ toList neWithRefLoc
                 Nothing -> []

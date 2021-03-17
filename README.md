@@ -85,7 +85,7 @@ xrefcheck --help
 
 1. Add the regular expression that matches the ignoring link to the optional `ignoreRefs` parameter of your config file.
 
-    For example: 
+    For example:
     ```yaml
     ignoreRefs:
       - https://bad.reference.(org|com)(/?)

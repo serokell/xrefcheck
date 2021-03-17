@@ -174,7 +174,7 @@ ignoreModesMsg = text $ header <> body
             , ("  \"file\"",      L.words $ "This mode can only be used at the top of markdown \
                                             \or right after comments at the top.")
             ]
-            
+
         modeIndent = length ("\"paragraph\"" :: String) + 2
         descrIndent = 27 - modeIndent
 

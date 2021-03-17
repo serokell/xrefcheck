@@ -85,7 +85,7 @@ nodeExtractInfo (Node _ _ docNodes) =
                 case ty of
                     PARAGRAPH -> loop nodes Nothing
                     _         -> returnError toIgnore (prettyType ty) pos
-            | otherwise = 
+            | otherwise =
                 case ty of
                     HTML_BLOCK _ -> processHtmlNode node pos nodes toIgnore
                     HEADING lvl -> do
@@ -127,7 +127,7 @@ nodeExtractInfo (Node _ _ docNodes) =
                 getHTMLText _ = Nothing
 
         getXrefcheckContent :: Node -> Maybe Text
-        getXrefcheckContent node = 
+        getXrefcheckContent node =
             let notStripped = T.stripPrefix "xrefcheck:" . T.strip =<<
                                  getCommentContent node
             in T.strip <$> notStripped
@@ -178,11 +178,11 @@ nodeExtractInfo (Node _ _ docNodes) =
         afterIgnoredLink _ = Nothing
 
         prettyPos :: Maybe PosInfo -> Text
-        prettyPos pos = 
+        prettyPos pos =
             let posToText :: Position -> Text
                 posToText (Position mPos) = fromMaybe "" mPos
             in "(" <> (posToText $ toPosition pos) <> ")"
-        
+
         prettyType :: NodeType -> Text
         prettyType ty =
             let mType = safeHead $ words $ show ty
@@ -211,7 +211,7 @@ nodeExtractInfo (Node _ _ docNodes) =
             , "perhaps you meant \
                \<\"ignore link\"|\"ignore paragraph\"|\"ignore file\"> "
             ]
-        
+
         returnError :: Maybe IgnoreMode -> Text -> Maybe PosInfo -> StateT FileInfo (Except Text) ()
         returnError mode txt pos =
             let errMsg = case mode of

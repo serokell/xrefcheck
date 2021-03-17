@@ -4,11 +4,8 @@
 
 { linux ? false, linux-static ? false, windows ? false }:
 let
-  sources = import ./nix/sources.nix;
-  haskell-nix = import sources."haskell.nix" {
-    sourcesOverride = { hackage = sources."hackage.nix"; stackage = sources."stackage.nix"; };
-  };
-  nixpkgs = import sources.nixpkgs haskell-nix.nixpkgsArgs;
+  nixpkgs = (import ./ci.nix).pkgs;
+  src = (import ./ci.nix).project-src;
   pkgs = if linux-static then nixpkgs.pkgsCross.musl64 else if windows then nixpkgs.pkgsCross.mingwW64 else nixpkgs;
   project = pkgs.haskell-nix.stackProject {
     src = pkgs.haskell-nix.haskellLib.cleanGit { src = ./.; };

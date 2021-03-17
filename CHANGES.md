@@ -7,6 +7,12 @@
 Unreleased
 ==========
 
+
+0.1.3
+=======
+
+* [#58](https://github.com/serokell/xrefcheck/pull/58)
+  + Switch to lts-17.3.
 * [#53](https://github.com/serokell/xrefcheck/pull/53)
   + Make possible to include a regular expression in
   `ignoreRefs` parameter of config to ignore external

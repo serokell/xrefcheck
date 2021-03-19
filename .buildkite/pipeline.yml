@@ -20,7 +20,7 @@ steps:
   - command: nix run -f ci.nix pkgs.reuse -c reuse lint
     label: REUSE lint
   - command:
-      - nix run -f ci.nix pkgs.gitAndTools.hub -c bash -c "curl https://raw.githubusercontent.com/serokell/scratch/release-binary/scripts/release-binary.sh | bash"
+      - nix run -f ci.nix pkgs.curl pkgs.gitAndTools.hub -c bash -c "curl https://raw.githubusercontent.com/serokell/scratch/release-binary/scripts/release-binary.sh | bash"
     label: Create a pre-release
     branches: master
   - command:

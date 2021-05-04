@@ -6,6 +6,9 @@
 
 Unreleased
 ==========
+
+0.2
+==========
 * [#57](https://github.com/serokell/xrefcheck/pull/57)
   + Added `flavor` field to config.
     Also see [config sample](tests/configs/github-config.yaml).

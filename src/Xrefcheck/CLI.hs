@@ -17,16 +17,18 @@ module Xrefcheck.CLI
     , getCommand
     ) where
 
+import qualified Data.Char as C
 import qualified Data.List as L
+import qualified Data.Text as T
 import Data.Version (showVersion)
-import Options.Applicative (Parser, ReadM, command, eitherReader, execParser, flag', footerDoc, fullDesc,
-                            help, helper, hsubparser, info, infoOption, long, metavar, option, progDesc,
-                            short, strOption, switch, value)
+import Options.Applicative
+  (Parser, ReadM, command, eitherReader, execParser, flag', footerDoc, fullDesc, help, helper,
+  hsubparser, info, infoOption, long, metavar, option, progDesc, short, strOption, switch, value)
 import Options.Applicative.Help.Pretty (Doc, displayS, fill, fillSep, indent, renderPretty, text)
 
 import Paths_xrefcheck (version)
-import Xrefcheck.Config
 import Xrefcheck.Core
+import Xrefcheck.Scan
 
 modeReadM :: ReadM VerifyMode
 modeReadM = eitherReader $ \s ->
@@ -45,7 +47,7 @@ modeReadM = eitherReader $ \s ->
 
 data Command
   = DefaultCommand Options
-  | DumpConfig FilePath
+  | DumpConfig Flavor FilePath
 
 data Options = Options
     { oConfigPath       :: Maybe FilePath
@@ -70,6 +72,24 @@ addTraversalOptions TraversalConfig{..} (TraversalOptions ignored) =
 -- | Where to try to seek configuration if specific path is not set.
 defaultConfigPaths :: [FilePath]
 defaultConfigPaths = ["./xrefcheck.yaml", "./.xrefcheck.yaml"]
+
+-- | Strictly speaking, what config we will dump depends on the repository type:
+-- this affects Markdown flavor, things excluded by default, e.t.c.
+--
+-- But at the moment there is one-to-one correspondence between repository types
+-- and flavors, so we write a type alias here.
+type RepoType = Flavor
+
+repoTypeReadM :: ReadM RepoType
+repoTypeReadM = eitherReader $ \name ->
+  maybeToRight (failureText name) $ L.lookup (map C.toLower name) allRepoTypesNamed
+  where
+    allRepoTypesNamed =
+      allRepoTypes <&> \ty -> (toString $ T.toLower (show ty), ty)
+    failureText name =
+      "Unknown repository type: " <> show name <> "\n\
+      \Expected one of: " <> mconcat (intersperse ", " $ map show allRepoTypes)
+    allRepoTypes = allFlavors
 
 optionsParser :: Parser Options
 optionsParser = do
@@ -122,13 +142,23 @@ traversalOptionsParser = do
         help "Files and folders which we pretend do not exist."
     return TraversalOptions{..}
 
-dumpConfigOptions :: Parser FilePath
+dumpConfigOptions :: Parser Command
 dumpConfigOptions = hsubparser $
   command "dump-config" $
     info parser $
     progDesc "Dump default configuration into a file."
   where
-    parser = strOption $
+    parser = DumpConfig <$> repoTypeOption <*> outputOption
+
+    repoTypeOption =
+      option repoTypeReadM $
+      short 't' <>
+      long "type" <>
+      metavar "REPOSITORY TYPE" <>
+      help "Git repository type."
+
+    outputOption =
+      strOption $
       short 'o' <>
       long "output" <>
       metavar "FILEPATH" <>
@@ -138,7 +168,7 @@ dumpConfigOptions = hsubparser $
 totalParser :: Parser Command
 totalParser = asum
   [ DefaultCommand <$> optionsParser
-  , DumpConfig <$> dumpConfigOptions
+  , dumpConfigOptions
   ]
 
 versionOption :: Parser (a -> a)

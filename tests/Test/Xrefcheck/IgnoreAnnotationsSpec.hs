@@ -39,7 +39,8 @@ spec = do
             ]
 
         parse :: FilePath -> IO (Either Text FileInfo)
-        parse path = parseFileInfo . decodeUtf8 <$> BSL.readFile path
+        parse path =
+            parseFileInfo defGithubMdConfig . decodeUtf8 <$> BSL.readFile path
 
         getFI :: FilePath -> IO FileInfo
         getFI path =

@@ -9,6 +9,7 @@ module Xrefcheck.Util
     ( nameF'
     , paren
     , postfixFields
+    , (-:)
     , aesonConfigOption
     ) where
 
@@ -32,6 +33,10 @@ paren a
 
 postfixFields :: LensRules
 postfixFields = lensRules & lensField .~ mappingNamer (\n -> [n ++ "L"])
+
+infixr 0 -:
+(-:) :: a -> b -> (a, b)
+(-:) = (,)
 
 -- | Options that we use to derive JSON instances for config types.
 aesonConfigOption :: Aeson.Options

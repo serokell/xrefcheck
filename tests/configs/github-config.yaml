@@ -26,12 +26,18 @@ verification:
 
   # Prefixes of files, references in which should not be analyzed.
   notScanned:
-    - :PLACEHOLDER:notScanned:
+    - .github/pull_request_template.md
+    - .github/issue_template.md
+    - .github/PULL_REQUEST_TEMPLATE
+    - .github/ISSUE_TEMPLATE
 
   # Glob patterns describing the files which do not physically exist in the
   # repository but should be treated as existing nevertheless.
   virtualFiles:
-    - :PLACEHOLDER:virtualFiles:
+    - ../../../issues
+    - ../../../issues/*
+    - ../../../pulls
+    - ../../../pulls/*
 
   # POSIX extended regular expressions that match external references
   # that have to be ignored (not verified).
@@ -46,4 +52,4 @@ scanners:
     # Flavor of markdown, e.g. GitHub-flavor.
     #
     # This affects which anchors are generated for headers.
-    flavor: :PLACEHOLDER:flavor:
+    flavor: GitHub

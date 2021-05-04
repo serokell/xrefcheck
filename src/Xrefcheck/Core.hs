@@ -10,6 +10,7 @@
 module Xrefcheck.Core where
 
 import Control.Lens (makeLenses, (%=))
+import Data.Aeson (FromJSON (..), withText)
 import Data.Char (isAlphaNum)
 import qualified Data.Char as C
 import Data.Default (Default (..))
@@ -27,6 +28,30 @@ import Xrefcheck.Util
 -----------------------------------------------------------
 -- Types
 -----------------------------------------------------------
+
+-- | Markdown flavor.
+--
+-- Unfortunatelly, CMark renderers used on different sites slightly differ,
+-- we have to account for that.
+data Flavor
+  = GitHub
+  | GitLab
+  deriving (Show)
+
+allFlavors :: [Flavor]
+allFlavors = [GitHub, GitLab]
+  where
+    _exhaustivenessCheck = \case
+      GitHub -> ()
+      GitLab -> ()
+      -- if you update this, also update the list above
+
+instance FromJSON Flavor where
+  parseJSON = withText "flavor" $ \txt ->
+    case T.toLower txt of
+      "github" -> pure GitHub
+      "gitlab" -> pure GitLab
+      _ -> fail $ "Unknown flavor " <> show txt
 
 -- | Description of element position in source file.
 -- We keep this in text because scanners for different formats use different
@@ -210,19 +235,33 @@ shouldCheckExternal = \case
 
 -- | Convert section header name to an anchor refering it.
 -- Conversion rules: https://docs.gitlab.com/ee/user/markdown.html#header-ids-and-links
-headerToAnchor :: Text -> Text
-headerToAnchor t = t
+headerToAnchor :: Flavor -> Text -> Text
+headerToAnchor flavor = \t -> t
     & T.toLower
-    & T.replace "+" tmp
-    & T.replace " " tmp
-    & joinSyms tmp
-    & T.replace (tmp <> "-") "-"
-    & T.replace ("-" <> tmp) "-"
-    & T.replace tmp "-"
-    & T.filter (\c -> isAlphaNum c || c == '_' || c == '-')
+    & mergeSpecialSymbols
   where
-    joinSyms sym = T.intercalate sym . filter (not . null) . T.splitOn sym
-    tmp = "\0"
+    joinSubsequentChars sym = toText . go . toString
+      where
+      go = \case
+        (c1 : c2 : s)
+          | c1 == c2 && c1 == sym -> go (c1 : s)
+        (c : s) -> c : go s
+        [] -> []
+
+    mergeSpecialSymbols = case flavor of
+      GitLab -> \t -> t
+        & T.replace " " "-"
+        & T.filter (\c -> isAlphaNum c || c == '_' || c == '-')
+        & joinSubsequentChars '-'
+      GitHub ->
+        -- GitHub case is tricky, it can produce many hythens in a row, e.g.
+        -- "A - B" -> "a---b"
+        let tmp = '\0'; tmpT = T.singleton tmp
+        in \t -> t
+        & T.replace " " tmpT
+        & joinSubsequentChars tmp
+        & T.replace tmpT "-"
+        & T.filter (\c -> isAlphaNum c || c == '_' || c == '-')
 
 -- | When there are several anchors with the same name, github automatically attaches
 -- "-<number>" suffixes to duplications to make them referable unambiguously.

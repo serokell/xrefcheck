@@ -13,15 +13,16 @@ import System.Directory (doesFileExist)
 
 import Xrefcheck.CLI
 import Xrefcheck.Config
+import Xrefcheck.Core
 import Xrefcheck.Progress
 import Xrefcheck.Scan
 import Xrefcheck.Scanners
 import Xrefcheck.System
 import Xrefcheck.Verify
 
-formats :: FormatsSupport
-formats = specificFormatsSupport
-    [ markdownSupport
+formats :: ScannersConfig -> FormatsSupport
+formats ScannersConfig{..} = specificFormatsSupport
+    [ markdownSupport scMarkdown
     ]
 
 defaultAction :: Options -> IO ()
@@ -33,8 +34,10 @@ defaultAction Options{..} = do
         mConfigPath <- findFirstExistingFile defaultConfigPaths
         case mConfigPath of
           Nothing -> do
-            hPutStrLn @Text stderr "Configuration file not found, using default config\n"
-            pure defConfig
+            hPutStrLn @Text stderr
+              "Configuration file not found, using default config \
+              \for GitHub repositories\n"
+            pure $ defConfig GitHub
           Just configPath ->
             readConfig configPath
       Just configPath -> do
@@ -45,7 +48,7 @@ defaultAction Options{..} = do
 
     repoInfo <- allowRewrite showProgressBar $ \rw -> do
         let fullConfig = addTraversalOptions (cTraversal config) oTraversalOptions
-        gatherRepoInfo rw formats fullConfig root
+        gatherRepoInfo rw (formats $ cScanners config) fullConfig root
 
     when oVerbose $
         fmtLn $ "=== Repository data ===\n\n" <> indentF 2 (build repoInfo)
@@ -79,5 +82,5 @@ main = withUtf8 $ do
     case command of
       DefaultCommand options ->
         defaultAction options
-      DumpConfig path ->
-        BS.writeFile path defConfigText
+      DumpConfig repoType path ->
+        BS.writeFile path (defConfigText repoType)

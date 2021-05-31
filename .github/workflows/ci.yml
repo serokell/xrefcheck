@@ -1,0 +1,15 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+jobs:
+  static:
+    name: Build the static executable
+    runs-on: nixos
+    steps:
+      - uses: actions/checkout@v2
+      - name: Build
+        run: nix-build ci.nix -A xrefcheck-static

@@ -12,3 +12,7 @@ jobs:
       - uses: actions/checkout@v2
       - name: Build
         run: nix-build ci.nix -A xrefcheck-static
+      - uses: actions/upload-artifact@v2
+        with:
+          name: xrefcheck-x86_64-linux
+          path: result/bin/xrefcheck

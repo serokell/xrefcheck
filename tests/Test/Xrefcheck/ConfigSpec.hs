@@ -52,7 +52,7 @@ spec = do
     it "when False - assume 401 status is invalid" $
       checkLinkWithServer (config { vcIgnoreAuthFailures = False })
         "http://127.0.0.1:3000/401" $ VerifyResult
-          [ ExternalResourceUnavailable $
+          [ ExternalHttpResourceUnavailable $
               Status { statusCode = 401, statusMessage = "Unauthorized" }
           ]
 
@@ -63,7 +63,7 @@ spec = do
     it "when False - assume 403 status is invalid" $
       checkLinkWithServer (config { vcIgnoreAuthFailures = False })
         "http://127.0.0.1:3000/403" $ VerifyResult
-          [ ExternalResourceUnavailable $
+          [ ExternalHttpResourceUnavailable $
               Status { statusCode = 403, statusMessage = "Forbidden" }
           ]
   where

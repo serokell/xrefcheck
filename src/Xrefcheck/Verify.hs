@@ -22,23 +22,29 @@ module Xrefcheck.Verify
     , checkExternalResource
     ) where
 
-import Control.Concurrent.Async (forConcurrently, withAsync)
-import Control.Monad.Except (MonadError (..))
+import qualified Data.ByteString as BS
+import qualified Data.List.NonEmpty as NonEmpty
 import qualified Data.Map as M
 import qualified Data.Text as T
+import qualified GHC.Exts as Exts
+import qualified System.FilePath.Glob as Glob
+
+import Control.Concurrent.Async (forConcurrently, withAsync)
+import Control.Monad.Except (MonadError (..))
+import Data.Maybe (fromJust)
 import Data.Text.Metrics (damerauLevenshteinNorm)
 import Fmt (Buildable (..), blockListF', listF, (+|), (|+))
-import qualified GHC.Exts as Exts
+import Network.FTP.Client (FTPResponse (..), ResponseStatus (..), login, nlst, withFTP)
 import Network.HTTP.Client (HttpException (..), HttpExceptionContent (..), responseStatus)
-import Network.HTTP.Req (GET (..), HEAD (..), HttpException (..), NoReqBody (..), defaultHttpConfig,
-                         ignoreResponse, req, runReq, useURI)
+import Network.HTTP.Req
+  (GET (..), HEAD (..), HttpException (..), NoReqBody (..), defaultHttpConfig, ignoreResponse, req,
+  runReq, useURI)
 import Network.HTTP.Types.Status (Status, statusCode, statusMessage)
 import System.Console.Pretty (Style (..), style)
 import System.Directory (canonicalizePath, doesDirectoryExist, doesFileExist)
 import System.FilePath (takeDirectory, (</>))
-import qualified System.FilePath.Glob as Glob
 import Text.Regex.TDFA.Text (Regex, regexec)
-import Text.URI (mkURI)
+import Text.URI (Authority (..), URI (..), mkURI, unRText)
 import Time (RatioNat, Second, Time (..), ms, threadDelay, timeout)
 
 import Xrefcheck.Config
@@ -60,9 +66,7 @@ deriving instance Semigroup (VerifyResult e)
 deriving instance Monoid (VerifyResult e)
 
 instance Buildable e => Buildable (VerifyResult e) where
-    build vr = case verifyErrors vr of
-        Nothing   -> "ok"
-        Just errs -> listF errs
+    build vr = maybe "ok" listF $ verifyErrors vr
 
 verifyOk :: VerifyResult e -> Bool
 verifyOk (VerifyResult errors) = null errors
@@ -97,7 +101,8 @@ data VerifyError
     | AmbiguousAnchorRef FilePath Text (NonEmpty Anchor)
     | ExternalResourceInvalidUri
     | ExternalResourceUnknownProtocol
-    | ExternalResourceUnavailable Status
+    | ExternalHttpResourceUnavailable Status
+    | ExternalFtpResourceUnavailable FTPResponse
     | ExternalResourceSomeError Text
     deriving (Show)
 
@@ -118,10 +123,13 @@ instance Buildable VerifyError where
         ExternalResourceInvalidUri ->
             "⛂  Invalid url\n"
         ExternalResourceUnknownProtocol ->
-            "⛂  Bad url (expected 'http' or 'https')\n"
-        ExternalResourceUnavailable status ->
+            "⛂  Bad url (expected 'http','https' or 'ftp')\n"
+        ExternalHttpResourceUnavailable status ->
             "⛂  Resource unavailable (" +| statusCode status |+ " " +|
             decodeUtf8 @Text (statusMessage status) |+ ")\n"
+        ExternalFtpResourceUnavailable status ->
+            "⛂  Resource unavailable (" +| frStatus status |+ " " +|
+            decodeUtf8 @Text (frMessage status) |+ ")\n"
         ExternalResourceSomeError err ->
             "⛂  " +| build err |+ "\n\n"
       where
@@ -129,6 +137,9 @@ instance Buildable VerifyError where
             []  -> "\n"
             [h] -> ",\n   did you mean " +| h |+ "?\n"
             hs  -> ", did you mean:\n" +| blockListF' "    -" build hs
+
+instance Buildable ResponseStatus where
+  build = show
 
 verifyRepo
     :: Rewrite
@@ -248,20 +259,25 @@ verifyReference config@VerifyConfig{..} mode progressRef (RepoInfo repoInfo)
                         givenAnchors
                 in throwError $ AnchorDoesNotExist anchor similarAnchors
 
-checkExternalResource :: VerifyConfig
-                      -> Text
-                      -> IO (VerifyResult VerifyError)
+checkExternalResource :: VerifyConfig -> Text -> IO (VerifyResult VerifyError)
 checkExternalResource VerifyConfig{..} link
     | isIgnored = return mempty
     | doesReferLocalhost = return mempty
     | otherwise = fmap toVerifyRes $ do
-        makeRequest HEAD 0.3 >>= \case
-            Right () -> return $ Right ()
-            Left   _ -> makeRequest GET 0.7
+          uri <- mkURI link
+            -- `catchAny` \_ ->
+            -- runExceptT $ throwError ExternalResourceInvalidUri
+
+          case unRText <$> uriScheme uri of
+            Just "http" -> checkHttp uri
+            Just "https" -> checkHttp uri
+            Just "ftp" -> checkFtp uri
+            _ -> runExceptT $ throwError ExternalResourceUnknownProtocol
   where
     isIgnored =
-        let maybeIsIgnored = (doesMatchAnyRegex link) <$> vcIgnoreRefs
+        let maybeIsIgnored = doesMatchAnyRegex link <$> vcIgnoreRefs
         in fromMaybe False maybeIsIgnored
+
     doesReferLocalhost = any (`T.isInfixOf` link) ["://localhost", "://127.0.0.1"]
 
     doesMatchAnyRegex :: Text -> ([Regex] -> Bool)
@@ -272,10 +288,18 @@ checkExternalResource VerifyConfig{..} link
                 Nothing -> False
             Left _ -> False
 
-    makeRequest :: _ => method -> RatioNat -> IO (Either VerifyError ())
-    makeRequest method timeoutFrac = runExceptT $ do
-        uri <- mkURI link
-             & maybe (throwError ExternalResourceInvalidUri) pure
+    checkHttp uri = makeHttpRequest uri HEAD 0.3 >>= \case
+      Right () -> return $ Right ()
+      Left   _ -> makeHttpRequest uri GET 0.7
+
+
+    makeHttpRequest
+      :: _
+      => URI
+      -> method
+      -> RatioNat
+      -> IO (Either VerifyError ())
+    makeHttpRequest uri method timeoutFrac = runExceptT $ do
         parsedUrl <- useURI uri
                    & maybe (throwError ExternalResourceUnknownProtocol) pure
         let reqLink = case parsedUrl of
@@ -288,8 +312,8 @@ checkExternalResource VerifyConfig{..} link
 
         let maxTime = Time @Second $ unTime vcExternalRefCheckTimeout * timeoutFrac
 
-        mres <- liftIO (timeout maxTime $ void reqLink)
-                `catch` (either throwError (\() -> return (Just ())) . interpretErrors)
+        mres <- liftIO (timeout maxTime $ void reqLink) `catch`
+          (either throwError (\() -> return (Just ())) . interpretErrors)
         maybe (throwError $ ExternalResourceSomeError "Response timeout") pure mres
 
     isAllowedErrorCode = or . sequence
@@ -306,5 +330,46 @@ checkExternalResource VerifyConfig{..} link
             HttpExceptionRequest _ exc -> case exc of
                 StatusCodeException resp _
                     | isAllowedErrorCode (statusCode $ responseStatus resp) -> Right ()
-                    | otherwise -> Left $ ExternalResourceUnavailable (responseStatus resp)
+                    | otherwise -> Left $ ExternalHttpResourceUnavailable (responseStatus resp)
                 other -> Left . ExternalResourceSomeError $ show other
+
+
+    checkFtp :: URI -> IO (Either VerifyError ())
+    checkFtp uri = runExceptT $ do
+      -- get authority which stores host and port
+      authority <- case uriAuthority uri of
+        Right a -> pure a
+        Left _ -> throwError ExternalResourceInvalidUri
+      let host = T.unpack . unRText $ authHost authority
+      let port :: Int = fromIntegral . fromMaybe 21 $ authPort authority
+      let pieces = uriPath uri
+      -- in case there aro no pieces - smth wrong with url
+      unless (isJust pieces) $
+        throwError ExternalResourceInvalidUri
+      let (trailing, pathList) = fromJust pieces
+      -- in case there are trailing slash - smth wrong with url
+      when trailing $
+        throwError ExternalResourceInvalidUri
+      -- build path from pieces
+      let path = T.unpack . mconcat
+            . NonEmpty.toList
+            . NonEmpty.intersperse "/"
+            . NonEmpty.map unRText
+            $ pathList
+      makeFtpRequest host port path
+
+    makeFtpRequest :: String -> Int -> FilePath -> ExceptT VerifyError IO ()
+    makeFtpRequest host port path = withFTP host port $
+      \handle resp -> do
+        -- check connection status
+        when (frStatus resp /= Success) $
+          Left $ ExternalFtpResourceUnavailable resp
+        -- anonymous login
+        loginResp <- login handle "anonymous" ""
+        -- check login status
+        when (frStatus loginResp /= Success) $
+          Left $ ExternalFtpResourceUnavailable loginResp
+        file <- nlst handle [ path ]
+        -- check file exists
+        when (BS.null file) $
+          Left $ FileDoesNotExist path

@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2018-2020 Serokell <https://serokell.io>
+# SPDX-FileCopyrightText: 2018-2021 Serokell <https://serokell.io>
 #
 # SPDX-License-Identifier: MPL-2.0
 
@@ -11,14 +11,13 @@ license: MPL-2.0
 license-file: LICENSE
 author: Kostya Ivanov, Serokell
 maintainer: Serokell <hi@serokell.io>
-copyright: 2018-2019 Serokell <https://serokell.io>
+copyright: 2018-2021 Serokell <https://serokell.io>
+description: Please see the README on GitHub at <https://github.com/serokell/xrefcheck#readme>
 
 extra-source-files:
   - README.md
   - CHANGES.md
   - src-files/*
-
-description: Please see the README on GitHub at <https://github.com/serokell/xrefcheck#readme>
 
 default-extensions:
   - AllowAmbiguousTypes

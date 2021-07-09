@@ -1,4 +1,4 @@
-{- SPDX-FileCopyrightText: 2018-2019 Serokell <https://serokell.io>
+{- SPDX-FileCopyrightText: 2018-2021 Serokell <https://serokell.io>
  -
  - SPDX-License-Identifier: MPL-2.0
  -}
@@ -34,11 +34,12 @@ import Control.Monad.Except (MonadError (..))
 import Data.Maybe (fromJust)
 import Data.Text.Metrics (damerauLevenshteinNorm)
 import Fmt (Buildable (..), blockListF', listF, (+|), (|+))
-import Network.FTP.Client (FTPResponse (..), ResponseStatus (..), login, nlst, withFTP)
+import Network.FTP.Client
+  (FTPMessage (..), FTPResponse (..), ResponseStatus (..), login, nlst, withFTP)
 import Network.HTTP.Client (HttpException (..), HttpExceptionContent (..), responseStatus)
 import Network.HTTP.Req
-  (GET (..), HEAD (..), HttpException (..), NoReqBody (..), defaultHttpConfig, ignoreResponse, req,
-  runReq, useURI)
+  (AllowsBody, CanHaveBody (NoBody), GET (..), HEAD (..), HttpBodyAllowed, HttpException (..),
+  HttpMethod, NoReqBody (..), defaultHttpConfig, ignoreResponse, req, runReq, useURI)
 import Network.HTTP.Types.Status (Status, statusCode, statusMessage)
 import System.Console.Pretty (Style (..), style)
 import System.Directory (canonicalizePath, doesDirectoryExist, doesFileExist)
@@ -129,7 +130,11 @@ instance Buildable VerifyError where
             decodeUtf8 @Text (statusMessage status) |+ ")\n"
         ExternalFtpResourceUnavailable status ->
             "⛂  Resource unavailable (" +| frStatus status |+ " " +|
-            decodeUtf8 @Text (frMessage status) |+ ")\n"
+            decodeUtf8 @Text (
+              case frMessage status of
+                SingleLine s -> s
+                MultiLine ss -> BS.concat ss
+            ) |+ ")\n"
         ExternalResourceSomeError err ->
             "⛂  " +| build err |+ "\n\n"
       where
@@ -264,9 +269,8 @@ checkExternalResource VerifyConfig{..} link
     | isIgnored = return mempty
     | doesReferLocalhost = return mempty
     | otherwise = fmap toVerifyRes $ do
-          uri <- mkURI link
-            -- `catchAny` \_ ->
-            -- runExceptT $ throwError ExternalResourceInvalidUri
+          uri <- mkURI link `catch` \_ ->
+            runExceptT $ throwError ExternalResourceInvalidUri
 
           case unRText <$> uriScheme uri of
             Just "http" -> checkHttp uri
@@ -292,9 +296,8 @@ checkExternalResource VerifyConfig{..} link
       Right () -> return $ Right ()
       Left   _ -> makeHttpRequest uri GET 0.7
 
-
     makeHttpRequest
-      :: _
+      :: (HttpMethod method, HttpBodyAllowed (AllowsBody method) 'NoBody)
       => URI
       -> method
       -> RatioNat
@@ -333,7 +336,6 @@ checkExternalResource VerifyConfig{..} link
                     | otherwise -> Left $ ExternalHttpResourceUnavailable (responseStatus resp)
                 other -> Left . ExternalResourceSomeError $ show other
 
-
     checkFtp :: URI -> IO (Either VerifyError ())
     checkFtp uri = runExceptT $ do
       -- get authority which stores host and port
@@ -363,13 +365,13 @@ checkExternalResource VerifyConfig{..} link
       \handle resp -> do
         -- check connection status
         when (frStatus resp /= Success) $
-          Left $ ExternalFtpResourceUnavailable resp
+          throwError $ ExternalFtpResourceUnavailable resp
         -- anonymous login
         loginResp <- login handle "anonymous" ""
         -- check login status
         when (frStatus loginResp /= Success) $
-          Left $ ExternalFtpResourceUnavailable loginResp
+          throwError $ ExternalFtpResourceUnavailable loginResp
         file <- nlst handle [ path ]
         -- check file exists
         when (BS.null file) $
-          Left $ FileDoesNotExist path
+          throwError $ FileDoesNotExist path

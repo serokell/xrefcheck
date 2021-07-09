@@ -1,24 +1,23 @@
-# SPDX-FileCopyrightText: 2018-2020 Serokell <https://serokell.io>
+# SPDX-FileCopyrightText: 2018-2021 Serokell <https://serokell.io>
 #
 # SPDX-License-Identifier: MPL-2.0
 
 spec-version: 0.31.0
 
-name:                xrefcheck
-version:             0.2
-github:              serokell/xrefcheck
-license:             MPL-2.0
-license-file:        LICENSE
-author:              Kostya Ivanov, Serokell
-maintainer:          Serokell <hi@serokell.io>
-copyright:           2018-2019 Serokell <https://serokell.io>
+name: xrefcheck
+version: 0.2
+github: serokell/xrefcheck
+license: MPL-2.0
+license-file: LICENSE
+author: Kostya Ivanov, Serokell
+maintainer: Serokell <hi@serokell.io>
+copyright: 2018-2021 Serokell <https://serokell.io>
+description: Please see the README on GitHub at <https://github.com/serokell/xrefcheck#readme>
 
 extra-source-files:
-- README.md
-- CHANGES.md
-- src-files/*
-
-description:         Please see the README on GitHub at <https://github.com/serokell/xrefcheck#readme>
+  - README.md
+  - CHANGES.md
+  - src-files/*
 
 default-extensions:
   - AllowAmbiguousTypes
@@ -71,6 +70,7 @@ dependencies:
   - filepath
   - file-embed
   - fmt
+  - ftp-client
   - Glob
   - http-client
   - http-types
@@ -100,31 +100,31 @@ library:
   source-dirs: src
 
   generated-other-modules:
-  - Paths_xrefcheck
+    - Paths_xrefcheck
 
 executables:
   xrefcheck:
-    main:                Main.hs
-    source-dirs:         exec
+    main: Main.hs
+    source-dirs: exec
     generated-other-modules:
-    - Paths_xrefcheck
+      - Paths_xrefcheck
     ghc-options:
-    - -threaded
-    - -rtsopts
-    - -with-rtsopts=-N
-    - -O2
+      - -threaded
+      - -rtsopts
+      - -with-rtsopts=-N
+      - -O2
     dependencies:
-    - xrefcheck
+      - xrefcheck
 
 tests:
   xrefcheck-tests:
-    main:                Main.hs
-    source-dirs:         tests
+    main: Main.hs
+    source-dirs: tests
     generated-other-modules:
-    - Paths_xrefcheck
+      - Paths_xrefcheck
     dependencies:
-    - xrefcheck
-    - hspec
-    - QuickCheck
+      - xrefcheck
+      - hspec
+      - QuickCheck
     build-tools:
-    - hspec-discover
+      - hspec-discover

@@ -6,6 +6,7 @@
 {-# LANGUAGE DeriveFunctor         #-}
 {-# LANGUAGE PartialTypeSignatures #-}
 {-# OPTIONS_GHC -Wno-partial-type-signatures #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Xrefcheck.Verify
     ( -- * General verification
@@ -268,15 +269,14 @@ checkExternalResource :: VerifyConfig -> Text -> IO (VerifyResult VerifyError)
 checkExternalResource VerifyConfig{..} link
     | isIgnored = return mempty
     | doesReferLocalhost = return mempty
-    | otherwise = fmap toVerifyRes $ do
-          uri <- mkURI link `catch` \_ ->
-            runExceptT $ throwError ExternalResourceInvalidUri
+    | otherwise = fmap toVerifyRes $ runExceptT $ do
+        uri <- mkURI link & maybe (throwError ExternalResourceInvalidUri) pure
 
-          case unRText <$> uriScheme uri of
-            Just "http" -> checkHttp uri
-            Just "https" -> checkHttp uri
-            Just "ftp" -> checkFtp uri
-            _ -> runExceptT $ throwError ExternalResourceUnknownProtocol
+        case unRText <$> uriScheme uri of
+          Just "http" -> checkHttp uri
+          Just "https" -> checkHttp uri
+          Just "ftp" -> checkFtp uri
+          _ -> throwError ExternalResourceUnknownProtocol
   where
     isIgnored =
         let maybeIsIgnored = doesMatchAnyRegex link <$> vcIgnoreRefs
@@ -292,17 +292,20 @@ checkExternalResource VerifyConfig{..} link
                 Nothing -> False
             Left _ -> False
 
-    checkHttp uri = makeHttpRequest uri HEAD 0.3 >>= \case
-      Right () -> return $ Right ()
-      Left   _ -> makeHttpRequest uri GET 0.7
+    checkHttp :: URI -> ExceptT VerifyError IO ()
+    checkHttp uri = do
+      res <- liftIO $ runExceptT $ makeHttpRequest uri HEAD 0.3
+      case res of
+        Right () -> return ()
+        Left   _ -> makeHttpRequest uri GET 0.7
 
     makeHttpRequest
       :: (HttpMethod method, HttpBodyAllowed (AllowsBody method) 'NoBody)
       => URI
       -> method
       -> RatioNat
-      -> IO (Either VerifyError ())
-    makeHttpRequest uri method timeoutFrac = runExceptT $ do
+      -> ExceptT VerifyError IO ()
+    makeHttpRequest uri method timeoutFrac = do
         parsedUrl <- useURI uri
                    & maybe (throwError ExternalResourceUnknownProtocol) pure
         let reqLink = case parsedUrl of
@@ -336,8 +339,8 @@ checkExternalResource VerifyConfig{..} link
                     | otherwise -> Left $ ExternalHttpResourceUnavailable (responseStatus resp)
                 other -> Left . ExternalResourceSomeError $ show other
 
-    checkFtp :: URI -> IO (Either VerifyError ())
-    checkFtp uri = runExceptT $ do
+    checkFtp :: URI -> ExceptT VerifyError IO ()
+    checkFtp uri = do
       -- get authority which stores host and port
       authority <- case uriAuthority uri of
         Right a -> pure a

@@ -35,27 +35,27 @@ import Xrefcheck.Util (aesonConfigOption, postfixFields, (-:))
 
 -- | Overall config.
 data Config = Config
-    { cTraversal    :: TraversalConfig
-    , cVerification :: VerifyConfig
-    , cScanners     :: ScannersConfig
-    }
+  { cTraversal    :: TraversalConfig
+  , cVerification :: VerifyConfig
+  , cScanners     :: ScannersConfig
+  }
 
 -- | Config of verification.
 data VerifyConfig = VerifyConfig
-    { vcAnchorSimilarityThreshold :: Double
-    , vcExternalRefCheckTimeout   :: Time Second
-    , vcVirtualFiles              :: [RelGlobPattern]
-      -- ^ Files which we pretend do exist.
-    , vcNotScanned                :: [FilePath]
-      -- ^ Prefixes of files, references in which we should not analyze.
-    , vcIgnoreRefs                :: Maybe [Regex]
-      -- ^ Regular expressions that match external references we should not verify.
-    }
+  { vcAnchorSimilarityThreshold :: Double
+  , vcExternalRefCheckTimeout   :: Time Second
+  , vcVirtualFiles              :: [RelGlobPattern]
+    -- ^ Files which we pretend do exist.
+  , vcNotScanned                :: [FilePath]
+    -- ^ Prefixes of files, references in which we should not analyze.
+  , vcIgnoreRefs                :: Maybe [Regex]
+    -- ^ Regular expressions that match external references we should not verify.
+  }
 
 -- | Configs for all the supported scanners.
 data ScannersConfig = ScannersConfig
-    { scMarkdown :: MarkdownConfig
-    }
+  { scMarkdown :: MarkdownConfig
+  }
 
 makeLensesWith postfixFields ''Config
 makeLensesWith postfixFields ''VerifyConfig
@@ -76,7 +76,9 @@ defConfigUnfilled =
 -- the provided replacement won't cause any warnings or failures.
 fillHoles
   :: HasCallStack
-  => [(ByteString, Either ByteString [ByteString])] -> ByteString -> ByteString
+  => [(ByteString, Either ByteString [ByteString])]
+  -> ByteString
+  -> ByteString
 fillHoles allReplacements rawConfig =
   let holesLocs = R.getAllMatches $ holeLineRegex `R.match` rawConfig
   in mconcat $ replaceHoles 0 holesLocs
@@ -113,25 +115,25 @@ fillHoles allReplacements rawConfig =
     replaceHole :: ByteString -> [ByteString]
     replaceHole holeLine = if
       | Just [_wholeMatch, _beginning, leadingSpaces, key] <-
-        R.getAllTextSubmatches <$> (holeItemRegex `R.matchM` holeLine) ->
-          case getReplacement key of
-            Left replacement -> [leadingSpaces, replacement]
-            Right _ -> error $
-              "Key " <> showBs key <> " requires replacement with an item, \
-              \but list was given"
+          R.getAllTextSubmatches <$> (holeItemRegex `R.matchM` holeLine) ->
+            case getReplacement key of
+              Left replacement -> [leadingSpaces, replacement]
+              Right _ -> error $
+                "Key " <> showBs key <> " requires replacement with an item, \
+                \but list was given"
 
       | Just [_wholeMatch, leadingChars, key] <-
-        R.getAllTextSubmatches <$> (holeListRegex `R.matchM` holeLine) ->
-          case getReplacement key of
-            Left _ -> error $
-              "Key " <> showBs key <> " requires replacement with a list, \
-              \but an item was given"
-            Right [] ->
-              ["[]"]
-            Right replacements@(_ : _) ->
-              Unsafe.init $ do
-                replacement <- replacements
-                [leadingChars, replacement, "\n"]
+          R.getAllTextSubmatches <$> (holeListRegex `R.matchM` holeLine) ->
+            case getReplacement key of
+              Left _ -> error $
+                "Key " <> showBs key <> " requires replacement with a list, \
+                \but an item was given"
+              Right [] ->
+                ["[]"]
+              Right replacements@(_ : _) ->
+                Unsafe.init $ do
+                  replacement <- replacements
+                  [leadingChars, replacement, "\n"]
 
       | otherwise ->
           error $ "Unrecognized placeholder pattern " <> showBs holeLine
@@ -187,26 +189,24 @@ deriveFromJSON aesonConfigOption ''ScannersConfig
 deriveFromJSON aesonConfigOption ''VerifyConfig
 
 instance KnownRatName unit => FromJSON (Time unit) where
-    parseJSON = withText "time" $
-        maybe (fail "Unknown time") pure . unitsP . toString
+  parseJSON = withText "time" $
+    maybe (fail "Unknown time") pure . unitsP . toString
 
 instance FromJSON Regex where
-    parseJSON = withText "regex" $ \val -> do
-        let errOrRegex =
-                R.compile defaultCompOption defaultExecOption val
-        either (error . show) return errOrRegex
+  parseJSON = withText "regex" $ \val -> do
+    let errOrRegex = R.compile defaultCompOption defaultExecOption val
+    either (error . show) return errOrRegex
 
 -- Default boolean values according to
 -- https://hackage.haskell.org/package/regex-tdfa-1.3.1.0/docs/Text-Regex-TDFA.html#t:CompOption
 defaultCompOption :: CompOption
-defaultCompOption =
-    CompOption
-    { caseSensitive = True
-    , multiline = True
-    , rightAssoc = True
-    , newSyntax = True
-    , lastStarGreedy = False
-    }
+defaultCompOption = CompOption
+  { caseSensitive = True
+  , multiline = True
+  , rightAssoc = True
+  , newSyntax = True
+  , lastStarGreedy = False
+  }
 
 -- ExecOption value to improve speed
 defaultExecOption :: ExecOption

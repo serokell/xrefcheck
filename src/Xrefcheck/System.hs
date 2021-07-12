@@ -4,11 +4,11 @@
  -}
 
 module Xrefcheck.System
-    ( readingSystem
-    , askWithinCI
-    , RelGlobPattern (..)
-    , bindGlobPattern
-    ) where
+  ( readingSystem
+  , askWithinCI
+  , RelGlobPattern (..)
+  , bindGlobPattern
+  ) where
 
 import Data.Aeson (FromJSON (..), withText)
 import qualified Data.Char as C
@@ -39,19 +39,18 @@ bindGlobPattern root (RelGlobPattern relPat) = readingSystem $ do
   -- TODO [#26] try to avoid using canonicalization
   absPat <- canonicalizePath (root </> relPat)
   case Glob.tryCompileWith globCompileOptions absPat of
-    Left err ->
-      error $ "Glob pattern compilation failed after canonicalization: " <>
-              toText err
+    Left err -> error $
+      "Glob pattern compilation failed after canonicalization: " <> toText err
     Right pat ->
       return pat
 
 instance FromJSON RelGlobPattern where
-    parseJSON = withText "Repo-relative glob pattern" $ \path -> do
-        let spath = toString path
-        -- Checking path is sane
-        _ <- Glob.tryCompileWith globCompileOptions spath
-             & either fail pure
-        return (RelGlobPattern spath)
+  parseJSON = withText "Repo-relative glob pattern" $ \path -> do
+    let spath = toString path
+    -- Checking path is sane
+    _ <- Glob.tryCompileWith globCompileOptions spath
+      & either fail pure
+    return (RelGlobPattern spath)
 
 -- | Glob compilation options we use.
 globCompileOptions :: Glob.CompOptions

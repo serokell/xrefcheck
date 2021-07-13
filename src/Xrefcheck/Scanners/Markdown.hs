@@ -108,7 +108,7 @@ nodeExtractInfo config (Node _ _ docNodes) =
                           nodeExtractText node
               let aPos = toPosition pos
               fiAnchors %= (Anchor{..} :)
-              loop nodes toIgnore
+              loop (subs ++ nodes) toIgnore
             HTML_INLINE htmlText -> do
               let mName = T.stripSuffix "\">" =<< T.stripPrefix "<a name=\"" htmlText
               whenJust mName $ \aName -> do

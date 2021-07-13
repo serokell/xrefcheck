@@ -7,6 +7,11 @@
 Unreleased
 ==========
 
+0.2.1
+==========
+* [#68](https://github.com/serokell/xrefcheck/pull/68)
+  + Recognise manual HTML-anchors inside headers.
+
 0.2
 ==========
 * [#57](https://github.com/serokell/xrefcheck/pull/57)

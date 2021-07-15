@@ -1,11 +1,9 @@
-# SPDX-FileCopyrightText: 2018-2019 Serokell <https://serokell.io>
+# SPDX-FileCopyrightText: 2018-2021 Serokell <https://serokell.io>
 #
 # SPDX-License-Identifier: MPL-2.0
 
 dist
 dist-*
-cabal-dev
-*.cabal
 *.o
 *.hi
 *.chi
@@ -14,6 +12,7 @@ cabal-dev
 *.dyn_hi
 .hpc
 .hsenv
+*cabal*
 .cabal-sandbox/
 cabal.sandbox.config
 *.prof
@@ -21,8 +20,6 @@ cabal.sandbox.config
 *.hp
 *.eventlog
 .stack-work/
-cabal.project.local
-cabal.project.local~
 .HTF/
 .ghc.environment.*
 result

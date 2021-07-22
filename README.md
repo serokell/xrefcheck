@@ -1,5 +1,5 @@
 <!--
- - SPDX-FileCopyrightText: 2018-2019 Serokell <https://serokell.io>
+ - SPDX-FileCopyrightText: 2018-2021 Serokell <https://serokell.io>
  -
  - SPDX-License-Identifier: MPL-2.0
  -->
@@ -163,6 +163,7 @@ Currently supported options include:
 ## Build instructions [↑](#xrefcheck)
 
 Run `stack install` to build everything and install the executable.
+If you want to use cabal, you need to run (`stack2cabal`)[https://hackage.haskell.org/package/stack2cabal] first!
 
 ### CI and nix [↑](#xrefcheck)
 

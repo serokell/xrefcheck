@@ -6,15 +6,15 @@
 -- | Generalised repo scanner and analyser.
 
 module Xrefcheck.Scan
-    ( TraversalConfig (..)
-    , Extension
-    , ScanAction
-    , FormatsSupport
-    , RepoInfo (..)
+  ( TraversalConfig (..)
+  , Extension
+  , ScanAction
+  , FormatsSupport
+  , RepoInfo (..)
 
-    , gatherRepoInfo
-    , specificFormatsSupport
-    ) where
+  , gatherRepoInfo
+  , specificFormatsSupport
+  ) where
 
 import Data.Aeson.TH (deriveFromJSON)
 import qualified Data.Foldable as F
@@ -29,9 +29,9 @@ import Xrefcheck.Util (aesonConfigOption)
 
 -- | Config of repositry traversal.
 data TraversalConfig = TraversalConfig
-    { tcIgnored   :: [FilePath]
-      -- ^ Files and folders, files in which we completely ignore.
-    }
+  { tcIgnored   :: [FilePath]
+    -- ^ Files and folders, files in which we completely ignore.
+  }
 
 deriveFromJSON aesonConfigOption ''TraversalConfig
 
@@ -54,36 +54,35 @@ specificFormatsSupport formats = \ext -> M.lookup ext formatsMap
         ]
 
 gatherRepoInfo
-    :: MonadIO m
-    => Rewrite -> FormatsSupport -> TraversalConfig -> FilePath -> m RepoInfo
+  :: MonadIO m
+  => Rewrite -> FormatsSupport -> TraversalConfig -> FilePath -> m RepoInfo
 gatherRepoInfo rw formatsSupport config root = do
-    putTextRewrite rw "Scanning repository..."
-    _ Tree.:/ repoTree <- liftIO $ Tree.readDirectoryWithL processFile rootNE
-    let fileInfos = filter (\(path, _) -> not $ isIgnored path) $
-                    dropSndMaybes . F.toList $
-                    Tree.zipPaths . (dirOfRoot Tree.:/) $
-                    filterExcludedDirs root repoTree
-    return $ RepoInfo (M.fromList fileInfos)
+  putTextRewrite rw "Scanning repository..."
+  _ Tree.:/ repoTree <- liftIO $ Tree.readDirectoryWithL processFile rootNE
+  let fileInfos = filter (\(path, _) -> not $ isIgnored path)
+        $ dropSndMaybes . F.toList
+        $ Tree.zipPaths . (dirOfRoot Tree.:/)
+        $ filterExcludedDirs root repoTree
+  return $ RepoInfo (M.fromList fileInfos)
   where
     rootNE = if null root then "." else root
     dirOfRoot = if root == "" || root == "." then "" else takeDirectory root
     processFile file = do
-        let ext = takeExtension file
-        let mscanner = formatsSupport ext
-        forM mscanner $ \scanFile ->
-            scanFile file
+      let ext = takeExtension file
+      let mscanner = formatsSupport ext
+      forM mscanner $ \scanFile -> scanFile file
     dropSndMaybes l = [(a, b) | (a, Just b) <- l]
 
     ignored = map (root </>) (tcIgnored config)
     isIgnored path = path `elem` ignored
     filterExcludedDirs cur = \case
-        Tree.Dir name subfiles ->
-            let subfiles' =
-                  if isIgnored cur
-                  then []
-                  else map visitRec subfiles
-                visitRec sub = filterExcludedDirs (cur </> Tree.name sub) sub
-            in Tree.Dir name subfiles'
-        file@Tree.File{} -> file
-        Tree.Failed _name err ->
-            errorWithoutStackTrace $ "Repository traversal failed: " <> show err
+      Tree.Dir name subfiles ->
+        let subfiles' =
+              if isIgnored cur
+              then []
+              else map visitRec subfiles
+            visitRec sub = filterExcludedDirs (cur </> Tree.name sub) sub
+        in Tree.Dir name subfiles'
+      file@Tree.File{} -> file
+      Tree.Failed _name err ->
+        errorWithoutStackTrace $ "Repository traversal failed: " <> show err

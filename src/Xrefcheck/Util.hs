@@ -6,12 +6,12 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Xrefcheck.Util
-    ( nameF'
-    , paren
-    , postfixFields
-    , (-:)
-    , aesonConfigOption
-    ) where
+  ( nameF'
+  , paren
+  , postfixFields
+  , (-:)
+  , aesonConfigOption
+  ) where
 
 import Control.Lens (LensRules, lensField, lensRules, mappingNamer)
 import qualified Data.Aeson as Aeson
@@ -24,12 +24,12 @@ instance Pretty Builder where
     style s = build @Text . style s . fmt
 
 nameF' :: Builder -> Builder -> Builder
-nameF' a b = nameF (style Faint a) b
+nameF' a = nameF (style Faint a)
 
 paren :: Builder -> Builder
 paren a
-    | a == "" = ""
-    | otherwise = "(" <> a <> ")"
+  | a == "" = ""
+  | otherwise = "(" <> a <> ")"
 
 postfixFields :: LensRules
 postfixFields = lensRules & lensField .~ mappingNamer (\n -> [n ++ "L"])

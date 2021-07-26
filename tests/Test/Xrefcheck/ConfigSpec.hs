@@ -25,12 +25,13 @@ spec = do
       -- stack exec xrefcheck -- dump-config -t GitHub -o tests/configs/github-config.yaml
       it "Config matches" $
         \config ->
-          counterexample
-            (toString $ unwords
-             [ "Config does not match the expected format."
-             , "Run"
-             , "`stack exec xrefcheck -- dump-config -t GitHub -o tests/configs/github-config.yaml`"
-             , "and verify changes"
-             ]
-            )
+          let matches =
+                [ "Config does not match the expected format."
+                , "Run"
+                , "`stack exec xrefcheck -- dump-config -t GitHub -o tests/configs/github-config.yaml`"
+                , "and verify changes"
+                ]
+          in
+            counterexample
+            (toString $ unwords matches)
             (config == defConfigText GitHub)

@@ -6,16 +6,16 @@
 {-# LANGUAGE ApplicativeDo #-}
 
 module Xrefcheck.CLI
-    ( VerifyMode (..)
-    , shouldCheckLocal
-    , shouldCheckExternal
-    , Command (..)
-    , Options (..)
-    , TraversalOptions (..)
-    , addTraversalOptions
-    , defaultConfigPaths
-    , getCommand
-    ) where
+  ( VerifyMode (..)
+  , shouldCheckLocal
+  , shouldCheckExternal
+  , Command (..)
+  , Options (..)
+  , TraversalOptions (..)
+  , addTraversalOptions
+  , defaultConfigPaths
+  , getCommand
+  ) where
 
 import qualified Data.Char as C
 import qualified Data.List as L
@@ -32,35 +32,35 @@ import Xrefcheck.Scan
 
 modeReadM :: ReadM VerifyMode
 modeReadM = eitherReader $ \s ->
-    case find ((== s) . fst) modes of
-        Just (_, mode) -> Right mode
-        Nothing -> Left . mconcat $ intersperse "\n"
-            [ "Unknown mode " <> show s <> "."
-            , "Allowed values: " <> mconcat (intersperse ", " $ map (show . fst) modes)
-            ]
+  case find ((== s) . fst) modes of
+    Just (_, mode) -> Right mode
+    Nothing -> Left . mconcat $ intersperse "\n"
+      [ "Unknown mode " <> show s <> "."
+      , "Allowed values: " <> mconcat (intersperse ", " $ map (show . fst) modes)
+      ]
   where
     modes =
-        [ ("local-only", LocalOnlyMode)
-        , ("external-only", ExternalOnlyMode)
-        , ("full", FullMode)
-        ]
+      [ ("local-only", LocalOnlyMode)
+      , ("external-only", ExternalOnlyMode)
+      , ("full", FullMode)
+      ]
 
 data Command
   = DefaultCommand Options
   | DumpConfig Flavor FilePath
 
 data Options = Options
-    { oConfigPath       :: Maybe FilePath
-    , oRoot             :: FilePath
-    , oMode             :: VerifyMode
-    , oVerbose          :: Bool
-    , oShowProgressBar  :: Maybe Bool
-    , oTraversalOptions :: TraversalOptions
-    }
+  { oConfigPath       :: Maybe FilePath
+  , oRoot             :: FilePath
+  , oMode             :: VerifyMode
+  , oVerbose          :: Bool
+  , oShowProgressBar  :: Maybe Bool
+  , oTraversalOptions :: TraversalOptions
+  }
 
 data TraversalOptions = TraversalOptions
-    { toIgnored :: [FilePath]
-    }
+  { toIgnored :: [FilePath]
+  }
 
 addTraversalOptions :: TraversalConfig -> TraversalOptions -> TraversalConfig
 addTraversalOptions TraversalConfig{..} (TraversalOptions ignored) =
@@ -93,54 +93,54 @@ repoTypeReadM = eitherReader $ \name ->
 
 optionsParser :: Parser Options
 optionsParser = do
-    oConfigPath <- optional . strOption $
-        short 'c' <>
-        long "config" <>
-        metavar "FILEPATH" <>
-        help ("Path to configuration file. \
-             \If not specified, tries to read config from one of " <>
-             (mconcat . intersperse ", " $ map show defaultConfigPaths) <> ". \
-             \If none of these files exist, default configuration is used."
-             )
-    oRoot <- strOption $
-        short 'r' <>
-        long "root" <>
-        metavar "DIRECTORY" <>
-        help "Path to repository root." <>
-        value "."
-    oMode <- option modeReadM $
-        short 'm' <>
-        long "mode" <>
-        metavar "KEYWORD" <>
-        value FullMode <>
-        help "Which parts of verification to invoke. \
-             \You can enable only verification of repository-local references, \
-             \only verification of external references or both. \
-             \Default mode: full."
-    oVerbose <- switch $
-        short 'v' <>
-        long "verbose" <>
-        help "Report repository scan and verification details."
-    oShowProgressBar <- asum
-        [ flag' (Just True) $
-            long "progress" <>
-            help "Display progress bar during verification. \
-                 \This is enabled by default unless `CI` env var is set to true."
-        , flag' (Just False) $
-            long "no-progress" <>
-            help "Do not display progress bar during verification."
-        , pure Nothing
-        ]
-    oTraversalOptions <- traversalOptionsParser
-    return Options{..}
+  oConfigPath <- optional . strOption $
+    short 'c' <>
+    long "config" <>
+    metavar "FILEPATH" <>
+    help ("Path to configuration file. \
+          \If not specified, tries to read config from one of " <>
+          (mconcat . intersperse ", " $ map show defaultConfigPaths) <> ". \
+          \If none of these files exist, default configuration is used."
+         )
+  oRoot <- strOption $
+    short 'r' <>
+    long "root" <>
+    metavar "DIRECTORY" <>
+    help "Path to repository root." <>
+    value "."
+  oMode <- option modeReadM $
+    short 'm' <>
+    long "mode" <>
+    metavar "KEYWORD" <>
+    value FullMode <>
+    help "Which parts of verification to invoke. \
+         \You can enable only verification of repository-local references, \
+         \only verification of external references or both. \
+         \Default mode: full."
+  oVerbose <- switch $
+    short 'v' <>
+    long "verbose" <>
+    help "Report repository scan and verification details."
+  oShowProgressBar <- asum
+    [ flag' (Just True) $
+        long "progress" <>
+        help "Display progress bar during verification. \
+             \This is enabled by default unless `CI` env var is set to true."
+    , flag' (Just False) $
+        long "no-progress" <>
+        help "Do not display progress bar during verification."
+    , pure Nothing
+    ]
+  oTraversalOptions <- traversalOptionsParser
+  return Options{..}
 
 traversalOptionsParser :: Parser TraversalOptions
 traversalOptionsParser = do
-    toIgnored <- many . strOption $
-        long "ignored" <>
-        metavar "FILEPATH" <>
-        help "Files and folders which we pretend do not exist."
-    return TraversalOptions{..}
+  toIgnored <- many . strOption $
+    long "ignored" <>
+    metavar "FILEPATH" <>
+    help "Files and folders which we pretend do not exist."
+  return TraversalOptions{..}
 
 dumpConfigOptions :: Parser Command
 dumpConfigOptions = hsubparser $
@@ -173,41 +173,41 @@ totalParser = asum
 
 versionOption :: Parser (a -> a)
 versionOption = infoOption ("xrefcheck-" <> showVersion version) $
-    long "version" <>
-    help "Show version."
+  long "version" <>
+  help "Show version."
 
 getCommand :: IO Command
 getCommand = do
-    execParser $
-        info (helper <*> versionOption <*> totalParser) $
-        fullDesc <>
-        progDesc "Cross-references verifier for markdown documentation in \
-                 \Git repositories." <>
-        (footerDoc $ pure ignoreModesMsg)
+  execParser $
+    info (helper <*> versionOption <*> totalParser) $
+    fullDesc <>
+    progDesc "Cross-references verifier for markdown documentation in \
+             \Git repositories." <>
+    footerDoc (pure ignoreModesMsg)
 
 ignoreModesMsg :: Doc
 ignoreModesMsg = text $ header <> body
-    where
-        header = "To ignore a link in your markdown, \
-                 \include \"<!-- xrefcheck: ignore <mode> -->\"\n\
-                 \comment with one of these modes:\n"
-        body = displayS (renderPretty pageParam pageWidth doc) ""
+  where
+    header = "To ignore a link in your markdown, \
+             \include \"<!-- xrefcheck: ignore <mode> -->\"\n\
+             \comment with one of these modes:\n"
+    body = displayS (renderPretty pageParam pageWidth doc) ""
 
-        pageWidth = 80
-        pageParam = 1
+    pageWidth = 80
+    pageParam = 1
 
-        doc = fillSep $ map formatDesc modeDescr
+    doc = fillSep $ map formatDesc modeDescr
 
-        modeDescr =
-            [ ("  \"link\"",      L.words $ "Ignore the link right after the comment.")
-            , ("  \"paragraph\"", L.words $ "Ignore the whole paragraph after the comment.")
-            , ("  \"file\"",      L.words $ "This mode can only be used at the top of markdown \
-                                            \or right after comments at the top.")
-            ]
+    modeDescr =
+      [ ("  \"link\"",      L.words "Ignore the link right after the comment.")
+      , ("  \"paragraph\"", L.words "Ignore the whole paragraph after the comment.")
+      , ("  \"file\"",      L.words "This mode can only be used at the top of \
+                                    \markdown or right after comments at the top.")
+      ]
 
-        modeIndent = length ("\"paragraph\"" :: String) + 2
-        descrIndent = 27 - modeIndent
+    modeIndent = length ("\"paragraph\"" :: String) + 2
+    descrIndent = 27 - modeIndent
 
-        formatDesc (mode, descr) =
-            (fill modeIndent $ text mode) <>
-            (indent descrIndent $ fillSep $ map text descr)
+    formatDesc (mode, descr) =
+      fill modeIndent (text mode) <>
+      indent descrIndent (fillSep $ map text descr)

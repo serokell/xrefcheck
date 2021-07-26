@@ -5,18 +5,18 @@
 
 -- | Printing progress bars.
 module Xrefcheck.Progress
-    ( -- * Progress
-      Progress (..)
-    , initProgress
-    , incProgress
-    , incProgressErrors
-    , showProgress
+  ( -- * Progress
+    Progress (..)
+  , initProgress
+  , incProgress
+  , incProgressErrors
+  , showProgress
 
-      -- * Printing
-    , Rewrite
-    , allowRewrite
-    , putTextRewrite
-    ) where
+    -- * Printing
+  , Rewrite
+  , allowRewrite
+  , putTextRewrite
+  ) where
 
 import Data.Ratio ((%))
 import System.Console.Pretty (Color (..), Style (..), color, style)
@@ -28,13 +28,13 @@ import Time (ms, threadDelay)
 
 -- | Processing progress of any thing.
 data Progress a = Progress
-    { pCurrent :: a
-      -- ^ How much has been completed.
-    , pTotal   :: a
-      -- ^ Overall amount of work.
-    , pErrors  :: !a
-      -- ^ How many of the completed work finished with an error.
-    } deriving (Show)
+  { pCurrent :: a
+    -- ^ How much has been completed.
+  , pTotal   :: a
+    -- ^ Overall amount of work.
+  , pErrors  :: !a
+    -- ^ How many of the completed work finished with an error.
+  } deriving (Show)
 
 -- | Initialise null progress.
 initProgress :: Num a => a -> Progress a
@@ -51,27 +51,28 @@ incProgressErrors Progress{..} = Progress{ pErrors = pErrors + 1, .. }
 -- | Visualise progress bar.
 showProgress :: Text -> Int -> Color -> Progress Int -> Text
 showProgress name width col Progress{..} = mconcat
-    [ color col (name <> ": [")
-    , toText bar
-    , color col "]"
-    , status
-    ]
+  [ color col (name <> ": [")
+  , toText bar
+  , color col "]"
+  , status
+  ]
   where
     done = floor $ (pCurrent % pTotal) * fromIntegral width
     errs = ceiling $ (pErrors % pTotal) * fromIntegral width
     done' = max 0 $ done - errs
     remained' = width - errs - done'
-    bar | pTotal == 0 = replicate width '-'
-        | otherwise = mconcat
-            [ color Red $ replicate errs '■'
-            , color col $ replicate done' '■'
-            , color col $ replicate remained' ' '
-            , " "
-            ]
+    bar
+      | pTotal == 0 = replicate width '-'
+      | otherwise = mconcat
+          [ color Red $ replicate errs '■'
+          , color col $ replicate done' '■'
+          , color col $ replicate remained' ' '
+          , " "
+          ]
     status
-        | pTotal == 0 = ""
-        | pErrors == 0 = style Faint $ color White "✓"
-        | otherwise = color Red "!"
+      | pTotal == 0 = ""
+      | pErrors == 0 = style Faint $ color White "✓"
+      | otherwise = color Red "!"
 
 -----------------------------------------------------------
 -- Rewritable output
@@ -79,8 +80,8 @@ showProgress name width col Progress{..} = mconcat
 
 -- | Rewrites state.
 data RewriteCtx = RewriteCtx
-    { rMaxPrintedSize :: IORef Int
-    }
+  { rMaxPrintedSize :: IORef Int
+  }
 
 -- | Passing this object allows returning caret and replace text in line.
 -- Only functions which has this thing can do that because being
@@ -94,26 +95,24 @@ data Rewrite
 
 -- | Provide context for rewrite operations.
 allowRewrite :: (MonadIO m, MonadMask m) => Bool -> (Rewrite -> m a) -> m a
-allowRewrite enabled action =
-    bracket prepare erase action
+allowRewrite enabled = bracket prepare erase
   where
     prepare
       | enabled = do
           rMaxPrintedSize <- newIORef 0
           return $ Rewrite RewriteCtx{..}
-      | otherwise =
-          pure RewriteDisabled
+      | otherwise = pure RewriteDisabled
     erase (Rewrite RewriteCtx{..}) = liftIO $ do
-        maxPrintedSize <- readIORef rMaxPrintedSize
-        hPutStr stderr $ '\r' : replicate maxPrintedSize ' ' ++ "\r"
-        -- prevent our output to interleave with further outputs
-        threadDelay (ms 100)
+      maxPrintedSize <- readIORef rMaxPrintedSize
+      hPutStr stderr $ '\r' : replicate maxPrintedSize ' ' ++ "\r"
+      -- prevent our output to interleave with further outputs
+      threadDelay (ms 100)
     erase RewriteDisabled = pass
 
 -- | Return caret and print the given text.
 putTextRewrite :: MonadIO m => Rewrite -> Text -> m ()
 putTextRewrite (Rewrite RewriteCtx{..}) msg = do
-    liftIO $ hPutStr stderr ('\r' : toString msg)
-    atomicModifyIORef' rMaxPrintedSize $ \maxPrinted ->
-        (max maxPrinted (length msg), ())
+  liftIO $ hPutStr stderr ('\r' : toString msg)
+  atomicModifyIORef' rMaxPrintedSize $ \maxPrinted ->
+    (max maxPrinted (length msg), ())
 putTextRewrite RewriteDisabled _ = pass

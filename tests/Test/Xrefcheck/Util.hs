@@ -7,7 +7,7 @@ module Test.Xrefcheck.Util where
 
 import Universum
 
-import qualified Data.ByteString.Lazy as BSL
+import Data.ByteString.Lazy qualified as BSL
 import Network.HTTP.Types (forbidden403, unauthorized401)
 import Web.Firefly (ToResponse (..), route, run)
 

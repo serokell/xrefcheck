@@ -7,7 +7,7 @@ module Main where
 
 import Universum
 
-import qualified Data.ByteString as BS
+import Data.ByteString qualified as BS
 import Main.Utf8 (withUtf8)
 
 import Xrefcheck.CLI (Command (..), getCommand)

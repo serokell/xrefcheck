@@ -21,11 +21,11 @@ import CMarkGFM (Node (..), NodeType (..), PosInfo (..), commonmarkToNode)
 import Control.Lens ((%=))
 import Control.Monad.Trans.Except (Except, runExcept, throwE)
 import Data.Aeson.TH (deriveFromJSON)
-import qualified Data.ByteString.Lazy as BSL
+import Data.ByteString.Lazy qualified as BSL
 import Data.Char (isSpace)
 import Data.Default (Default (..))
-import qualified Data.Text as T
-import qualified Data.Text.Lazy as LT
+import Data.Text qualified as T
+import Data.Text.Lazy qualified as LT
 import Fmt (Buildable (..), blockListF, nameF, (+|), (|+))
 
 import Xrefcheck.Core

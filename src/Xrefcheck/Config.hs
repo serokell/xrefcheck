@@ -14,14 +14,14 @@ import Universum
 import Control.Exception (assert)
 import Control.Lens (makeLensesWith)
 import Data.Aeson.TH (deriveFromJSON)
-import qualified Data.ByteString as BS
-import qualified Data.Map as Map
+import Data.ByteString qualified as BS
+import Data.Map qualified as Map
 import Data.Yaml (FromJSON (..), decodeEither', prettyPrintParseException, withText)
 import Instances.TH.Lift ()
 import Text.Regex.TDFA (CompOption (..), ExecOption (..), Regex)
-import qualified Text.Regex.TDFA as R
+import Text.Regex.TDFA qualified as R
 import Text.Regex.TDFA.ByteString ()
-import qualified Text.Regex.TDFA.Text as R
+import Text.Regex.TDFA.Text qualified as R
 
 -- FIXME: Use </> from System.FilePath
 -- </> from Posix is used only because we cross-compile to Windows and \ doesn't work on Linux

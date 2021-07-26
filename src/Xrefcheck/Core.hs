@@ -14,11 +14,11 @@ import Universum
 import Control.Lens (makeLenses, (%=))
 import Data.Aeson (FromJSON (..), withText)
 import Data.Char (isAlphaNum)
-import qualified Data.Char as C
+import Data.Char qualified as C
 import Data.Default (Default (..))
-import qualified Data.List as L
-import qualified Data.Map as M
-import qualified Data.Text as T
+import Data.List qualified as L
+import Data.Map qualified as M
+import Data.Text qualified as T
 import Fmt (Buildable (..), blockListF, blockListF', nameF, (+|), (|+))
 import System.Console.Pretty (Color (..), Style (..), color, style)
 import System.FilePath (isPathSeparator, pathSeparator)

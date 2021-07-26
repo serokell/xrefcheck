@@ -7,7 +7,7 @@ module Test.Xrefcheck.AnchorsInHeadersSpec where
 
 import Universum
 
-import qualified Data.ByteString.Lazy as BSL
+import Data.ByteString.Lazy qualified as BSL
 import Test.Hspec (Spec, describe, it, shouldBe)
 
 import Xrefcheck.Core

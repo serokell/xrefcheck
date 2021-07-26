@@ -21,9 +21,9 @@ module Xrefcheck.CLI
 
 import Universum
 
-import qualified Data.Char as C
-import qualified Data.List as L
-import qualified Data.Text as T
+import Data.Char qualified as C
+import Data.List qualified as L
+import Data.Text qualified as T
 import Data.Version (showVersion)
 import Options.Applicative
   (Parser, ReadM, command, eitherReader, execParser, flag, flag', footerDoc, fullDesc, help, helper,

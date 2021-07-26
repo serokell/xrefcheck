@@ -13,12 +13,12 @@ module Xrefcheck.System
 import Universum
 
 import Data.Aeson (FromJSON (..), withText)
-import qualified Data.Char as C
+import Data.Char qualified as C
 import GHC.IO.Unsafe (unsafePerformIO)
 import System.Directory (canonicalizePath)
 import System.Environment (lookupEnv)
 import System.FilePath ((</>))
-import qualified System.FilePath.Glob as Glob
+import System.FilePath.Glob qualified as Glob
 
 -- | We can quite safely treat surrounding filesystem as frozen,
 -- so IO reading operations can be turned into pure values.

@@ -8,9 +8,9 @@ module Test.Xrefcheck.ConfigSpec where
 import Universum
 
 import Control.Concurrent (forkIO, killThread)
-import qualified Control.Exception as E
+import Control.Exception qualified as E
 
-import qualified Data.ByteString as BS
+import Data.ByteString qualified as BS
 import Network.HTTP.Types (Status (..))
 import Test.Hspec (Spec, before, describe, it, shouldBe)
 import Test.QuickCheck (counterexample, ioProperty, once)

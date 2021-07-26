@@ -5,6 +5,8 @@
 
 module Test.Xrefcheck.IgnoreRegexSpec where
 
+import Universum
+
 import Data.Yaml (decodeEither')
 import Test.HUnit (assertFailure)
 import Test.Hspec (Spec, describe, it)

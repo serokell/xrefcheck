@@ -19,6 +19,8 @@ module Xrefcheck.CLI
   , getCommand
   ) where
 
+import Universum
+
 import qualified Data.Char as C
 import qualified Data.List as L
 import qualified Data.Text as T

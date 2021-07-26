@@ -7,7 +7,9 @@
 
 module Xrefcheck.Config where
 
-import qualified Unsafe
+import qualified Universum.Unsafe as Unsafe
+
+import Universum
 
 import Control.Exception (assert)
 import Control.Lens (makeLensesWith)

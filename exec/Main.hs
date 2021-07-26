@@ -5,6 +5,8 @@
 
 module Main where
 
+import Universum
+
 import qualified Data.ByteString as BS
 import Main.Utf8 (withUtf8)
 

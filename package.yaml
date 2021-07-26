@@ -35,6 +35,7 @@ default-extensions:
   - MultiParamTypeClasses
   - MultiWayIf
   - NamedFieldPuns
+  - NoImplicitPrelude
   - OverloadedStrings
   - RankNTypes
   - RecordWildCards
@@ -57,9 +58,7 @@ dependencies:
   - aeson
   - aeson-casing
   - async
-  - name: base
-    mixin: [hiding (Prelude)]
-    version: "< 4.15"
+  - base
   - bytestring
   - containers
   - cmark-gfm
@@ -91,8 +90,7 @@ dependencies:
   - th-lift-instances
   - th-utilities
   - transformers
-  - name: universum
-    mixin: [(Universum as Prelude), (Universum.Unsafe as Unsafe)]
+  - universum
   - yaml
   - with-utf8
 

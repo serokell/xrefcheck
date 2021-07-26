@@ -6,6 +6,8 @@ module Main
   ( main
   ) where
 
+import Universum
+
 import Test.Tasty (defaultIngredients, defaultMainWithIngredients, includingOptions)
 import Test.Tasty.Ingredients (Ingredient)
 

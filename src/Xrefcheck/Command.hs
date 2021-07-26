@@ -7,6 +7,8 @@ module Xrefcheck.Command
   ( defaultAction
   ) where
 
+import Universum
+
 import Data.Yaml (decodeFileEither, prettyPrintParseException)
 import Fmt (blockListF', build, fmt, fmtLn, indentF)
 import System.Directory (doesFileExist)

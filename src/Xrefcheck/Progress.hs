@@ -18,6 +18,8 @@ module Xrefcheck.Progress
   , putTextRewrite
   ) where
 
+import Universum
+
 import Data.Ratio ((%))
 import System.Console.Pretty (Color (..), Style (..), color, style)
 import Time (ms, threadDelay)

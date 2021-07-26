@@ -15,6 +15,8 @@ module Xrefcheck.Scanners.Markdown
   , parseFileInfo
   ) where
 
+import Universum
+
 import CMarkGFM (Node (..), NodeType (..), PosInfo (..), commonmarkToNode)
 import Control.Lens ((%=))
 import Control.Monad.Trans.Except (Except, runExcept, throwE)

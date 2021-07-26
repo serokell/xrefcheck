@@ -3,6 +3,8 @@
  - SPDX-License-Identifier: MPL-2.0
  -}
 
+import Universum
+
 import Spec (spec)
 import Test.Hspec (hspec)
 

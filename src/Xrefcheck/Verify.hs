@@ -22,6 +22,8 @@ module Xrefcheck.Verify
   , checkExternalResource
   ) where
 
+import Universum
+
 import Control.Concurrent.Async (wait, withAsync)
 import Control.Exception (throwIO)
 import Control.Monad.Except (MonadError (..))

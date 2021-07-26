@@ -16,6 +16,8 @@ module Xrefcheck.Scan
   , specificFormatsSupport
   ) where
 
+import Universum
+
 import Data.Aeson.TH (deriveFromJSON)
 import qualified Data.Foldable as F
 import qualified Data.Map as M

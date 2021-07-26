@@ -10,6 +10,8 @@ module Xrefcheck.System
   , bindGlobPattern
   ) where
 
+import Universum
+
 import Data.Aeson (FromJSON (..), withText)
 import qualified Data.Char as C
 import GHC.IO.Unsafe (unsafePerformIO)

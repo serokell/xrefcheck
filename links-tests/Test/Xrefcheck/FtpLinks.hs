@@ -8,6 +8,8 @@ module Test.Xrefcheck.FtpLinks
   , test_FtpLinks
   ) where
 
+import Universum
+
 import Data.Tagged (Tagged, untag)
 import Options.Applicative (help, long, strOption)
 import Test.Tasty (TestTree, askOption, testGroup)

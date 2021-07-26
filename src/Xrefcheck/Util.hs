@@ -13,6 +13,8 @@ module Xrefcheck.Util
   , aesonConfigOption
   ) where
 
+import Universum
+
 import Control.Lens (LensRules, lensField, lensRules, mappingNamer)
 import qualified Data.Aeson as Aeson
 import Data.Aeson.Casing (aesonPrefix, camelCase)

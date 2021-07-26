@@ -5,6 +5,8 @@
 
 module Test.Xrefcheck.LocalSpec where
 
+import Universum
+
 import Test.Hspec (Spec, describe, it)
 import Test.QuickCheck ((===))
 

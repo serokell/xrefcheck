@@ -5,8 +5,11 @@
 
 module Test.Xrefcheck.ConfigSpec where
 
+import Universum
+
 import Control.Concurrent (forkIO, killThread)
 import qualified Control.Exception as E
+
 import qualified Data.ByteString as BS
 import Network.HTTP.Types (Status (..))
 import Test.Hspec (Spec, before, describe, it, shouldBe)

@@ -5,6 +5,8 @@
 
 module Test.Xrefcheck.IgnoreAnnotationsSpec where
 
+import Universum
+
 import Test.Hspec (Spec, describe, it, shouldBe)
 
 import Test.Xrefcheck.Util

@@ -11,6 +11,8 @@ module Xrefcheck.CLI
   , shouldCheckExternal
   , Command (..)
   , Options (..)
+  , VerifyOptions (..)
+  , addVerifyOptions
   , TraversalOptions (..)
   , addTraversalOptions
   , defaultConfigPaths
@@ -22,11 +24,12 @@ import qualified Data.List as L
 import qualified Data.Text as T
 import Data.Version (showVersion)
 import Options.Applicative
-  (Parser, ReadM, command, eitherReader, execParser, flag', footerDoc, fullDesc, help, helper,
+  (Parser, ReadM, command, eitherReader, execParser, flag, flag', footerDoc, fullDesc, help, helper,
   hsubparser, info, infoOption, long, metavar, option, progDesc, short, strOption, switch, value)
 import Options.Applicative.Help.Pretty (Doc, displayS, fill, fillSep, indent, renderPretty, text)
 
 import Paths_xrefcheck (version)
+import Xrefcheck.Config (VerifyConfig (..))
 import Xrefcheck.Core
 import Xrefcheck.Scan
 
@@ -56,6 +59,7 @@ data Options = Options
   , oVerbose          :: Bool
   , oShowProgressBar  :: Maybe Bool
   , oTraversalOptions :: TraversalOptions
+  , oVerifyOptions    :: VerifyOptions
   }
 
 data TraversalOptions = TraversalOptions
@@ -66,6 +70,17 @@ addTraversalOptions :: TraversalConfig -> TraversalOptions -> TraversalConfig
 addTraversalOptions TraversalConfig{..} (TraversalOptions ignored) =
   TraversalConfig
   { tcIgnored = tcIgnored ++ ignored
+  , ..
+  }
+
+newtype VerifyOptions = VerifyOptions
+  { voCheckLocalhost :: Maybe Bool
+  }
+
+addVerifyOptions :: VerifyConfig -> VerifyOptions -> VerifyConfig
+addVerifyOptions VerifyConfig{..} (VerifyOptions checkLocalhost) =
+  VerifyConfig
+  { vcCheckLocalhost = fromMaybe vcCheckLocalhost checkLocalhost
   , ..
   }
 
@@ -132,6 +147,7 @@ optionsParser = do
     , pure Nothing
     ]
   oTraversalOptions <- traversalOptionsParser
+  oVerifyOptions <- verifyOptionsParser
   return Options{..}
 
 traversalOptionsParser :: Parser TraversalOptions
@@ -141,6 +157,13 @@ traversalOptionsParser = do
     metavar "FILEPATH" <>
     help "Files and folders which we pretend do not exist."
   return TraversalOptions{..}
+
+verifyOptionsParser :: Parser VerifyOptions
+verifyOptionsParser = do
+  voCheckLocalhost <- flag Nothing (Just True) $
+    long "check-localhost" <>
+    help "Check localhost links."
+  return VerifyOptions{..}
 
 dumpConfigOptions :: Parser Command
 dumpConfigOptions = hsubparser $

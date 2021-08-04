@@ -1,0 +1,43 @@
+=== Invalid references found ===
+
+  ➥  In file ./check-localhost/check-localhost.md
+     bad reference (external) at src:7:10-47:
+       - text: "web-site"
+       - link: https://localhost/web-site
+       - anchor: -
+
+     ⛂  InternalException (HostCannotConnect "localhost" [Network.Socket.connect: <socket: N>: does not exist (Connection refused)])
+
+
+
+  ➥  In file ./check-localhost/check-localhost.md
+     bad reference (external) at src:9:10-39:
+       - text: "team"
+       - link: https://127.0.0.1/team
+       - anchor: -
+
+     ⛂  InternalException (HostCannotConnect "127.0.0.1" [Network.Socket.connect: <socket: N>: does not exist (Connection refused)])
+
+
+
+  ➥  In file ./check-localhost/check-localhost.md
+     bad reference (external) at src:11:10-38:
+       - text: "blog"
+       - link: http://localhost/blog
+       - anchor: -
+
+     ⛂  ConnectionFailure Network.Socket.connect: <socket: N>: does not exist (Connection refused)
+
+
+
+  ➥  In file ./check-localhost/check-localhost.md
+     bad reference (external) at src:13:10-38:
+       - text: "labs"
+       - link: http://127.0.0.1/labs
+       - anchor: -
+
+     ⛂  ConnectionFailure Network.Socket.connect: <socket: N>: does not exist (Connection refused)
+
+
+
+Invalid references dumped, 4 in total.

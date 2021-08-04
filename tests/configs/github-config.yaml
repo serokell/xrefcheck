@@ -45,6 +45,9 @@ verification:
   ignoreRefs:
     []
 
+  # Check localhost links.
+  checkLocalhost: false
+
 # Parameters of scanners for various file types.
 scanners:
 

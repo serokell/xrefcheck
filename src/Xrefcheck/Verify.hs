@@ -271,17 +271,16 @@ verifyReference
 
 checkExternalResource :: VerifyConfig -> Text -> IO (VerifyResult VerifyError)
 checkExternalResource VerifyConfig{..} link
-  | isIgnored = return mempty
-  | doesReferLocalhost = return mempty
+  | skipCheck = return mempty
   | otherwise = fmap toVerifyRes $ do
       makeRequest HEAD 0.3 >>= \case
         Right () -> return $ Right ()
         Left   _ -> makeRequest GET 0.7
   where
-    isIgnored =
-      let maybeIsIgnored = doesMatchAnyRegex link <$> vcIgnoreRefs
-      in fromMaybe False maybeIsIgnored
-    doesReferLocalhost = any (`T.isInfixOf` link) ["://localhost", "://127.0.0.1"]
+    skipCheck = isIgnored || (not vcCheckLocalhost && isLocalLink)
+      where
+        isIgnored =  maybe False (doesMatchAnyRegex link) vcIgnoreRefs
+        isLocalLink = any (`T.isInfixOf` link) ["://localhost", "://127.0.0.1"]
 
     doesMatchAnyRegex :: Text -> ([Regex] -> Bool)
     doesMatchAnyRegex src = any $ \regex ->

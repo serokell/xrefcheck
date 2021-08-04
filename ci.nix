@@ -18,7 +18,10 @@ rec {
 
   project-src = pkgs.haskell-nix.haskellLib.cleanGit {
     name = "xrefcheck";
-    src = ./.;
+    src = pkgs.haskell-nix.haskellLib.cleanSourceWith {
+      filter = path: type: !(pkgs.lib.hasInfix "tests/golden/helpers" path);
+      src = ./.;
+    };
   };
 
   xrefcheck-lib-and-tests = (import ./xrefcheck.nix { linux = true; });

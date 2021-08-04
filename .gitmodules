@@ -1,0 +1,10 @@
+# SPDX-FileCopyrightText: 2021 Serokell <https://serokell.io>
+#
+# SPDX-License-Identifier: MPL-2.0
+
+[submodule "tests/golden/helpers/bats-assert"]
+	path = tests/golden/helpers/bats-assert
+	url = git@github.com:bats-core/bats-assert.git
+[submodule "tests/golden/helpers/bats-support"]
+	path = tests/golden/helpers/bats-support
+	url = git@github.com:bats-core/bats-support.git

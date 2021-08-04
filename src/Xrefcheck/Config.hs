@@ -50,6 +50,8 @@ data VerifyConfig = VerifyConfig
     -- ^ Prefixes of files, references in which we should not analyze.
   , vcIgnoreRefs                :: Maybe [Regex]
     -- ^ Regular expressions that match external references we should not verify.
+  , vcCheckLocalhost            :: Bool
+    -- ^ If True - we will check localhost links.
   }
 
 -- | Configs for all the supported scanners.

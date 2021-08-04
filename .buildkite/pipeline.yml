@@ -1,33 +1,44 @@
-# SPDX-FileCopyrightText: 2019 Serokell <https://serokell.io>
+# SPDX-FileCopyrightText: 2019-2021 Serokell <https://serokell.io>
 #
 # SPDX-License-Identifier: MPL-2.0
 
 steps:
   - command: nix-build ci.nix -A trailing-whitespace-check
     label: Check trailing whitespaces
+
   - command: nix-build ci.nix -A xrefcheck-lib-and-tests
     label: Library and tests
+
+  - command: nix run -f ci.nix pkgs.bats pkgs.diffutils xrefcheck-static -c bash -c "cd tests/golden && bats ./"
+    label: Golden tests (bats)
+
   - command: nix-build ci.nix -A xrefcheck-static
     label: Executable
     artifact_paths:
       - "result/bin/xrefcheck"
+
   - command: nix-build ci.nix -A xrefcheck-windows
     label: Windows executable
     artifact_paths:
       - "result/bin/*"
+
   - command: nix run -f ci.nix xrefcheck-static -c xrefcheck --ignored tests/markdowns
     label: Xrefcheck itself
+
   - command: nix run -f ci.nix pkgs.reuse -c reuse lint
     label: REUSE lint
+
   - command:
       - nix run -f ci.nix pkgs.curl pkgs.gitAndTools.hub -c bash -c "curl https://raw.githubusercontent.com/serokell/scratch/release-binary/scripts/release-binary.sh | bash"
     label: Create a pre-release
     branches: master
+
   - command:
       - nix-build docker
       - nix run -f ci.nix pkgs.skopeo -c ./scripts/upload-docker-image.sh "docker-archive:$(readlink result)" "docker://docker.io/serokell/xrefcheck:latest"
     label: Push to dockerhub
     branches: master
+
   - command:
       - nix-build docker
       - nix run -f ci.nix pkgs.skopeo -c ./scripts/upload-docker-image.sh "docker-archive:$(readlink result)" "docker://docker.io/serokell/xrefcheck:${BUILDKITE_BRANCH}"

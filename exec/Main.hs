@@ -53,8 +53,10 @@ defaultAction Options{..} = do
     when oVerbose $
         fmtLn $ "=== Repository data ===\n\n" <> indentF 2 (build repoInfo)
 
-    verifyRes <- allowRewrite showProgressBar $ \rw ->
-        verifyRepo rw (cVerification config) oMode root repoInfo
+    verifyRes <- allowRewrite showProgressBar $ \rw -> do
+      let fullConfig = addVerifyOptions (cVerification config) oVerifyOptions
+      verifyRepo rw fullConfig oMode root repoInfo
+
     case verifyErrors verifyRes of
         Nothing ->
             fmtLn "All repository links are valid."

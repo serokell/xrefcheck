@@ -6,6 +6,9 @@
 
 Unreleased
 ==========
+* [#85](https://github.com/serokell/xrefcheck/pull/85)
+  + Make possible to specify whether ignore localhost links, use
+  `check-localhost` CLA argument (by default localhost links will not be checked).
 
 0.2.1
 ==========

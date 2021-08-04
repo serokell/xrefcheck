@@ -9,6 +9,8 @@ Unreleased
 * [#85](https://github.com/serokell/xrefcheck/pull/85)
   + Make possible to specify whether ignore localhost links, use
   `check-localhost` CLA argument (by default localhost links will not be checked).
+  + Make possible to ignore auth failures (assume 'protected' links
+  valid), use `ignoreAuthFailures` parameter of config.
 
 0.2.1
 ==========

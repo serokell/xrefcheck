@@ -55,7 +55,7 @@ import Xrefcheck.System
 -----------------------------------------------------------
 
 newtype VerifyResult e = VerifyResult [e]
-  deriving (Show, Functor)
+  deriving (Show, Eq, Functor)
 
 deriving instance Semigroup (VerifyResult e)
 deriving instance Monoid (VerifyResult e)
@@ -101,7 +101,7 @@ data VerifyError
   | ExternalResourceUnknownProtocol
   | ExternalResourceUnavailable Status
   | ExternalResourceSomeError Text
-  deriving (Show)
+  deriving (Show, Eq)
 
 instance Buildable VerifyError where
   build = \case
@@ -315,7 +315,9 @@ checkExternalResource VerifyConfig{..} link
     isAllowedErrorCode = or . sequence
       -- We have to stay conservative - if some URL can be accessed under
       -- some circumstances, we should do our best to report it as fine.
-      [ (403 ==)  -- unauthorized access
+      [ if vcIgnoreAuthFailures -- unauthorized access
+        then flip elem [403, 401]
+        else const False
       , (405 ==)  -- method mismatch
       ]
 

@@ -1,16 +1,22 @@
-{- SPDX-FileCopyrightText: 2019 Serokell <https://serokell.io>
+{- SPDX-FileCopyrightText: 2019-2021 Serokell <https://serokell.io>
  -
  - SPDX-License-Identifier: MPL-2.0
  -}
 
 module Test.Xrefcheck.ConfigSpec where
 
+import Control.Concurrent (forkIO, killThread)
+import qualified Control.Exception as E
 import qualified Data.ByteString as BS
-import Test.Hspec (Spec, before, describe, it)
+import Network.HTTP.Types (Status (..))
+import Test.Hspec (Spec, before, describe, it, shouldBe)
 import Test.QuickCheck (counterexample, ioProperty, once)
 
-import Xrefcheck.Config
-import Xrefcheck.Core
+import Xrefcheck.Config (Config (..), VerifyConfig (..), defConfig, defConfigText)
+import Xrefcheck.Core (Flavor (GitHub), allFlavors)
+import Xrefcheck.Verify (VerifyError (..), VerifyResult (..), checkExternalResource)
+
+import Test.Xrefcheck.Util (mockServer)
 
 spec :: Spec
 spec = do
@@ -35,3 +41,33 @@ spec = do
             counterexample
             (toString $ unwords matches)
             (config == defConfigText GitHub)
+
+  describe "`ignoreAuthFailures` working as expected" $ do
+    let config = (cVerification $ defConfig GitHub) { vcCheckLocalhost = True }
+
+    it "when True - assume 401 status is valid" $
+      checkLinkWithServer (config { vcIgnoreAuthFailures = True })
+        "http://127.0.0.1:3000/401" $ VerifyResult []
+
+    it "when False - assume 401 status is invalid" $
+      checkLinkWithServer (config { vcIgnoreAuthFailures = False })
+        "http://127.0.0.1:3000/401" $ VerifyResult
+          [ ExternalResourceUnavailable $
+              Status { statusCode = 401, statusMessage = "Unauthorized" }
+          ]
+
+    it "when True - assume 403 status is valid" $
+      checkLinkWithServer (config { vcIgnoreAuthFailures = True })
+        "http://127.0.0.1:3000/403" $ VerifyResult []
+
+    it "when False - assume 403 status is invalid" $
+      checkLinkWithServer (config { vcIgnoreAuthFailures = False })
+        "http://127.0.0.1:3000/403" $ VerifyResult
+          [ ExternalResourceUnavailable $
+              Status { statusCode = 403, statusMessage = "Forbidden" }
+          ]
+  where
+    checkLinkWithServer config link expectation =
+      E.bracket (forkIO mockServer) killThread $ \_ -> do
+        result <- checkExternalResource config link
+        result `shouldBe` expectation

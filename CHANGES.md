@@ -7,6 +7,7 @@
 Unreleased
 ==========
 
+
 0.2
 ==========
 * [#57](https://github.com/serokell/xrefcheck/pull/57)

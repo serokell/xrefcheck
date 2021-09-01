@@ -59,7 +59,7 @@ nodeFlatten :: Node -> [NodeType]
 nodeFlatten (Node _pos ty subs) = ty : concatMap nodeFlatten subs
 
 nodeExtractText :: Node -> Text
-nodeExtractText = mconcat . map extractText . nodeFlatten
+nodeExtractText = T.strip . mconcat . map extractText . nodeFlatten
   where
     extractText = \case
       TEXT t -> t

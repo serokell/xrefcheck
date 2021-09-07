@@ -21,7 +21,7 @@ import qualified Data.Foldable as F
 import qualified Data.Map as M
 import GHC.Err (errorWithoutStackTrace)
 import qualified System.Directory.Tree as Tree
-import System.FilePath (takeDirectory, takeExtension, (</>))
+import System.FilePath (dropTrailingPathSeparator, takeDirectory, takeExtension, (</>))
 
 import Xrefcheck.Core
 import Xrefcheck.Progress
@@ -53,6 +53,21 @@ specificFormatsSupport formats = \ext -> M.lookup ext formatsMap
         , extension <- extensions
         ]
 
+-- | Returns the context location of the given path.
+-- This is done by removing the last component from the path.
+--
+-- > locationOf "./folder/file.md"  == "./folder"
+-- > locationOf "./folder/subfolder"  == "./folder"
+-- > locationOf "./folder/subfolder/"  == "./folder"
+-- > locationOf "./folder/subfolder/./"  == "./folder/subfolder"
+-- > locationOf "."  == ""
+-- > locationOf "/absolute/path"  == "/absolute"
+-- > locationOf "/"  == "/"
+locationOf :: FilePath -> FilePath
+locationOf fp
+  | fp == "" || fp == "." = ""
+  | otherwise = takeDirectory $ dropTrailingPathSeparator fp
+
 gatherRepoInfo
   :: MonadIO m
   => Rewrite -> FormatsSupport -> TraversalConfig -> FilePath -> m RepoInfo
@@ -61,12 +76,11 @@ gatherRepoInfo rw formatsSupport config root = do
   _ Tree.:/ repoTree <- liftIO $ Tree.readDirectoryWithL processFile rootNE
   let fileInfos = filter (\(path, _) -> not $ isIgnored path)
         $ dropSndMaybes . F.toList
-        $ Tree.zipPaths . (dirOfRoot Tree.:/)
+        $ Tree.zipPaths . (locationOf root Tree.:/)
         $ filterExcludedDirs root repoTree
   return $ RepoInfo (M.fromList fileInfos)
   where
     rootNE = if null root then "." else root
-    dirOfRoot = if root == "" || root == "." then "" else takeDirectory root
     processFile file = do
       let ext = takeExtension file
       let mscanner = formatsSupport ext

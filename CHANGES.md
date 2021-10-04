@@ -13,6 +13,8 @@ Unreleased
   valid), use `ignoreAuthFailures` parameter of config.
 * [#66](https://github.com/serokell/xrefcheck/pull/66)
   + Added support for ftp links.
+* [#74](https://github.com/serokell/xrefcheck/pull/83)
+  + Add the duplication detection & verification result caching algorithm for external references.
 
 0.2.1
 ==========

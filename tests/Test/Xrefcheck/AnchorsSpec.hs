@@ -22,6 +22,7 @@ checkHeaderConversions fl suites =
       fi <- getFI fl "tests/markdowns/without-annotations/non_stripped_spaces.md"
       getAnchors fi `shouldBe` [ case fl of GitHub -> "header--with-leading-spaces"
                                             GitLab -> "header-with-leading-spaces"
+                               , "edge-case"
                                ]
   where
     getAnchors :: FileInfo -> [Text]

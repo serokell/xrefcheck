@@ -16,7 +16,7 @@ spec = do
     describe "Anchors in headers" $ do
         it "Check if anchors in headers are recognized" $ do
             fi <- getFI "tests/markdowns/without-annotations/anchors_in_headers.md"
-            getAnchors fi `shouldBe` ["-some-stuff", "stuff-section"]
+            getAnchors fi `shouldBe` ["some-stuff", "stuff-section"]
     where
         parse :: FilePath -> IO (Either Text FileInfo)
         parse path =

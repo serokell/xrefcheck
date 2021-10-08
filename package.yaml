@@ -123,8 +123,9 @@ tests:
     generated-other-modules:
     - Paths_xrefcheck
     dependencies:
-    - xrefcheck
+    - firefly
     - hspec
     - QuickCheck
+    - xrefcheck
     build-tools:
     - hspec-discover

@@ -57,7 +57,7 @@ instance FromJSON Flavor where
 -- We keep this in text because scanners for different formats use different
 -- representation of this thing, and it actually appears in reports only.
 newtype Position = Position (Maybe Text)
-  deriving (Show, Generic)
+  deriving (Show, Eq, Generic)
 
 instance Buildable Position where
   build (Position pos) = case pos of
@@ -90,7 +90,7 @@ data Anchor = Anchor
   { aType :: AnchorType
   , aName :: Text
   , aPos  :: Position
-  } deriving (Show, Generic)
+  } deriving (Show, Eq, Generic)
 
 -- | All information regarding a single file we care about.
 data FileInfo = FileInfo

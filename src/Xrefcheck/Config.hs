@@ -50,6 +50,11 @@ data VerifyConfig = VerifyConfig
     -- ^ Prefixes of files, references in which we should not analyze.
   , vcIgnoreRefs                :: Maybe [Regex]
     -- ^ Regular expressions that match external references we should not verify.
+  , vcCheckLocalhost            :: Bool
+    -- ^ If True - we will check localhost links.
+  , vcIgnoreAuthFailures        :: Bool
+    -- ^ If True - links which return 403 or 401 code will be skipped,
+    -- otherwise – will be marked as broken, because we can't check it.
   }
 
 -- | Configs for all the supported scanners.

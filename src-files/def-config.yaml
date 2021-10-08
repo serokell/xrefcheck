@@ -13,7 +13,6 @@ traversal:
     # Stack files
     - .stack-work
 
-
 # Verification parameters.
 verification:
   # On 'anchor not found' error, how much similar anchors should be displayed as
@@ -36,12 +35,16 @@ verification:
   # POSIX extended regular expressions that match external references
   # that have to be ignored (not verified).
   # It is an optional parameter, so it can be omitted.
-  ignoreRefs:
-    []
+  ignoreRefs: []
+
+  # Check localhost links.
+  checkLocalhost: false
+
+  # Skip links which return 403 or 401 code.
+  ignoreAuthFailures: true
 
 # Parameters of scanners for various file types.
 scanners:
-
   markdown:
     # Flavor of markdown, e.g. GitHub-flavor.
     #

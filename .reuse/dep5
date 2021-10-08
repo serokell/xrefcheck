@@ -3,3 +3,7 @@ Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Files: .github/pull_request_template.md .github/ISSUE_TEMPLATE/*.md
 Copyright: 2018-2019 Serokell <https://serokell.io>
 License: Unlicense
+
+Files: links-tests/ftp_root/**/*
+Copyright: 2021 Serokell <https://serokell.io>
+License: Unlicense

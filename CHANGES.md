@@ -1,5 +1,5 @@
 <!--
- - SPDX-FileCopyrightText: 2020 Serokell <https://serokell.io>
+ - SPDX-FileCopyrightText: 2021 Serokell <https://serokell.io>
  -
  - SPDX-License-Identifier: MPL-2.0
  -->
@@ -11,6 +11,8 @@ Unreleased
   `check-localhost` CLA argument (by default localhost links will not be checked).
   + Make possible to ignore auth failures (assume 'protected' links
   valid), use `ignoreAuthFailures` parameter of config.
+* [#66](https://github.com/serokell/xrefcheck/pull/66)
+  + Added support for ftp links.
 
 0.2.1
 ==========

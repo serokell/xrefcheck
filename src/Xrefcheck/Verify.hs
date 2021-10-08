@@ -22,28 +22,35 @@ module Xrefcheck.Verify
   , checkExternalResource
   ) where
 
-import Control.Concurrent.Async (forConcurrently, withAsync)
-import Control.Monad.Except (MonadError (..))
+import qualified Data.ByteString as BS
 import qualified Data.Map as M
 import qualified Data.Text as T
+import qualified GHC.Exts as Exts
+import qualified System.FilePath.Glob as Glob
+
+import Control.Concurrent.Async (forConcurrently, withAsync)
+import Control.Exception (throwIO)
+import Control.Monad.Except (MonadError (..))
 import Data.Text.Metrics (damerauLevenshteinNorm)
 import Fmt (Buildable (..), blockListF', listF, (+|), (|+))
-import qualified GHC.Exts as Exts
+import Network.FTP.Client
+  (FTPException (..), FTPResponse (..), ResponseStatus (..), login, nlst, size, withFTP, withFTPS)
 import Network.HTTP.Client (HttpException (..), HttpExceptionContent (..), responseStatus)
 import Network.HTTP.Req
-  (GET (..), HEAD (..), HttpException (..), NoReqBody (..), defaultHttpConfig, ignoreResponse, req,
-  runReq, useURI)
+  (AllowsBody, CanHaveBody (NoBody), GET (..), HEAD (..), HttpBodyAllowed, HttpException (..),
+  HttpMethod, NoReqBody (..), defaultHttpConfig, ignoreResponse, req, runReq, useURI)
 import Network.HTTP.Types.Status (Status, statusCode, statusMessage)
 import System.Console.Pretty (Style (..), style)
 import System.Directory (canonicalizePath, doesDirectoryExist, doesFileExist)
 import System.FilePath (takeDirectory, (</>))
-import qualified System.FilePath.Glob as Glob
 import Text.Regex.TDFA.Text (Regex, regexec)
-import Text.URI (mkURI)
+import Text.URI (Authority (..), URI (..), mkURI)
 import Time (RatioNat, Second, Time (..), ms, threadDelay, timeout)
 
+import Data.Bits (toIntegralSized)
 import Xrefcheck.Config
 import Xrefcheck.Core
+import Xrefcheck.Orphans ()
 import Xrefcheck.Progress
 import Xrefcheck.System
 
@@ -94,18 +101,22 @@ instance Buildable a => Buildable (WithReferenceLoc a) where
     +| wrlItem |+ "\n\n"
 
 data VerifyError
-  = FileDoesNotExist FilePath
+  = LocalFileDoesNotExist FilePath
   | AnchorDoesNotExist Text [Anchor]
   | AmbiguousAnchorRef FilePath Text (NonEmpty Anchor)
   | ExternalResourceInvalidUri
+  | ExternalResourceInvalidUrl (Maybe Text)
   | ExternalResourceUnknownProtocol
-  | ExternalResourceUnavailable Status
+  | ExternalHttpResourceUnavailable Status
+  | ExternalFtpResourceUnavailable FTPResponse
+  | ExternalFtpException FTPException
+  | FtpEntryDoesNotExist FilePath
   | ExternalResourceSomeError Text
   deriving (Show, Eq)
 
 instance Buildable VerifyError where
   build = \case
-    FileDoesNotExist file ->
+    LocalFileDoesNotExist file ->
       "⛀  File does not exist:\n   " +| file |+ "\n"
 
     AnchorDoesNotExist anchor similar ->
@@ -121,14 +132,29 @@ instance Buildable VerifyError where
       \   can change silently whereas the document containing it evolves.\n"
 
     ExternalResourceInvalidUri ->
-      "⛂  Invalid url\n"
+      "⛂  Invalid URI\n"
+
+    ExternalResourceInvalidUrl Nothing ->
+      "⛂  Invalid URL\n"
+
+    ExternalResourceInvalidUrl (Just message) ->
+      "⛂  Invalid URL (" +| message |+ ")\n"
 
     ExternalResourceUnknownProtocol ->
-      "⛂  Bad url (expected 'http' or 'https')\n"
+      "⛂  Bad url (expected 'http','https', 'ftp' or 'ftps')\n"
 
-    ExternalResourceUnavailable status ->
+    ExternalHttpResourceUnavailable status ->
       "⛂  Resource unavailable (" +| statusCode status |+ " " +|
       decodeUtf8 @Text (statusMessage status) |+ ")\n"
+
+    ExternalFtpResourceUnavailable response ->
+      "⛂  Resource unavailable:\n" +| response |+ "\n"
+
+    ExternalFtpException err ->
+      "⛂  FTP exception (" +| err |+ ")\n"
+
+    FtpEntryDoesNotExist entry ->
+      "⛂ File or directory does not exist:\n" +| entry |+ "\n"
 
     ExternalResourceSomeError err ->
       "⛂  " +| build err |+ "\n\n"
@@ -236,7 +262,7 @@ verifyReference
             ]
 
       unless (fileExists || dirExists || isVirtual) $
-        throwError (FileDoesNotExist file)
+        throwError (LocalFileDoesNotExist file)
 
     checkAnchor file fileAnchors anchor = do
       checkAnchorReferenceAmbiguity file fileAnchors anchor
@@ -264,18 +290,22 @@ verifyReference
         Nothing ->
           let isSimilar = (>= vcAnchorSimilarityThreshold)
               similarAnchors =
-                filter
-                (isSimilar . realToFrac . damerauLevenshteinNorm anchor . aName)
+                filter (isSimilar . realToFrac . damerauLevenshteinNorm anchor . aName)
                 givenAnchors
           in throwError $ AnchorDoesNotExist anchor similarAnchors
 
 checkExternalResource :: VerifyConfig -> Text -> IO (VerifyResult VerifyError)
 checkExternalResource VerifyConfig{..} link
   | skipCheck = return mempty
-  | otherwise = fmap toVerifyRes $ do
-      makeRequest HEAD 0.3 >>= \case
-        Right () -> return $ Right ()
-        Left   _ -> makeRequest GET 0.7
+  | otherwise = fmap toVerifyRes $ runExceptT $ do
+      uri <- mkURI link & maybe (throwError ExternalResourceInvalidUri) pure
+
+      case toString <$> uriScheme uri of
+        Just "http" -> checkHttp uri
+        Just "https" -> checkHttp uri
+        Just "ftp" -> checkFtp uri False
+        Just "ftps" -> checkFtp uri True
+        _ -> throwError ExternalResourceUnknownProtocol
   where
     skipCheck = isIgnored || (not vcCheckLocalhost && isLocalLink)
       where
@@ -291,12 +321,23 @@ checkExternalResource VerifyConfig{..} link
           Nothing -> False
         Left _ -> False
 
-    makeRequest :: _ => method -> RatioNat -> IO (Either VerifyError ())
-    makeRequest method timeoutFrac = runExceptT $ do
-      uri <- mkURI link
-           & maybe (throwError ExternalResourceInvalidUri) pure
-      parsedUrl <- useURI uri
-                 & maybe (throwError ExternalResourceUnknownProtocol) pure
+    checkHttp :: URI -> ExceptT VerifyError IO ()
+    checkHttp uri = makeHttpRequest uri HEAD 0.3 `catchError` \_ ->
+      makeHttpRequest uri GET 0.7
+
+    makeHttpRequest
+      :: (HttpMethod method, HttpBodyAllowed (AllowsBody method) 'NoBody)
+      => URI
+      -> method
+      -> RatioNat
+      -> ExceptT VerifyError IO ()
+    makeHttpRequest uri method timeoutFrac = do
+      parsedUrl <- case useURI uri of
+        -- accordingly to source code - Nothing can be only in case when
+        -- protocol is not http or https, but we've checked it already
+        -- so just in case we throw exception here
+        Nothing -> throwError $ ExternalResourceInvalidUrl Nothing
+        Just u -> pure u
       let reqLink = case parsedUrl of
             Left (url, option) ->
               runReq defaultHttpConfig $
@@ -305,8 +346,7 @@ checkExternalResource VerifyConfig{..} link
               runReq defaultHttpConfig $
               req method url NoReqBody ignoreResponse option
 
-      let maxTime = Time @Second $
-            unTime vcExternalRefCheckTimeout * timeoutFrac
+      let maxTime = Time @Second $ unTime vcExternalRefCheckTimeout * timeoutFrac
 
       mres <- liftIO (timeout maxTime $ void reqLink) `catch`
         (either throwError (\() -> return (Just ())) . interpretErrors)
@@ -328,5 +368,64 @@ checkExternalResource VerifyConfig{..} link
         HttpExceptionRequest _ exc -> case exc of
           StatusCodeException resp _
             | isAllowedErrorCode (statusCode $ responseStatus resp) -> Right ()
-            | otherwise -> Left $ ExternalResourceUnavailable (responseStatus resp)
+            | otherwise -> Left $ ExternalHttpResourceUnavailable (responseStatus resp)
           other -> Left . ExternalResourceSomeError $ show other
+
+    checkFtp :: URI -> Bool -> ExceptT VerifyError IO ()
+    checkFtp uri secure = do
+      -- get authority which stores host and port
+      authority <- case uriAuthority uri of
+        Right a -> pure a
+        Left _ -> throwError $
+          ExternalResourceInvalidUrl (Just "FTP path must be absolute")
+      let host = toString $ authHost authority
+      port :: Int <- case toIntegralSized . fromMaybe 21 $ authPort authority of
+        Just p -> pure p
+        Nothing -> throwError $
+          ExternalResourceInvalidUrl (Just "Bad port")
+      -- build path from pieces
+      path <- case uriPath uri of
+        Nothing -> pure ""
+        Just (_, pieces) -> pure
+          . mconcat
+          . intersperse "/"
+          . map toString
+          . toList
+          $ pieces
+      makeFtpRequest host port path secure `catch` \e ->
+        throwError $ ExternalFtpException e
+
+    makeFtpRequest
+      :: String
+      -> Int
+      -> FilePath
+      -> Bool
+      -> ExceptT VerifyError IO ()
+    makeFtpRequest host port path secure = handler host port $
+      \handle response -> do
+        -- check connection status
+        when (frStatus response /= Success) $
+          throwError $ ExternalFtpResourceUnavailable response
+        -- anonymous login
+        loginResp <- login handle "anonymous" ""
+        -- check login status
+        when (frStatus loginResp /= Success) $
+          if vcIgnoreAuthFailures
+          then pure ()
+          else throwError $ ExternalFtpException $ UnsuccessfulException loginResp
+        -- If the response is non-null, the path is definitely a directory;
+        -- If the response is null, the path may be a file or may not exist.
+        dirList <- nlst handle [ "-a", path ]
+        when (BS.null dirList) $ do
+          -- The server-PI will respond to the SIZE command with a 213 reply
+          -- giving the transfer size of the file whose pathname was supplied,
+          -- or an error response if the file does not exist, the size is
+          -- unavailable, or some other error has occurred.
+          _ <- size handle path `catch` \case
+              UnsuccessfulException _ -> throwError $ FtpEntryDoesNotExist path
+              FailureException FTPResponse{..} | frCode == 550 ->
+                throwError $ FtpEntryDoesNotExist path
+              err -> liftIO $ throwIO err
+          pure ()
+      where
+        handler = if secure then withFTPS else withFTP

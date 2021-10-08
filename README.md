@@ -36,7 +36,7 @@ Both relative and absolute local links are supported out of the box.
   This tool requires some configuring before it can be applied to a repository or added to CI.
 * [awesome_bot](https://github.com/dkhamsing/awesome_bot) - a solution written in Ruby that can be easily included in CI or integrated into GitHub.
   Its features include duplicated URLs detection, specifying allowed HTTP error codes and reporting generation.
-  At the moment of writting, it scans only external references and checking anchors is not possible.
+  At the moment of writing, it scans only external references and checking anchors is not possible.
 * [remark-validate-links](https://github.com/remarkjs/remark-validate-links) and [remark-lint-no-dead-urls](https://github.com/davidtheclark/remark-lint-no-dead-urls) - highly configurable Javascript solution for checking local and remote links resp.
   It is able to check multiple repositores at once if they are gathered in one folder.
   Being written on JavaScript, it is fairly slow on large repositories.
@@ -45,6 +45,7 @@ Both relative and absolute local links are supported out of the box.
 * [url-checker](https://github.com/paramt/url-checker) - GitHub action which checks links in specified files.
 * [linkcheck](https://github.com/filiph/linkcheck) - advanced site crawler, checks for `HTML` files. There are other solutions for this particular task which we don't mention here.
 
+At the moment of writing, the listed solutions don't support ftp/ftps links.
 
 ## Usage [↑](#xrefcheck)
 

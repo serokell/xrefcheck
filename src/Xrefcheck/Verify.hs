@@ -22,17 +22,16 @@ module Xrefcheck.Verify
   , checkExternalResource
   ) where
 
+import Control.Concurrent.Async (wait, withAsync)
+import Control.Exception (throwIO)
+import Control.Monad.Except (MonadError (..))
 import qualified Data.ByteString as BS
 import qualified Data.Map as M
 import qualified Data.Text as T
-import qualified GHC.Exts as Exts
-import qualified System.FilePath.Glob as Glob
-
-import Control.Concurrent.Async (forConcurrently, withAsync)
-import Control.Exception (throwIO)
-import Control.Monad.Except (MonadError (..))
 import Data.Text.Metrics (damerauLevenshteinNorm)
+import Data.Traversable (for)
 import Fmt (Buildable (..), blockListF', listF, (+|), (|+))
+import qualified GHC.Exts as Exts
 import Network.FTP.Client
   (FTPException (..), FTPResponse (..), ResponseStatus (..), login, nlst, size, withFTP, withFTPS)
 import Network.HTTP.Client (HttpException (..), HttpExceptionContent (..), responseStatus)
@@ -43,6 +42,7 @@ import Network.HTTP.Types.Status (Status, statusCode, statusMessage)
 import System.Console.Pretty (Style (..), style)
 import System.Directory (canonicalizePath, doesDirectoryExist, doesFileExist)
 import System.FilePath (takeDirectory, (</>))
+import qualified System.FilePath.Glob as Glob
 import Text.Regex.TDFA.Text (Regex, regexec)
 import Text.URI (Authority (..), URI (..), mkURI)
 import Time (RatioNat, Second, Time (..), ms, threadDelay, timeout)
@@ -164,6 +164,37 @@ instance Buildable VerifyError where
         [h] -> ",\n   did you mean " +| h |+ "?\n"
         hs  -> ", did you mean:\n" +| blockListF' "    -" build hs
 
+data NeedsCaching key
+  = NoCaching
+  | CacheUnderKey key
+
+-- | Perform concurrent traversal of the list with the caching mechanism.
+-- The function is semantically similar to @Control.Concurrent.Async.forConcurrently@;
+-- each asynchronous result of the @action@ is prepended to the accumulator list @[Async b]@.
+-- Additionally, these action results may also be inserted in a map of the type
+-- @Map cacheKey (Async b)@, depending on the return value of the function
+-- @a -> NeedsCaching cacheKey@ applied to each of the element from the given list.
+-- If an element of the type @a@ needs caching, and the value is already present in the map,
+-- then the @action@ will not be executed, and the value is added to the accumulator list.
+-- After the whole list has been traversed, the accumulator is traversed once again to ensure
+-- every asynchronous action is completed.
+forConcurrentlyCaching
+  :: Ord cacheKey
+  => [a] -> (a -> NeedsCaching cacheKey) -> (a -> IO b) -> IO [b]
+forConcurrentlyCaching list needsCaching action = go [] M.empty list
+  where
+    go acc cached (x : xs) = case needsCaching x of
+      NoCaching -> do
+        withAsync (action x) $ \b ->
+          go (b : acc) cached xs
+      CacheUnderKey cacheKey -> do
+        case M.lookup cacheKey cached of
+          Nothing -> do
+            withAsync (action x) $ \b ->
+              go (b : acc) (M.insert cacheKey b cached) xs
+          Just b -> go (b : acc) cached xs
+    go acc _ [] = for acc wait <&> reverse
+
 verifyRepo
   :: Rewrite
   -> VerifyConfig
@@ -186,13 +217,18 @@ verifyRepo
 
   progressRef <- newIORef $ initVerifyProgress (map snd toScan)
 
-  withAsync (printer progressRef) $ \_ ->
-    fmap fold . forConcurrently toScan $ \(file, ref) ->
+  accumulated <- withAsync (printer progressRef) $ \_ ->
+    forConcurrentlyCaching toScan ifExternalThenCache $ \(file, ref) ->
       verifyReference config mode progressRef repoInfo' root file ref
+  return $ fold accumulated
   where
     printer progressRef = forever $ do
       readIORef progressRef >>= reprintAnalyseProgress rw mode
       threadDelay (ms 100)
+
+    ifExternalThenCache (_, Reference{..}) = case locationType rLink of
+      ExternalLoc -> CacheUnderKey rLink
+      _           -> NoCaching
 
 shouldCheckLocType :: VerifyMode -> LocationType -> Bool
 shouldCheckLocType mode locType

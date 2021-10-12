@@ -11,18 +11,23 @@ module Xrefcheck.Scan
   , ScanAction
   , FormatsSupport
   , RepoInfo (..)
+  , ScanResult (..)
 
   , gatherRepoInfo
   , specificFormatsSupport
   ) where
 
+import Control.Exception.Safe (throwString)
 import Data.Aeson.TH (deriveFromJSON)
 import qualified Data.Foldable as F
 import qualified Data.Map as M
+import qualified Data.Text as T
 import GHC.Err (errorWithoutStackTrace)
 import qualified System.Directory.Tree as Tree
 import System.FilePath (takeDirectory, takeExtension, (</>))
 
+import Control.Monad.Except (Except)
+import Control.Monad.Trans.Except
 import Xrefcheck.Core
 import Xrefcheck.Progress
 import Xrefcheck.Util (aesonConfigOption)
@@ -39,10 +44,14 @@ deriveFromJSON aesonConfigOption ''TraversalConfig
 type Extension = String
 
 -- | Way to parse a file.
-type ScanAction = FilePath -> IO FileInfo
+type ScanAction = FilePath -> ExceptT ScanError IO FileInfo
 
 -- | All supported ways to parse a file.
 type FormatsSupport = Extension -> Maybe ScanAction
+
+type ScanError = (FilePath, Text)
+data ScanResult e = ScanResult [e] RepoInfo
+  deriving Show
 
 specificFormatsSupport :: [([Extension], ScanAction)] -> FormatsSupport
 specificFormatsSupport formats = \ext -> M.lookup ext formatsMap
@@ -54,33 +63,40 @@ specificFormatsSupport formats = \ext -> M.lookup ext formatsMap
         ]
 
 gatherRepoInfo
-  :: MonadIO m
-  => Rewrite -> FormatsSupport -> TraversalConfig -> FilePath -> m RepoInfo
+  :: Rewrite
+  -> FormatsSupport
+  -> TraversalConfig
+  -> FilePath
+  -> IO (ScanResult ScanError)
 gatherRepoInfo rw formatsSupport config root = do
   putTextRewrite rw "Scanning repository..."
-  _ Tree.:/ repoTree <- liftIO $ Tree.readDirectoryWithL processFile rootNE
+  _ Tree.:/ repoTree <- Tree.readDirectoryWithL processFile rootNE
+  let (fileErrs, excluded) = filterExcludedDirs root repoTree
   let fileInfos = filter (\(path, _) -> not $ isIgnored path)
         $ dropSndMaybes . F.toList
         $ Tree.zipPaths . (dirOfRoot Tree.:/)
-        $ filterExcludedDirs root repoTree
-  return $ RepoInfo (M.fromList fileInfos)
+        $ excluded
+  return . ScanResult fileErrs $ RepoInfo (M.fromList fileInfos)
   where
     rootNE = if null root then "." else root
     dirOfRoot = if root == "" || root == "." then "" else takeDirectory root
+
+    processFile :: FilePath -> IO (Except ScanError FileInfo)
     processFile file = do
       let ext = takeExtension file
-      let mscanner = formatsSupport ext
-      forM mscanner $ \scanFile -> scanFile file
+      case runExceptT <$> (formatsSupport ext <*> Just file) of
+        Just mscanner -> except <$> mscanner
+        Nothing -> return $ throwE (file, "Unknown error")
+
     dropSndMaybes l = [(a, b) | (a, Just b) <- l]
 
     ignored = map (root </>) (tcIgnored config)
     isIgnored path = path `elem` ignored
     filterExcludedDirs cur = \case
       Tree.Dir name subfiles ->
-        let subfiles' =
-              if isIgnored cur
-              then []
-              else map visitRec subfiles
+        let subfiles'
+              | isIgnored cur = []
+              | otherwise = map visitRec subfiles
             visitRec sub = filterExcludedDirs (cur </> Tree.name sub) sub
         in Tree.Dir name subfiles'
       file@Tree.File{} -> file

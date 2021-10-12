@@ -254,17 +254,14 @@ nodeExtractInfo config (Node _ _ docNodes) =
           (loop nodes . pure) $ getIgnoreMode node
         Nothing -> loop nodes toIgnore
 
-parseFileInfo :: MarkdownConfig -> LT.Text -> Either Text FileInfo
-parseFileInfo config input = runExcept $ nodeExtractInfo config $
+parseFileInfo :: MarkdownConfig -> LT.Text -> Except Text FileInfo
+parseFileInfo config input = nodeExtractInfo config $
   commonmarkToNode [] [] $ toStrict input
 
 markdownScanner :: MarkdownConfig -> ScanAction
 markdownScanner config path = do
-  errOrInfo <- parseFileInfo config . decodeUtf8 <$> BSL.readFile path
-  case errOrInfo of
-    Left errTxt -> do
-      die $ "Error when scanning " <> path <> ": " <> T.unpack errTxt
-    Right fileInfo -> return fileInfo
+  errOrInfo <- lift $ parseFileInfo config . decodeUtf8 <$> BSL.readFile path
+  either (throwE . (,) path) return $ runExcept errOrInfo
 
 markdownSupport :: MarkdownConfig -> ([Extension], ScanAction)
 markdownSupport config = ([".md"], markdownScanner config)

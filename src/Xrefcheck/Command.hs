@@ -15,7 +15,7 @@ import Xrefcheck.CLI (Options (..), addTraversalOptions, addVerifyOptions, defau
 import Xrefcheck.Config (Config (..), ScannersConfig (..), defConfig)
 import Xrefcheck.Core (Flavor (..))
 import Xrefcheck.Progress (allowRewrite)
-import Xrefcheck.Scan (FormatsSupport, gatherRepoInfo, specificFormatsSupport)
+import Xrefcheck.Scan (FormatsSupport, ScanResult (..), gatherRepoInfo, specificFormatsSupport)
 import Xrefcheck.Scanners.Markdown (markdownSupport)
 import Xrefcheck.System (askWithinCI)
 import Xrefcheck.Verify (verifyErrors, verifyRepo)
@@ -54,7 +54,7 @@ defaultAction Options{..} = do
     withinCI <- askWithinCI
     let showProgressBar = oShowProgressBar ?: not withinCI
 
-    repoInfo <- allowRewrite showProgressBar $ \rw -> do
+    (ScanResult ee repoInfo) <- allowRewrite showProgressBar $ \rw -> do
       let fullConfig = addTraversalOptions (cTraversal config) oTraversalOptions
       gatherRepoInfo rw (formats $ cScanners config) fullConfig oRoot
 

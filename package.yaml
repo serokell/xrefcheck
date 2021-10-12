@@ -85,6 +85,7 @@ dependencies:
   - req
   - regex-tdfa
   - roman-numerals
+  - safe-exceptions
   - template-haskell
   - text
   - text-metrics

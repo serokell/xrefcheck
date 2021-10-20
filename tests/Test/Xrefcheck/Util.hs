@@ -18,7 +18,7 @@ parse :: Flavor -> FilePath -> IO (Either Text FileInfo)
 parse fl path =
   parseFileInfo MarkdownConfig { mcFlavor = fl } . decodeUtf8 <$> BSL.readFile path
 
-getFI :: Flavor -> FilePath -> IO FileInfo
+getFI :: HasCallStack => Flavor -> FilePath -> IO FileInfo
 getFI fl path =
   let errOrFI = parse fl path
   in either error id <$> errOrFI

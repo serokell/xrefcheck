@@ -27,6 +27,7 @@ default-extensions:
   - DefaultSignatures
   - DeriveDataTypeable
   - DeriveGeneric
+  - DerivingStrategies
   - FlexibleContexts
   - FlexibleInstances
   - FunctionalDependencies
@@ -67,6 +68,7 @@ dependencies:
   - deepseq
   - directory-tree
   - directory
+  - dlist
   - filepath
   - file-embed
   - fmt

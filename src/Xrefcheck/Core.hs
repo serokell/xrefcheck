@@ -26,6 +26,8 @@ import Text.Numeral.Roman (toRoman)
 
 import Xrefcheck.Progress
 import Xrefcheck.Util
+import Data.DList (DList)
+import qualified Data.DList as DList
 
 -----------------------------------------------------------
 -- Types
@@ -94,6 +96,21 @@ data Anchor = Anchor
   , aPos  :: Position
   } deriving (Show, Eq, Generic)
 
+data FileInfoDiff = FileInfoDiff
+  { _fidReferences :: DList Reference
+  , _fidAnchors    :: DList Anchor
+  }
+makeLenses ''FileInfoDiff
+
+diffToFileInfo :: FileInfoDiff -> FileInfo
+diffToFileInfo (FileInfoDiff refs anchors) = FileInfo (DList.toList refs) (DList.toList anchors)
+
+instance Semigroup FileInfoDiff where
+  FileInfoDiff a b <> FileInfoDiff c d = FileInfoDiff (a <> c) (b <> d)
+
+instance Monoid FileInfoDiff where
+  mempty = FileInfoDiff mempty mempty
+
 -- | All information regarding a single file we care about.
 data FileInfo = FileInfo
   { _fiReferences :: [Reference]
@@ -102,7 +119,7 @@ data FileInfo = FileInfo
 makeLenses ''FileInfo
 
 instance Default FileInfo where
-  def = FileInfo [] []
+  def = diffToFileInfo mempty
 
 newtype RepoInfo = RepoInfo (Map FilePath FileInfo)
   deriving (Show)

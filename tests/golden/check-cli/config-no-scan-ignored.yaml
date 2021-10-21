@@ -13,6 +13,8 @@ verification:
   ignoreRefs: []
   checkLocalhost: false
   ignoreAuthFailures: true
+  defaultRetryAfter: 30s
+  maxRetries: 3
 
 scanners:
   markdown:

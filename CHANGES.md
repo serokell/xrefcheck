@@ -17,6 +17,11 @@ Unreleased
   + Add the duplication detection & verification result caching algorithm for external references.
 * [#82](https://github.com/serokell/xrefcheck/pull/82)
   + Fix the issue of having the lowest level context duplicated, caused by the root's trailing path separator.
+* [#31](https://github.com/serokell/xrefcheck/pull/88)
+  + Handle the "429 too many requests" errors & attempt to eliminate them during verification.
+
+0.2.1
+==========
 * [#68](https://github.com/serokell/xrefcheck/pull/68)
   + Recognise manual HTML-anchors inside headers.
 

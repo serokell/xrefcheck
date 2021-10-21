@@ -54,6 +54,9 @@ data VerifyConfig = VerifyConfig
   , vcIgnoreAuthFailures        :: Bool
     -- ^ If True - links which return 403 or 401 code will be skipped,
     -- otherwise – will be marked as broken, because we can't check it.
+  , vcDefaultRetryAfter         :: Time Second
+    -- ^ Default Retry-After delay, applicable when we receive a 429 response
+    -- and it does not contain a @Retry-After@ header.
   }
 
 -- | Configs for all the supported scanners.

@@ -54,6 +54,11 @@ verification:
   # Skip links which return 403 or 401 code.
   ignoreAuthFailures: true
 
+  # When a verification result is a "429 Too Many Requests" response
+  # and it does not contain a "Retry-After" header,
+  # wait this amount of time before attempting to verify the link again.
+  defaultRetryAfter: 30s
+
 # Parameters of scanners for various file types.
 scanners:
   markdown:

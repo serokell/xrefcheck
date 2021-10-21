@@ -103,6 +103,7 @@ library:
     - text
     - text-metrics
     - th-lift-instances
+    - time
     - universum
     - yaml
 
@@ -130,6 +131,8 @@ tests:
     generated-other-modules:
       - Paths_xrefcheck
     dependencies:
+      - case-insensitive
+      - containers
       - firefly
       - hspec
       - hspec-expectations
@@ -140,7 +143,9 @@ tests:
       - fmt
       - http-types
       - HUnit
+      - o-clock
       - regex-tdfa
+      - time
       - universum
       - yaml
     build-tools:

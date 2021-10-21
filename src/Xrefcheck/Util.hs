@@ -11,6 +11,7 @@ module Xrefcheck.Util
   , postfixFields
   , (-:)
   , aesonConfigOption
+  , posixTimeToTimeSecond
   ) where
 
 import Universum
@@ -18,8 +19,13 @@ import Universum
 import Control.Lens (LensRules, lensField, lensRules, mappingNamer)
 import Data.Aeson qualified as Aeson
 import Data.Aeson.Casing (aesonPrefix, camelCase)
+import Data.Fixed (Fixed (MkFixed), HasResolution (resolution))
+import Data.Ratio ((%))
+import Data.Time.Clock (nominalDiffTimeToSeconds)
+import Data.Time.Clock.POSIX (POSIXTime)
 import Fmt (Builder, build, fmt, nameF)
 import System.Console.Pretty (Pretty (..), Style (Faint))
+import Time (Second, Time (..), sec)
 
 instance Pretty Builder where
     colorize s c = build @Text . colorize s c . fmt
@@ -43,3 +49,8 @@ infixr 0 -:
 -- | Options that we use to derive JSON instances for config types.
 aesonConfigOption :: Aeson.Options
 aesonConfigOption = aesonPrefix camelCase
+
+posixTimeToTimeSecond :: POSIXTime -> Time Second
+posixTimeToTimeSecond posixTime =
+  let picos@(MkFixed ps) = nominalDiffTimeToSeconds posixTime
+  in sec . fromRational $ ps % resolution picos

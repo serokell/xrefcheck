@@ -63,6 +63,7 @@ dependencies:
   - async
   - base
   - bytestring
+  - case-insensitive
   - containers
   - cmark-gfm
   - data-default
@@ -93,6 +94,7 @@ dependencies:
   - text-metrics
   - th-lift-instances
   - th-utilities
+  - time
   - transformers
   - universum
   - yaml

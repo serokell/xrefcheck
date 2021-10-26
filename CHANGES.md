@@ -15,6 +15,8 @@ Unreleased
   + Added support for ftp links.
 * [#74](https://github.com/serokell/xrefcheck/pull/83)
   + Add the duplication detection & verification result caching algorithm for external references.
+* [#82](https://github.com/serokell/xrefcheck/pull/82)
+  + Fix the issue of having the lowest level context duplicated, caused by the root's trailing path separator.
 
 0.2.1
 ==========

@@ -11,6 +11,8 @@ module Xrefcheck.Util
   , postfixFields
   , (-:)
   , aesonConfigOption
+  , pairedEnclosingGlyphs
+  , octet
   ) where
 
 import Universum
@@ -18,6 +20,10 @@ import Universum
 import Control.Lens (LensRules, lensField, lensRules, mappingNamer)
 import Data.Aeson qualified as Aeson
 import Data.Aeson.Casing (aesonPrefix, camelCase)
+import Data.Char (toUpper)
+import qualified Data.Map as M
+import qualified Data.Text as T (map)
+import Data.Text.Format (hex)
 import Fmt (Builder, build, fmt, nameF)
 import System.Console.Pretty (Pretty (..), Style (Faint))
 
@@ -43,3 +49,18 @@ infixr 0 -:
 -- | Options that we use to derive JSON instances for config types.
 aesonConfigOption :: Aeson.Options
 aesonConfigOption = aesonPrefix camelCase
+
+pairedEnclosingGlyphs :: M.Map Char Char
+pairedEnclosingGlyphs = M.fromList
+  [ ('(', ')')
+  , (')', '(')
+  , ('[', ']')
+  , (']', '[')
+  , ('{', '}')
+  , ('}', '{')
+  , ('<', '>')
+  , ('>', '<')
+  ]
+
+octet :: Char -> Text
+octet = ("%" <>) . T.map toUpper . fmt @Text . hex . ord

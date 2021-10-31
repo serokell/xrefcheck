@@ -80,6 +80,7 @@ dependencies:
   - HUnit
   - lens
   - pretty-terminal
+  - megaparsec
   - modern-uri
   - mtl
   - o-clock
@@ -90,6 +91,7 @@ dependencies:
   - roman-numerals
   - template-haskell
   - text
+  - text-format
   - text-metrics
   - th-lift-instances
   - th-utilities

@@ -115,7 +115,7 @@ removeIgnored = runIdentity . runExceptT . flip evalStateT None . cataNode remov
 foldNode :: (Monoid a, Monad m) => (Node -> m a) -> Node -> m a
 foldNode action node@(Node _ _ subs) = do
   a <- action node
-  b <- foldM (fmap . (<>)) mempty (foldNode action <$> subs)
+  b <- concatForM subs (foldNode action)
   return (a <> b)
 
 {- | Extract information from source tree.

@@ -41,7 +41,7 @@ import Network.HTTP.Req
   (AllowsBody, CanHaveBody (NoBody), GET (..), HEAD (..), HttpBodyAllowed, HttpException (..),
   HttpMethod, NoReqBody (..), defaultHttpConfig, ignoreResponse, req, runReq, useURI)
 import Network.HTTP.Types.Status (Status, statusCode, statusMessage)
-import System.Console.Pretty (Color (..), Style (..), color, style)
+import System.Console.Pretty (Style (..), style)
 import System.Directory (canonicalizePath, doesDirectoryExist, doesFileExist)
 import System.FilePath (takeDirectory, (</>))
 import System.FilePath.Glob qualified as Glob
@@ -341,7 +341,7 @@ checkExternalResource :: VerifyConfig -> Text -> IO (VerifyResult VerifyError)
 checkExternalResource VerifyConfig{..} link
   | skipCheck = return mempty
   | otherwise = fmap toVerifyRes $ runExceptT $ do
-      uri <- mkURI link & either (processBrackets link) pure
+      uri <- mkURI link & either processBrackets pure
 
       case toString <$> uriScheme uri of
         Just "http" -> checkHttp uri
@@ -363,6 +363,24 @@ checkExternalResource VerifyConfig{..} link
             null before && null after && not (null match)
           Nothing -> False
         Left _ -> False
+
+    processBrackets se = case (fromException se :: Maybe ParseException) of
+      Nothing -> throwError $ ExternalResourceInvalidUri Nothing
+      Just pe ->
+        let peBundle = (\(ParseException bundle) -> bundle) pe
+            err :| _ = bundleErrors peBundle
+        in case err of
+          TrivialError position _ _ ->
+            let characterInQuestion = link `T.index` position
+            in
+              if characterInQuestion `elem` illegalCharactersToDisplay
+              then throwError . ExternalResourceInvalidUri . Just $
+                invalidURIVerbose characterInQuestion position link
+              else throwError $ ExternalResourceInvalidUri Nothing
+          _ -> throwError $ ExternalResourceInvalidUri Nothing
+      where
+        illegalCharactersToDisplay :: String
+        illegalCharactersToDisplay = "[]"
 
     checkHttp :: URI -> ExceptT VerifyError IO ()
     checkHttp uri = makeHttpRequest uri HEAD 0.3 `catchError` \_ ->
@@ -472,54 +490,3 @@ checkExternalResource VerifyConfig{..} link
           pure ()
       where
         handler = if secure then withFTPS else withFTP
-
-processBrackets :: Text -> SomeException -> ExceptT VerifyError IO URI
-processBrackets link se =
-  case (fromException se :: Maybe ParseException) of
-    Nothing -> throwError $ ExternalResourceInvalidUri Nothing
-    Just pe ->
-      let peBundle = (\(ParseException bundle) -> bundle) pe
-          err :| _ = bundleErrors peBundle
-      in case err of
-        TrivialError position _ _ ->
-          let characterInQuestion = link `T.index` position
-          in
-            if characterInQuestion `elem` invalidCharactersToDisplay
-            then throwError . ExternalResourceInvalidUri . Just . fmt . indentF 3 . unlinesF $
-              pinpointInvalidCharacter characterInQuestion position <>
-              suggestPercentEncoding characterInQuestion
-            else throwError $ ExternalResourceInvalidUri Nothing
-        _ -> throwError $ ExternalResourceInvalidUri Nothing
-  where
-    invalidCharactersToDisplay = ['[', ']']
-
-    pinpointInvalidCharacter characterInQuestion position =
-      [ "unexpected character " <> show characterInQuestion
-      , style Bold (color Magenta "|")
-      , style Bold (color Magenta "|") <> "  " <>
-        applyPrettyAt position link Bold Magenta
-      , style Bold (color Magenta "|") <> "  " <>
-        T.replicate position " " <> style Bold (color Magenta "^")
-      , show characterInQuestion <>
-        " is not allowed to be explcitily used in the URIs by the WHATWG URL standard"
-      , "Consider using its percent-encoded counterpart: " <>
-        style Bold (color Magenta $ octet characterInQuestion)
-      ]
-
-    suggestPercentEncoding ch = maybeToList $ do
-      paired <- ch `M.lookup` pairedEnclosingGlyphs
-      return $
-        "Similarly for " <> show paired <>
-        " if it is present in the URI: " <>
-        style Bold (color Magenta (octet paired))
-
-    applyPrettyAt :: Int -> Text -> Style -> Color -> Text
-    applyPrettyAt position text sty col =
-      let s = splitAt position $ toString text
-      in toText $ case s of
-        (prefix, []) -> prefix
-        ([], suffix@(h : t)) ->
-          if position < 0
-          then suffix
-          else style sty (color col [h]) <> t
-        (prefix, h : t) -> prefix <> color col [h] <> t

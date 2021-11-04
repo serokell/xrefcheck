@@ -30,3 +30,9 @@ development
 
 Here are [how-we-work](https://serokell.io/how-we-work) and [privacy](https://serokell.io/privacy)
 and <!-- xrefcheck: ignore link -->     [ml consulting](https://serokell.io/machine-learning-consulting)
+
+<!-- xrefcheck: ignore link -->
+Ignore link bug _regression test_ [link1](link1) [link2](link2)
+
+<!-- xrefcheck: ignore link -->
+Another ignore link bug _some [link1](link1) emphasis_ [link2](link2)

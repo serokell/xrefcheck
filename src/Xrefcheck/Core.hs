@@ -11,7 +11,7 @@ module Xrefcheck.Core where
 
 import Universum
 
-import Control.Lens (makeLenses, (%=))
+import Control.Lens (makeLenses)
 import Data.Aeson (FromJSON (..), withText)
 import Data.Char (isAlphaNum)
 import Data.Char qualified as C

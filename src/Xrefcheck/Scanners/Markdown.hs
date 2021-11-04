@@ -21,6 +21,8 @@ import CMarkGFM (Node (..), NodeType (..), PosInfo (..), commonmarkToNode)
 import Control.Monad.Except (MonadError, throwError)
 import Data.Aeson.TH (deriveFromJSON)
 import Data.ByteString.Lazy qualified as BSL
+import Data.DList qualified as DList
+import Data.Default (def)
 import Data.Text qualified as T
 import Data.Text.Lazy qualified as LT
 import Fmt (Buildable (..), blockListF, nameF, (+|), (|+))
@@ -28,7 +30,6 @@ import Fmt (Buildable (..), blockListF, nameF, (+|), (|+))
 import Xrefcheck.Core
 import Xrefcheck.Scan
 import Xrefcheck.Util
-import Data.Default (def)
 
 data MarkdownConfig = MarkdownConfig
   { mcFlavor :: Flavor
@@ -55,8 +56,7 @@ toPosition = Position . \case
         startLine |+ ":" +| startColumn |+ " - " +|
         endLine |+ ":" +| endColumn |+ ""
 
-{- | Extract text from the topmost node.
--}
+-- | Extract text from the topmost node.
 nodeExtractText :: Node -> Text
 nodeExtractText = T.strip . mconcat . map extractText . nodeFlatten
   where
@@ -75,14 +75,12 @@ data IgnoreMode
   | None
   deriving Eq
 
-{- | A fold over a `Node`.
--}
+-- | A fold over a `Node`.
 cataNode :: (Maybe PosInfo -> NodeType -> [c] -> c) -> Node -> c
 cataNode f (Node pos ty subs) = f pos ty (cataNode f <$> subs)
 
-{- | Remove nodes with accordance with global `MarkdownConfig` and local
-     overrides.
--}
+-- | Remove nodes with accordance with global `MarkdownConfig` and local
+--   overrides.
 removeIgnored :: Node -> Either Text Node
 removeIgnored = runIdentity . runExceptT . flip evalStateT None . cataNode remove
   where
@@ -110,18 +108,17 @@ removeIgnored = runIdentity . runExceptT . flip evalStateT None . cataNode remov
       let mType = safeHead $ words $ show ty
       in fromMaybe "" mType
 
-{- | Custom `foldMap` for source tree.
--}
+-- | Custom `foldMap` for source tree.
 foldNode :: (Monoid a, Monad m) => (Node -> m a) -> Node -> m a
 foldNode action node@(Node _ _ subs) = do
   a <- action node
   b <- concatForM subs (foldNode action)
   return (a <> b)
 
-{- | Extract information from source tree.
--}
+-- | Extract information from source tree.
 nodeExtractInfo
-  :: ( MonadError Text m
+  :: forall m
+  .  ( MonadError Text m
      , MonadState IgnoreMode m
      , MonadReader MarkdownConfig m
      )
@@ -136,6 +133,7 @@ nodeExtractInfo input@(Node _ _ nSubs) = do
       diffToFileInfo <$> foldNode extractor relevant
 
   where
+    extractor :: Node -> m FileInfoDiff
     extractor node@(Node pos ty _) =
       case ty of
         HTML_BLOCK _ -> do
@@ -146,7 +144,7 @@ nodeExtractInfo input@(Node _ _ nSubs) = do
           let aType = HeaderAnchor lvl
           let aName = headerToAnchor flavor $ nodeExtractText node
           let aPos  = toPosition pos
-          return $ FileInfoDiff mempty $ pure $ Anchor {aType, aName, aPos}
+          return $ FileInfoDiff DList.empty $ DList.singleton $ Anchor {aType, aName, aPos}
 
         HTML_INLINE text -> do
           let mName = T.stripSuffix "\">" =<< T.stripPrefix "<a name=\"" text
@@ -170,8 +168,8 @@ nodeExtractInfo input@(Node _ _ nSubs) = do
                   t : ts -> (t, Just $ T.intercalate "#" ts)
                   []     -> error "impossible"
           return $ FileInfoDiff
-            (pure $ Reference {rName, rPos, rLink, rAnchor})
-            mempty
+            (DList.singleton $ Reference {rName, rPos, rLink, rAnchor})
+            DList.empty
 
         _ -> return mempty
 

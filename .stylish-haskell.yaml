@@ -16,6 +16,7 @@ steps:
       list_padding: 2
       separate_lists: true
       space_surround: false
+      post_qualify: true
   - trailing_whitespace: {}
 columns: 100
 newline: native
@@ -38,6 +39,7 @@ language_extensions:
   - FunctionalDependencies
   - GADTs
   - GeneralizedNewtypeDeriving
+  - ImportQualifiedPost
   - LambdaCase
   - MultiParamTypeClasses
   - MultiWayIf

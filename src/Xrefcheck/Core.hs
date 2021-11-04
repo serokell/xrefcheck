@@ -27,7 +27,7 @@ import Text.Numeral.Roman (toRoman)
 import Xrefcheck.Progress
 import Xrefcheck.Util
 import Data.DList (DList)
-import qualified Data.DList as DList
+import Data.DList qualified as DList
 
 -----------------------------------------------------------
 -- Types
@@ -103,7 +103,8 @@ data FileInfoDiff = FileInfoDiff
 makeLenses ''FileInfoDiff
 
 diffToFileInfo :: FileInfoDiff -> FileInfo
-diffToFileInfo (FileInfoDiff refs anchors) = FileInfo (DList.toList refs) (DList.toList anchors)
+diffToFileInfo (FileInfoDiff refs anchors) =
+    FileInfo (DList.toList refs) (DList.toList anchors)
 
 instance Semigroup FileInfoDiff where
   FileInfoDiff a b <> FileInfoDiff c d = FileInfoDiff (a <> c) (b <> d)
@@ -123,11 +124,6 @@ instance Default FileInfo where
 
 newtype RepoInfo = RepoInfo (Map FilePath FileInfo)
   deriving (Show)
-
-finaliseFileInfo :: FileInfo -> FileInfo
-finaliseFileInfo = execState $ do
-  fiReferences %= reverse
-  fiAnchors %= reverse
 
 -----------------------------------------------------------
 -- Instances
@@ -296,9 +292,7 @@ stripAnchorDupNo t = do
 -- | Strip './' prefix from local references.
 canonizeLocalRef :: Text -> Text
 canonizeLocalRef ref =
-  case T.stripPrefix localPrefix ref of
-    Nothing -> ref
-    Just r  -> canonizeLocalRef r
+  maybe ref canonizeLocalRef (T.stripPrefix localPrefix ref)
   where
     localPrefix = toText ['.', pathSeparator]
 

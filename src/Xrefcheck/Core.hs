@@ -40,7 +40,7 @@ import Data.DList qualified as DList
 data Flavor
   = GitHub
   | GitLab
-  deriving (Show)
+  deriving stock (Show)
 
 allFlavors :: [Flavor]
 allFlavors = [GitHub, GitLab]
@@ -61,7 +61,7 @@ instance FromJSON Flavor where
 -- We keep this in text because scanners for different formats use different
 -- representation of this thing, and it actually appears in reports only.
 newtype Position = Position (Maybe Text)
-  deriving (Show, Eq, Generic)
+  deriving stock (Show, Eq, Generic)
 
 instance Buildable Position where
   build (Position pos) = case pos of
@@ -77,7 +77,7 @@ data Reference = Reference
   , rAnchor :: Maybe Text
     -- ^ Section or custom anchor tag.
   , rPos    :: Position
-  } deriving (Show, Generic)
+  } deriving stock (Show, Generic)
 
 -- | Context of anchor.
 data AnchorType
@@ -87,14 +87,14 @@ data AnchorType
     -- ^ They can be set up manually
   | BiblioAnchor
     -- ^ Id of entry in bibliography
-  deriving (Show, Eq, Generic)
+  deriving stock (Show, Eq, Generic)
 
 -- | A referable anchor.
 data Anchor = Anchor
   { aType :: AnchorType
   , aName :: Text
   , aPos  :: Position
-  } deriving (Show, Eq, Generic)
+  } deriving stock (Show, Eq, Generic)
 
 data FileInfoDiff = FileInfoDiff
   { _fidReferences :: DList Reference
@@ -116,14 +116,14 @@ instance Monoid FileInfoDiff where
 data FileInfo = FileInfo
   { _fiReferences :: [Reference]
   , _fiAnchors    :: [Anchor]
-  } deriving (Show, Generic)
+  } deriving stock (Show, Generic)
 makeLenses ''FileInfo
 
 instance Default FileInfo where
   def = diffToFileInfo mempty
 
 newtype RepoInfo = RepoInfo (Map FilePath FileInfo)
-  deriving (Show)
+  deriving stock (Show)
 
 -----------------------------------------------------------
 -- Instances
@@ -189,7 +189,7 @@ data LocationType
     -- ^ Reference to a file at outer site
   | OtherLoc
     -- ^ Entry not to be processed (e.g. "mailto:e-mail")
-  deriving (Show)
+  deriving stock (Show)
 
 instance Buildable LocationType where
   build = \case
@@ -303,7 +303,7 @@ canonizeLocalRef ref =
 data VerifyProgress = VerifyProgress
   { vrLocal    :: !(Progress Int)
   , vrExternal :: !(Progress Int)
-  } deriving (Show)
+  } deriving stock (Show)
 
 initVerifyProgress :: [Reference] -> VerifyProgress
 initVerifyProgress references = VerifyProgress

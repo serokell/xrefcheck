@@ -64,10 +64,10 @@ import Xrefcheck.System
 -----------------------------------------------------------
 
 newtype VerifyResult e = VerifyResult [e]
-  deriving (Show, Eq, Functor)
+  deriving newtype (Show, Eq, Functor)
 
-deriving instance Semigroup (VerifyResult e)
-deriving instance Monoid (VerifyResult e)
+deriving newtype instance Semigroup (VerifyResult e)
+deriving newtype instance Monoid (VerifyResult e)
 
 instance Buildable e => Buildable (VerifyResult e) where
   build vr = case verifyErrors vr of
@@ -114,7 +114,7 @@ data VerifyError
   | ExternalFtpException FTPException
   | FtpEntryDoesNotExist FilePath
   | ExternalResourceSomeError Text
-  deriving (Show, Eq)
+  deriving stock (Show, Eq)
 
 instance Buildable VerifyError where
   build = \case

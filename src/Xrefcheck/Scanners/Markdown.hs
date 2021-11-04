@@ -73,7 +73,7 @@ data IgnoreMode
   | Paragraph
   | File
   | None
-  deriving Eq
+  deriving stock (Eq)
 
 -- | A fold over a `Node`.
 cataNode :: (Maybe PosInfo -> NodeType -> [c] -> c) -> Node -> c

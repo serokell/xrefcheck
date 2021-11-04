@@ -36,7 +36,7 @@ data Progress a = Progress
     -- ^ Overall amount of work.
   , pErrors  :: !a
     -- ^ How many of the completed work finished with an error.
-  } deriving (Show)
+  } deriving stock (Show)
 
 -- | Initialise null progress.
 initProgress :: Num a => a -> Progress a

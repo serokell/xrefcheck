@@ -55,6 +55,7 @@ ghc-options:
   - -Wall
   - -Wincomplete-record-updates
   - -Wincomplete-uni-patterns
+  - -Wmissing-deriving-strategies
 
 dependencies:
   - aeson

@@ -44,4 +44,4 @@ instance Buildable FTPException where
   build (UnsuccessfulException e) = build e
   build (BogusResponseFormatException e) = build e
 
-deriving instance Eq FTPException
+deriving stock instance Eq FTPException

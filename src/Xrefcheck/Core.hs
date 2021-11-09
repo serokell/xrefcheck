@@ -62,6 +62,7 @@ instance FromJSON Flavor where
 -- representation of this thing, and it actually appears in reports only.
 newtype Position = Position (Maybe Text)
   deriving stock (Show, Eq, Generic)
+  deriving anyclass NFData
 
 instance Buildable Position where
   build (Position pos) = case pos of
@@ -77,7 +78,9 @@ data Reference = Reference
   , rAnchor :: Maybe Text
     -- ^ Section or custom anchor tag.
   , rPos    :: Position
-  } deriving stock (Show, Generic)
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass NFData
 
 -- | Context of anchor.
 data AnchorType
@@ -88,13 +91,16 @@ data AnchorType
   | BiblioAnchor
     -- ^ Id of entry in bibliography
   deriving stock (Show, Eq, Generic)
+  deriving anyclass NFData
 
 -- | A referable anchor.
 data Anchor = Anchor
   { aType :: AnchorType
   , aName :: Text
   , aPos  :: Position
-  } deriving stock (Show, Eq, Generic)
+  }
+  deriving stock (Show, Eq, Generic)
+  deriving anyclass NFData
 
 data FileInfoDiff = FileInfoDiff
   { _fidReferences :: DList Reference
@@ -116,7 +122,9 @@ instance Monoid FileInfoDiff where
 data FileInfo = FileInfo
   { _fiReferences :: [Reference]
   , _fiAnchors    :: [Anchor]
-  } deriving stock (Show, Generic)
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass NFData
 makeLenses ''FileInfo
 
 instance Default FileInfo where
@@ -128,12 +136,6 @@ newtype RepoInfo = RepoInfo (Map FilePath FileInfo)
 -----------------------------------------------------------
 -- Instances
 -----------------------------------------------------------
-
-instance NFData Position
-instance NFData Reference
-instance NFData AnchorType
-instance NFData Anchor
-instance NFData FileInfo
 
 instance Buildable Reference where
   build Reference{..} =

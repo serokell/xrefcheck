@@ -25,6 +25,7 @@ default-extensions:
   - ConstraintKinds
   - DataKinds
   - DefaultSignatures
+  - DeriveAnyClass
   - DeriveDataTypeable
   - DeriveGeneric
   - DerivingStrategies

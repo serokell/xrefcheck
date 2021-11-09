@@ -18,7 +18,7 @@ spec = do
     for_ allFlavors $ \fl -> do
       it ("is detected (" <> show fl <> ")") $ do
         fi <- getFI fl "tests/markdowns/without-annotations/copy-paste_in_lists.md"
-        getPasta fi `shouldBe`[("a", "c")]
+        getPasta fi `shouldBe`[("foo-bar","Foo Kek")]
   where
     getPasta :: FileInfo -> [(Text, Text)]
     getPasta fi = map (cpAnchorText &&& cpPlainText) $ fi ^. fiCopyPastes

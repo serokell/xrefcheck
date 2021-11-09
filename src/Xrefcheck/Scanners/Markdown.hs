@@ -22,6 +22,7 @@ import Control.Lens hiding ((^?))
 import Control.Monad.Except (MonadError, throwError)
 import Data.Aeson.TH (deriveFromJSON)
 import Data.ByteString.Lazy qualified as BSL
+import Data.Char (isAlpha)
 import Data.DList qualified as DList
 import Data.Default (def)
 import Data.List (isSubsequenceOf)
@@ -206,7 +207,9 @@ nodeExtractInfo input@(Node _ _ nSubs) = do
 
 urlIsASubsequence :: CopyPaste -> Bool
 urlIsASubsequence paste =
-  T.unpack (cpAnchorText paste) `isSubsequenceOf` T.unpack (cpPlainText paste)
+  gist (cpAnchorText paste) `isSubsequenceOf` gist (cpPlainText paste)
+  where
+    gist = T.unpack  . T.toLower . T.filter isAlpha
 
 merge :: (Monad m, Monoid b) => [a -> m b] -> a -> m b
 merge fs a = mconcat <$> traverse ($ a) fs

@@ -6,12 +6,12 @@
 
 A list with bad copy-paste:
 
-- [a](a) e
-- [b](b) e
-- [c](a) e
+- [Foo Bar](foo-bar) e
+- [Foo Qux](foo-qux) e
+- [Foo Kek](foo-bar) e
 
 A list that is completely fine:
 
-- [a](a) d
-- [b](b) d
-- [c](c) d
+- [Foo Bar](foo-bar) e
+- [Foo Qux](foo-qux) e
+- [Foo Kek](foo-kek) e

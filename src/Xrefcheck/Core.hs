@@ -40,15 +40,10 @@ import Xrefcheck.Util
 data Flavor
   = GitHub
   | GitLab
-  deriving stock (Show)
+  deriving stock (Show, Enum, Bounded)
 
 allFlavors :: [Flavor]
-allFlavors = [GitHub, GitLab]
-  where
-    _exhaustivenessCheck = \case
-      GitHub -> ()
-      GitLab -> ()
-      -- if you update this, also update the list above
+allFlavors = [minBound.. maxBound]
 
 instance FromJSON Flavor where
   parseJSON = withText "flavor" $ \txt ->

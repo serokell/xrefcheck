@@ -130,7 +130,7 @@ nodeExtractInfo input@(Node _ _ nSubs) = do
   else case removeIgnored input of
     Left err -> throwError err
     Right relevant ->
-      diffToFileInfo <$> foldNode extractor relevant
+      diffToFileInfo <$> foldNode (merge [extractor, copyPaste]) relevant
 
   where
     extractor :: Node -> m FileInfoDiff
@@ -174,6 +174,12 @@ nodeExtractInfo input@(Node _ _ nSubs) = do
             }
 
         _ -> return mempty
+
+    copyPaste :: Node -> m FileInfoDiff
+    copyPaste _ = pure mempty
+
+merge :: (Monad m, Monoid b) => [a -> m b] -> a -> m b
+merge fs a = mconcat <$> traverse ($ a) fs
 
 checkIgnoreFile :: [Node] -> Bool
 checkIgnoreFile nodes =

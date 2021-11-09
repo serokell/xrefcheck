@@ -27,6 +27,7 @@ import Universum
 import Control.Concurrent.Async (wait, withAsync)
 import Control.Exception (throwIO)
 import Control.Monad.Except (MonadError (..))
+import Data.Bits (toIntegralSized)
 import Data.ByteString qualified as BS
 import Data.Map qualified as M
 import Data.Text qualified as T
@@ -49,7 +50,6 @@ import Text.Regex.TDFA.Text (Regex, regexec)
 import Text.URI (Authority (..), URI (..), mkURI)
 import Time (RatioNat, Second, Time (..), ms, threadDelay, timeout)
 
-import Data.Bits (toIntegralSized)
 import Xrefcheck.Config
 import Xrefcheck.Core
 import Xrefcheck.Orphans ()
@@ -70,9 +70,7 @@ deriving newtype instance Semigroup (VerifyResult e)
 deriving newtype instance Monoid (VerifyResult e)
 
 instance Buildable e => Buildable (VerifyResult e) where
-  build vr = case verifyErrors vr of
-    Nothing   -> "ok"
-    Just errs -> listF errs
+  build vr = maybe "ok" listF (verifyErrors vr)
 
 verifyOk :: VerifyResult e -> Bool
 verifyOk (VerifyResult errors) = null errors
@@ -114,6 +112,7 @@ data VerifyError
   | ExternalFtpException FTPException
   | FtpEntryDoesNotExist FilePath
   | ExternalResourceSomeError Text
+  | PossiblyIncorrectCopyPaste Text Text
   deriving stock (Show, Eq)
 
 instance Buildable VerifyError where
@@ -156,10 +155,15 @@ instance Buildable VerifyError where
       "⛂  FTP exception (" +| err |+ ")\n"
 
     FtpEntryDoesNotExist entry ->
-      "⛂ File or directory does not exist:\n" +| entry |+ "\n"
+      "⛂  File or directory does not exist:\n" +| entry |+ "\n"
 
     ExternalResourceSomeError err ->
       "⛂  " +| build err |+ "\n\n"
+
+    PossiblyIncorrectCopyPaste url text ->
+      "⛂  Possibly incorrect copy-paste in list with references\n" +|
+      "   the url is " +| build url |+ "\n   " +|
+      "   but the text is " +| build text |+ "\n\n"
     where
       anchorHints = \case
         []  -> "\n"
@@ -219,10 +223,19 @@ verifyRepo
 
   progressRef <- newIORef $ initVerifyProgress (map snd toScan)
 
+  errorss <- for (M.toList repoInfo) $ \(file, info) -> do
+    let pasta = _fiCopyPastes info
+    return
+      $ VerifyResult
+      $ fmap (\(CopyPaste url txt pos) ->
+          WithReferenceLoc file (Reference "" "" Nothing pos)
+            $ PossiblyIncorrectCopyPaste url txt)
+        pasta
+
   accumulated <- withAsync (printer progressRef) $ \_ ->
     forConcurrentlyCaching toScan ifExternalThenCache $ \(file, ref) ->
       verifyReference config mode progressRef repoInfo' root file ref
-  return $ fold accumulated
+  return $ fold errorss <> fold accumulated
   where
     printer progressRef = forever $ do
       readIORef progressRef >>= reprintAnalyseProgress rw mode

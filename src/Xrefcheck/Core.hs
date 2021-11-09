@@ -130,6 +130,7 @@ data FileInfo = FileInfo
   }
   deriving stock (Show, Generic)
   deriving anyclass NFData
+
 makeLenses ''FileInfo
 
 instance Default FileInfo where

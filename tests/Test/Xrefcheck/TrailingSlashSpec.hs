@@ -5,6 +5,8 @@
 
 module Test.Xrefcheck.TrailingSlashSpec where
 
+import Universum
+
 import Fmt (blockListF, pretty, unlinesF)
 import System.Directory (doesFileExist)
 import Test.Hspec (Spec, describe, expectationFailure, it)

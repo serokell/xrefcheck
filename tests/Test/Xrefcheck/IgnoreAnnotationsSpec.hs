@@ -5,6 +5,8 @@
 
 module Test.Xrefcheck.IgnoreAnnotationsSpec where
 
+import Universum
+
 import Test.Hspec (Spec, describe, it, shouldBe)
 
 import Test.Xrefcheck.Util
@@ -20,7 +22,7 @@ spec = do
     it "Check \"ignore link\" performance" $ do
       fi <- getFI GitHub "tests/markdowns/with-annotations/ignore_link.md"
       getRefs fi `shouldBe`
-        ["team", "team", "team", "hire-us", "how-we-work", "privacy"]
+        ["team", "team", "team", "hire-us", "how-we-work", "privacy", "link2", "link2"]
   describe "\"ignore paragraph\" mode" $ do
     it "Check \"ignore paragraph\" performance" $ do
       fi <- getFI GitHub "tests/markdowns/with-annotations/ignore_paragraph.md"

@@ -15,15 +15,16 @@ module Xrefcheck.Scanners.Markdown
   , parseFileInfo
   ) where
 
+import Universum
+
 import CMarkGFM (Node (..), NodeType (..), PosInfo (..), commonmarkToNode)
-import Control.Lens ((%=))
-import Control.Monad.Trans.Except (Except, runExcept, throwE)
+import Control.Monad.Except (MonadError, throwError)
 import Data.Aeson.TH (deriveFromJSON)
-import qualified Data.ByteString.Lazy as BSL
-import Data.Char (isSpace)
-import Data.Default (Default (..))
-import qualified Data.Text as T
-import qualified Data.Text.Lazy as LT
+import Data.ByteString.Lazy qualified as BSL
+import Data.DList qualified as DList
+import Data.Default (def)
+import Data.Text qualified as T
+import Data.Text.Lazy qualified as LT
 import Fmt (Buildable (..), blockListF, nameF, (+|), (|+))
 
 import Xrefcheck.Core
@@ -55,9 +56,7 @@ toPosition = Position . \case
         startLine |+ ":" +| startColumn |+ " - " +|
         endLine |+ ":" +| endColumn |+ ""
 
-nodeFlatten :: Node -> [NodeType]
-nodeFlatten (Node _pos ty subs) = ty : concatMap nodeFlatten subs
-
+-- | Extract text from the topmost node.
 nodeExtractText :: Node -> Text
 nodeExtractText = T.strip . mconcat . map extractText . nodeFlatten
   where
@@ -66,142 +65,150 @@ nodeExtractText = T.strip . mconcat . map extractText . nodeFlatten
       CODE t -> t
       _ -> ""
 
+    nodeFlatten :: Node -> [NodeType]
+    nodeFlatten (Node _pos ty subs) = ty : concatMap nodeFlatten subs
+
 data IgnoreMode
   = Link
   | Paragraph
   | File
-  deriving Eq
+  | None
+  deriving stock (Eq)
 
-nodeExtractInfo :: MarkdownConfig -> Node -> Except Text FileInfo
-nodeExtractInfo config (Node _ _ docNodes) =
-  if checkIgnoreFile docNodes
-  then return def
-  else finaliseFileInfo <$> extractionResult
+-- | A fold over a `Node`.
+cataNode :: (Maybe PosInfo -> NodeType -> [c] -> c) -> Node -> c
+cataNode f (Node pos ty subs) = f pos ty (cataNode f <$> subs)
+
+-- | Remove nodes with accordance with global `MarkdownConfig` and local
+--   overrides.
+removeIgnored :: Node -> Either Text Node
+removeIgnored = runIdentity . runExceptT . flip evalStateT None . cataNode remove
   where
-    extractionResult :: Except Text FileInfo
-    extractionResult = execStateT (loop docNodes Nothing) def
+    remove
+      :: (MonadError Text m, MonadState IgnoreMode m)
+      => Maybe PosInfo
+      -> NodeType
+      -> [m Node]
+      -> m Node
+    remove pos ty subs = do
+      mode <- get
+      case (mode, ty) of
+        (Paragraph, PARAGRAPH) -> put None $> defNode
+        (Paragraph, x)         -> throwError (makeError mode (prettyType x) pos)
+        (File, _)              -> throwError (makeError mode "" pos)
+        (Link, LINK {})        -> put None $> defNode
+        (Link, _)              -> Node pos ty <$> sequence subs
+        (None, _) -> do
+          case getIgnoreMode (Node pos ty []) of
+            Just mode' -> put mode' $> defNode
+            Nothing    -> Node pos ty <$> sequence subs
 
-    loop :: [Node] -> Maybe IgnoreMode -> StateT FileInfo (Except Text) ()
-    loop [] _ = pass
-    loop (node@(Node pos ty subs) : nodes) toIgnore
-      | toIgnore == Just File = returnError toIgnore "" pos
-      | toIgnore == Just Link = do
-          let (Node startPos _ _) = maybe defNode id $ safeHead subs
-          let mNext = case ty of
-                PARAGRAPH -> afterIgnoredLink subs <> Just nodes
-                TEXT txt | null (dropWhile isSpace $ T.unpack txt) -> afterIgnoredLink nodes
-                SOFTBREAK -> afterIgnoredLink nodes
-                _ -> afterIgnoredLink (node : nodes)
-          case mNext of
-            Just next -> loop next Nothing
-            Nothing   -> returnError toIgnore "" startPos
-      | toIgnore == Just Paragraph =
-          case ty of
-            PARAGRAPH -> loop nodes Nothing
-            _         -> returnError toIgnore (prettyType ty) pos
-      | otherwise =
-          case ty of
-            HTML_BLOCK _ -> processHtmlNode node pos nodes toIgnore
-            HEADING lvl -> do
-              let aType = HeaderAnchor lvl
-              let aName = headerToAnchor (mcFlavor config) $
-                          nodeExtractText node
-              let aPos = toPosition pos
-              fiAnchors %= (Anchor{..} :)
-              loop (subs ++ nodes) toIgnore
-            HTML_INLINE htmlText -> do
-              let mName = T.stripSuffix "\">" =<< T.stripPrefix "<a name=\"" htmlText
-              whenJust mName $ \aName -> do
-                  let aType = HandAnchor
-                      aPos = toPosition pos
-                  fiAnchors %= (Anchor{..} :)
-              processHtmlNode node pos nodes toIgnore
-            LINK url _ -> do
-              let rName = nodeExtractText node
-                  rPos = toPosition pos
-                  link = if null url then rName else url
-              let (rLink, rAnchor) = case T.splitOn "#" link of
-                      [t]    -> (t, Nothing)
-                      t : ts -> (t, Just $ T.intercalate "#" ts)
-                      []     -> error "impossible"
-              fiReferences %= (Reference{..} :)
-              loop nodes toIgnore
-            _ -> loop (subs ++ nodes) toIgnore
+    prettyType :: NodeType -> Text
+    prettyType ty =
+      let mType = safeHead $ words $ show ty
+      in fromMaybe "" mType
 
-    defNode :: Node
-    defNode = Node Nothing DOCUMENT [] -- hard-coded default Node
+-- | Custom `foldMap` for source tree.
+foldNode :: (Monoid a, Monad m) => (Node -> m a) -> Node -> m a
+foldNode action node@(Node _ _ subs) = do
+  a <- action node
+  b <- concatForM subs (foldNode action)
+  return (a <> b)
 
-    getCommentContent :: Node -> Maybe Text
-    getCommentContent node = do
-      txt <- getHTMLText node
-      T.stripSuffix "-->" =<< T.stripPrefix "<!--" (T.strip txt)
-      where
-        getHTMLText :: Node -> Maybe Text
-        getHTMLText (Node _ (HTML_BLOCK txt) _) = Just txt
-        getHTMLText (Node _ (HTML_INLINE txt) _) = Just txt
-        getHTMLText _ = Nothing
+-- | Extract information from source tree.
+nodeExtractInfo
+  :: forall m
+  .  ( MonadError Text m
+     , MonadState IgnoreMode m
+     , MonadReader MarkdownConfig m
+     )
+  => Node
+  -> m FileInfo
+nodeExtractInfo input@(Node _ _ nSubs) = do
+  if checkIgnoreFile nSubs
+  then return def
+  else case removeIgnored input of
+    Left err -> throwError err
+    Right relevant ->
+      diffToFileInfo <$> foldNode extractor relevant
 
-    getXrefcheckContent :: Node -> Maybe Text
-    getXrefcheckContent node =
-      let notStripped = T.stripPrefix "xrefcheck:" . T.strip =<<
-            getCommentContent node
-      in T.strip <$> notStripped
+  where
+    extractor :: Node -> m FileInfoDiff
+    extractor node@(Node pos ty _) =
+      case ty of
+        HTML_BLOCK _ -> do
+          return mempty
 
-    getIgnoreMode :: Node -> Maybe IgnoreMode
-    getIgnoreMode node =
-      let mContent = getXrefcheckContent node
+        HEADING lvl -> do
+          flavor <- asks mcFlavor
+          let aType = HeaderAnchor lvl
+          let aName = headerToAnchor flavor $ nodeExtractText node
+          let aPos  = toPosition pos
+          return $ FileInfoDiff DList.empty $ DList.singleton $ Anchor {aType, aName, aPos}
 
-          textToMode :: [Text] -> Maybe IgnoreMode
-          textToMode ("ignore" : [x])
-            | x == "link"      = return Link
-            | x == "paragraph" = return Paragraph
-            | x == "file"      = return File
-            | otherwise        = Nothing
-          textToMode _           = Nothing
-      in textToMode . words =<< mContent
+        HTML_INLINE text -> do
+          let mName = T.stripSuffix "\">" =<< T.stripPrefix "<a name=\"" text
+          case mName of
+            Just aName -> do
+              let aType = HandAnchor
+                  aPos  = toPosition pos
+              return $ FileInfoDiff
+                mempty
+                (pure $ Anchor {aType, aName, aPos})
 
+            Nothing -> do
+              return mempty
+
+        LINK url _ -> do
+          let rName = nodeExtractText node
+              rPos = toPosition pos
+              link = if null url then rName else url
+          let (rLink, rAnchor) = case T.splitOn "#" link of
+                  [t]    -> (t, Nothing)
+                  t : ts -> (t, Just $ T.intercalate "#" ts)
+                  []     -> error "impossible"
+          return $ FileInfoDiff
+            (DList.singleton $ Reference {rName, rPos, rLink, rAnchor})
+            DList.empty
+
+        _ -> return mempty
+
+checkIgnoreFile :: [Node] -> Bool
+checkIgnoreFile nodes =
+  let isSimpleComment :: Node -> Bool
+      isSimpleComment node = isComment node && not (isIgnoreFile node)
+
+      mIgnoreFile = safeHead $ dropWhile isSimpleComment nodes
+  in maybe False isIgnoreFile mIgnoreFile
+  where
     isComment :: Node -> Bool
     isComment = isJust . getCommentContent
 
     isIgnoreFile :: Node -> Bool
     isIgnoreFile = (Just File ==) . getIgnoreMode
 
-    checkIgnoreFile :: [Node] -> Bool
-    checkIgnoreFile nodes =
-      let isSimpleComment :: Node -> Bool
-          isSimpleComment node = isComment node && not (isIgnoreFile node)
 
-          mIgnoreFile = safeHead $ dropWhile isSimpleComment nodes
-      in maybe False isIgnoreFile mIgnoreFile
+defNode :: Node
+defNode = Node Nothing DOCUMENT [] -- hard-coded default Node
 
-    isLink :: Node -> Bool
-    isLink (Node _ (LINK _ _) _) = True
-    isLink _ = False
-
-    isText :: Node -> Bool
-    isText (Node _ (TEXT _) _) = True
-    isText _ = False
-
-    afterIgnoredLink :: [Node] -> Maybe [Node]
-    afterIgnoredLink (fNode : nodes)
-      | isLink fNode = return nodes
-      | sNode : nodes' <- nodes =
-          if isText fNode && isLink sNode
-          then return nodes'
-          else Nothing
-      | otherwise = Nothing
-    afterIgnoredLink _ = Nothing
-
-    prettyPos :: Maybe PosInfo -> Text
-    prettyPos pos =
+makeError
+  :: IgnoreMode
+  -> Text
+  -> Maybe PosInfo
+  -> Text
+makeError mode txt pos =
+  let errMsg = case mode of
+        Link      -> linkMsg
+        Paragraph -> paragraphMsg
+        File      -> fileMsg
+        None      -> unrecognisedMsg
+  in errMsg <> posInfo
+  where
+    posInfo :: Text
+    posInfo =
       let posToText :: Position -> Text
           posToText (Position mPos) = fromMaybe "" mPos
       in "(" <> posToText (toPosition pos) <> ")"
-
-    prettyType :: NodeType -> Text
-    prettyType ty =
-      let mType = safeHead $ words $ show ty
-      in maybe "" id mType
 
     fileMsg :: Text
     fileMsg =
@@ -211,52 +218,61 @@ nodeExtractInfo config (Node _ _ docNodes) =
     linkMsg :: Text
     linkMsg = "expected a LINK after \"ignore link\" "
 
-    paragraphMsg :: Text -> Text
-    paragraphMsg txt = unwords
+    paragraphMsg :: Text
+    paragraphMsg = unwords
       [ "expected a PARAGRAPH after \
-         \\"ignore paragraph\", but found"
+          \\"ignore paragraph\", but found"
       , txt
       , ""
       ]
 
-    unrecognisedMsg :: Text -> Text
-    unrecognisedMsg txt = unwords
+    unrecognisedMsg :: Text
+    unrecognisedMsg = unwords
       [ "unrecognised option"
       , "\"" <> txt <> "\""
       , "perhaps you meant \
-         \<\"ignore link\"|\"ignore paragraph\"|\"ignore file\"> "
+          \<\"ignore link\"|\"ignore paragraph\"|\"ignore file\"> "
       ]
 
-    returnError
-      :: Maybe IgnoreMode
-      -> Text
-      -> Maybe PosInfo
-      -> StateT FileInfo (Except Text) ()
-    returnError mode txt pos =
-      let errMsg = case mode of
-            Just Link      -> linkMsg
-            Just Paragraph -> paragraphMsg txt
-            Just File      -> fileMsg
-            Nothing        -> unrecognisedMsg txt
-          posInfo = prettyPos pos
-      in lift $ throwE $ errMsg <> posInfo
+getCommentContent :: Node -> Maybe Text
+getCommentContent node = do
+  txt <- getHTMLText node
+  T.stripSuffix "-->" =<< T.stripPrefix "<!--" (T.strip txt)
+  where
+    getHTMLText :: Node -> Maybe Text
+    getHTMLText (Node _ (HTML_BLOCK txt) _) = Just txt
+    getHTMLText (Node _ (HTML_INLINE txt) _) = Just txt
+    getHTMLText _ = Nothing
 
-    processHtmlNode
-      :: Node
-      -> Maybe PosInfo
-      -> [Node]
-      -> Maybe IgnoreMode
-      -> StateT FileInfo (Except Text) ()
-    processHtmlNode node pos nodes toIgnore = do
-      let xrefcheckContent = getXrefcheckContent node
-      case xrefcheckContent of
-        Just content -> maybe (returnError Nothing content pos)
-          (loop nodes . pure) $ getIgnoreMode node
-        Nothing -> loop nodes toIgnore
+getXrefcheckContent :: Node -> Maybe Text
+getXrefcheckContent node =
+  let notStripped = T.stripPrefix "xrefcheck:" . T.strip =<<
+        getCommentContent node
+  in T.strip <$> notStripped
+
+getIgnoreMode :: Node -> Maybe IgnoreMode
+getIgnoreMode node =
+  let mContent = getXrefcheckContent node
+
+  in textToMode . words =<< mContent
+
+textToMode :: [Text] -> Maybe IgnoreMode
+textToMode ("ignore" : [x])
+  | x == "link"      = return Link
+  | x == "paragraph" = return Paragraph
+  | x == "file"      = return File
+  | otherwise        = return None
+textToMode _         = Nothing
 
 parseFileInfo :: MarkdownConfig -> LT.Text -> Either Text FileInfo
-parseFileInfo config input = runExcept $ nodeExtractInfo config $
-  commonmarkToNode [] [] $ toStrict input
+parseFileInfo config input
+  = runIdentity
+  $ runExceptT
+  $ flip runReaderT config
+  $ flip evalStateT None
+  $ nodeExtractInfo
+  $ commonmarkToNode [] []
+  $ toStrict input
 
 markdownScanner :: MarkdownConfig -> ScanAction
 markdownScanner config path = do

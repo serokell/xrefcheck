@@ -9,6 +9,8 @@
 
 module Xrefcheck.Orphans () where
 
+import Universum
+
 import qualified Data.ByteString.Char8 as C
 
 import Fmt (Buildable (..), unlinesF, (+|), (|+))
@@ -42,4 +44,4 @@ instance Buildable FTPException where
   build (UnsuccessfulException e) = build e
   build (BogusResponseFormatException e) = build e
 
-deriving instance Eq FTPException
+deriving stock instance Eq FTPException

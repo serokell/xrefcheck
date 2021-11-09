@@ -5,7 +5,9 @@
 
 module Test.Xrefcheck.Util where
 
-import qualified Data.ByteString.Lazy as BSL
+import Universum
+
+import Data.ByteString.Lazy qualified as BSL
 import Network.HTTP.Types (forbidden403, unauthorized401)
 import Web.Firefly (ToResponse (..), route, run)
 
@@ -16,7 +18,7 @@ parse :: Flavor -> FilePath -> IO (Either Text FileInfo)
 parse fl path =
   parseFileInfo MarkdownConfig { mcFlavor = fl } . decodeUtf8 <$> BSL.readFile path
 
-getFI :: Flavor -> FilePath -> IO FileInfo
+getFI :: HasCallStack => Flavor -> FilePath -> IO FileInfo
 getFI fl path =
   let errOrFI = parse fl path
   in either error id <$> errOrFI

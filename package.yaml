@@ -27,14 +27,17 @@ default-extensions:
   - DefaultSignatures
   - DeriveDataTypeable
   - DeriveGeneric
+  - DerivingStrategies
   - FlexibleContexts
   - FlexibleInstances
   - FunctionalDependencies
   - GeneralizedNewtypeDeriving
+  - ImportQualifiedPost
   - LambdaCase
   - MultiParamTypeClasses
   - MultiWayIf
   - NamedFieldPuns
+  - NoImplicitPrelude
   - OverloadedStrings
   - RankNTypes
   - RecordWildCards
@@ -52,14 +55,13 @@ ghc-options:
   - -Wall
   - -Wincomplete-record-updates
   - -Wincomplete-uni-patterns
+  - -Wmissing-deriving-strategies
 
 dependencies:
   - aeson
   - aeson-casing
   - async
-  - name: base
-    mixin: [hiding (Prelude)]
-    version: "< 4.15"
+  - base
   - bytestring
   - containers
   - cmark-gfm
@@ -67,6 +69,7 @@ dependencies:
   - deepseq
   - directory-tree
   - directory
+  - dlist
   - filepath
   - file-embed
   - fmt
@@ -91,8 +94,7 @@ dependencies:
   - th-lift-instances
   - th-utilities
   - transformers
-  - name: universum
-    mixin: [(Universum as Prelude), (Universum.Unsafe as Unsafe)]
+  - universum
   - yaml
   - with-utf8
 

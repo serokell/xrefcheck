@@ -22,16 +22,18 @@ module Xrefcheck.Verify
   , checkExternalResource
   ) where
 
+import Universum
+
 import Control.Concurrent.Async (wait, withAsync)
 import Control.Exception (throwIO)
 import Control.Monad.Except (MonadError (..))
-import qualified Data.ByteString as BS
-import qualified Data.Map as M
-import qualified Data.Text as T
+import Data.ByteString qualified as BS
+import Data.Map qualified as M
+import Data.Text qualified as T
 import Data.Text.Metrics (damerauLevenshteinNorm)
 import Data.Traversable (for)
 import Fmt (Buildable (..), blockListF', listF, (+|), (|+))
-import qualified GHC.Exts as Exts
+import GHC.Exts qualified as Exts
 import Network.FTP.Client
   (FTPException (..), FTPResponse (..), ResponseStatus (..), login, nlst, size, withFTP, withFTPS)
 import Network.HTTP.Client (HttpException (..), HttpExceptionContent (..), responseStatus)
@@ -42,7 +44,7 @@ import Network.HTTP.Types.Status (Status, statusCode, statusMessage)
 import System.Console.Pretty (Style (..), style)
 import System.Directory (canonicalizePath, doesDirectoryExist, doesFileExist)
 import System.FilePath (takeDirectory, (</>))
-import qualified System.FilePath.Glob as Glob
+import System.FilePath.Glob qualified as Glob
 import Text.Regex.TDFA.Text (Regex, regexec)
 import Text.URI (Authority (..), URI (..), mkURI)
 import Time (RatioNat, Second, Time (..), ms, threadDelay, timeout)
@@ -62,10 +64,10 @@ import Xrefcheck.System
 -----------------------------------------------------------
 
 newtype VerifyResult e = VerifyResult [e]
-  deriving (Show, Eq, Functor)
+  deriving newtype (Show, Eq, Functor)
 
-deriving instance Semigroup (VerifyResult e)
-deriving instance Monoid (VerifyResult e)
+deriving newtype instance Semigroup (VerifyResult e)
+deriving newtype instance Monoid (VerifyResult e)
 
 instance Buildable e => Buildable (VerifyResult e) where
   build vr = case verifyErrors vr of
@@ -112,7 +114,7 @@ data VerifyError
   | ExternalFtpException FTPException
   | FtpEntryDoesNotExist FilePath
   | ExternalResourceSomeError Text
-  deriving (Show, Eq)
+  deriving stock (Show, Eq)
 
 instance Buildable VerifyError where
   build = \case

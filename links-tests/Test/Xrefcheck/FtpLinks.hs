@@ -8,6 +8,8 @@ module Test.Xrefcheck.FtpLinks
   , test_FtpLinks
   ) where
 
+import Universum
+
 import Data.Tagged (Tagged, untag)
 import Options.Applicative (help, long, strOption)
 import Test.Tasty (TestTree, askOption, testGroup)
@@ -27,7 +29,7 @@ ftpOptions =
 
 -- | Option specifying FTP host.
 newtype FtpHostOpt = FtpHostOpt Text
-  deriving (Show, Eq)
+  deriving stock (Show, Eq)
 
 instance IsOption FtpHostOpt where
   defaultValue = FtpHostOpt "ftp://localhost"

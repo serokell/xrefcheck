@@ -18,6 +18,8 @@ module Xrefcheck.Progress
   , putTextRewrite
   ) where
 
+import Universum
+
 import Data.Ratio ((%))
 import System.Console.Pretty (Color (..), Style (..), color, style)
 import Time (ms, threadDelay)
@@ -34,7 +36,7 @@ data Progress a = Progress
     -- ^ Overall amount of work.
   , pErrors  :: !a
     -- ^ How many of the completed work finished with an error.
-  } deriving (Show)
+  } deriving stock (Show)
 
 -- | Initialise null progress.
 initProgress :: Num a => a -> Progress a

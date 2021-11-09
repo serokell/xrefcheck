@@ -9,14 +9,16 @@
 
 module Xrefcheck.Core where
 
-import Control.Lens (makeLenses, (%=))
+import Universum
+
+import Control.Lens (makeLenses)
 import Data.Aeson (FromJSON (..), withText)
 import Data.Char (isAlphaNum)
-import qualified Data.Char as C
+import Data.Char qualified as C
 import Data.Default (Default (..))
-import qualified Data.List as L
-import qualified Data.Map as M
-import qualified Data.Text as T
+import Data.List qualified as L
+import Data.Map qualified as M
+import Data.Text qualified as T
 import Fmt (Buildable (..), blockListF, blockListF', nameF, (+|), (|+))
 import System.Console.Pretty (Color (..), Style (..), color, style)
 import System.FilePath (isPathSeparator, pathSeparator)
@@ -24,6 +26,8 @@ import Text.Numeral.Roman (toRoman)
 
 import Xrefcheck.Progress
 import Xrefcheck.Util
+import Data.DList (DList)
+import Data.DList qualified as DList
 
 -----------------------------------------------------------
 -- Types
@@ -36,7 +40,7 @@ import Xrefcheck.Util
 data Flavor
   = GitHub
   | GitLab
-  deriving (Show)
+  deriving stock (Show)
 
 allFlavors :: [Flavor]
 allFlavors = [GitHub, GitLab]
@@ -57,7 +61,7 @@ instance FromJSON Flavor where
 -- We keep this in text because scanners for different formats use different
 -- representation of this thing, and it actually appears in reports only.
 newtype Position = Position (Maybe Text)
-  deriving (Show, Eq, Generic)
+  deriving stock (Show, Eq, Generic)
 
 instance Buildable Position where
   build (Position pos) = case pos of
@@ -73,7 +77,7 @@ data Reference = Reference
   , rAnchor :: Maybe Text
     -- ^ Section or custom anchor tag.
   , rPos    :: Position
-  } deriving (Show, Generic)
+  } deriving stock (Show, Generic)
 
 -- | Context of anchor.
 data AnchorType
@@ -83,32 +87,43 @@ data AnchorType
     -- ^ They can be set up manually
   | BiblioAnchor
     -- ^ Id of entry in bibliography
-  deriving (Show, Eq, Generic)
+  deriving stock (Show, Eq, Generic)
 
 -- | A referable anchor.
 data Anchor = Anchor
   { aType :: AnchorType
   , aName :: Text
   , aPos  :: Position
-  } deriving (Show, Eq, Generic)
+  } deriving stock (Show, Eq, Generic)
+
+data FileInfoDiff = FileInfoDiff
+  { _fidReferences :: DList Reference
+  , _fidAnchors    :: DList Anchor
+  }
+makeLenses ''FileInfoDiff
+
+diffToFileInfo :: FileInfoDiff -> FileInfo
+diffToFileInfo (FileInfoDiff refs anchors) =
+    FileInfo (DList.toList refs) (DList.toList anchors)
+
+instance Semigroup FileInfoDiff where
+  FileInfoDiff a b <> FileInfoDiff c d = FileInfoDiff (a <> c) (b <> d)
+
+instance Monoid FileInfoDiff where
+  mempty = FileInfoDiff mempty mempty
 
 -- | All information regarding a single file we care about.
 data FileInfo = FileInfo
   { _fiReferences :: [Reference]
   , _fiAnchors    :: [Anchor]
-  } deriving (Show, Generic)
+  } deriving stock (Show, Generic)
 makeLenses ''FileInfo
 
 instance Default FileInfo where
-  def = FileInfo [] []
+  def = diffToFileInfo mempty
 
 newtype RepoInfo = RepoInfo (Map FilePath FileInfo)
-  deriving (Show)
-
-finaliseFileInfo :: FileInfo -> FileInfo
-finaliseFileInfo = execState $ do
-  fiReferences %= reverse
-  fiAnchors %= reverse
+  deriving stock (Show)
 
 -----------------------------------------------------------
 -- Instances
@@ -174,7 +189,7 @@ data LocationType
     -- ^ Reference to a file at outer site
   | OtherLoc
     -- ^ Entry not to be processed (e.g. "mailto:e-mail")
-  deriving (Show)
+  deriving stock (Show)
 
 instance Buildable LocationType where
   build = \case
@@ -277,9 +292,7 @@ stripAnchorDupNo t = do
 -- | Strip './' prefix from local references.
 canonizeLocalRef :: Text -> Text
 canonizeLocalRef ref =
-  case T.stripPrefix localPrefix ref of
-    Nothing -> ref
-    Just r  -> canonizeLocalRef r
+  maybe ref canonizeLocalRef (T.stripPrefix localPrefix ref)
   where
     localPrefix = toText ['.', pathSeparator]
 
@@ -290,7 +303,7 @@ canonizeLocalRef ref =
 data VerifyProgress = VerifyProgress
   { vrLocal    :: !(Progress Int)
   , vrExternal :: !(Progress Int)
-  } deriving (Show)
+  } deriving stock (Show)
 
 initVerifyProgress :: [Reference] -> VerifyProgress
 initVerifyProgress references = VerifyProgress

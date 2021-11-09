@@ -16,11 +16,13 @@ module Xrefcheck.Scan
   , specificFormatsSupport
   ) where
 
+import Universum
+
 import Data.Aeson.TH (deriveFromJSON)
-import qualified Data.Foldable as F
-import qualified Data.Map as M
+import Data.Foldable qualified as F
+import Data.Map qualified as M
 import GHC.Err (errorWithoutStackTrace)
-import qualified System.Directory.Tree as Tree
+import System.Directory.Tree qualified as Tree
 import System.FilePath (dropTrailingPathSeparator, takeDirectory, takeExtension, (</>))
 
 import Xrefcheck.Core

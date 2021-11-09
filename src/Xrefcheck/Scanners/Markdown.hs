@@ -144,7 +144,9 @@ nodeExtractInfo input@(Node _ _ nSubs) = do
           let aType = HeaderAnchor lvl
           let aName = headerToAnchor flavor $ nodeExtractText node
           let aPos  = toPosition pos
-          return $ FileInfoDiff DList.empty $ DList.singleton $ Anchor {aType, aName, aPos}
+          return mempty
+            { _fidAnchors = DList.singleton $ Anchor {aType, aName, aPos}
+            }
 
         HTML_INLINE text -> do
           let mName = T.stripSuffix "\">" =<< T.stripPrefix "<a name=\"" text
@@ -152,9 +154,9 @@ nodeExtractInfo input@(Node _ _ nSubs) = do
             Just aName -> do
               let aType = HandAnchor
                   aPos  = toPosition pos
-              return $ FileInfoDiff
-                mempty
-                (pure $ Anchor {aType, aName, aPos})
+              return mempty
+                { _fidAnchors = DList.singleton $ Anchor {aType, aName, aPos}
+                }
 
             Nothing -> do
               return mempty
@@ -167,9 +169,9 @@ nodeExtractInfo input@(Node _ _ nSubs) = do
                   [t]    -> (t, Nothing)
                   t : ts -> (t, Just $ T.intercalate "#" ts)
                   []     -> error "impossible"
-          return $ FileInfoDiff
-            (DList.singleton $ Reference {rName, rPos, rLink, rAnchor})
-            DList.empty
+          return mempty
+            { _fidReferences = DList.singleton $ Reference {rName, rPos, rLink, rAnchor}
+            }
 
         _ -> return mempty
 

@@ -102,26 +102,36 @@ data Anchor = Anchor
   deriving stock (Show, Eq, Generic)
   deriving anyclass NFData
 
+data CopyPaste = CopyPaste
+  { cpAnchorText :: Text
+  , cpPlainText  :: Text
+  , cpPosition   :: Position
+  }
+  deriving stock (Show, Eq, Generic)
+  deriving anyclass NFData
+
 data FileInfoDiff = FileInfoDiff
   { _fidReferences :: DList Reference
   , _fidAnchors    :: DList Anchor
+  , _fidCopyPastes :: DList CopyPaste
   }
 makeLenses ''FileInfoDiff
 
 diffToFileInfo :: FileInfoDiff -> FileInfo
-diffToFileInfo (FileInfoDiff refs anchors) =
-    FileInfo (DList.toList refs) (DList.toList anchors)
+diffToFileInfo (FileInfoDiff refs anchors pastas) =
+    FileInfo (DList.toList refs) (DList.toList anchors) (DList.toList pastas)
 
 instance Semigroup FileInfoDiff where
-  FileInfoDiff a b <> FileInfoDiff c d = FileInfoDiff (a <> c) (b <> d)
+  FileInfoDiff a b e <> FileInfoDiff c d f = FileInfoDiff (a <> c) (b <> d) (e <> f)
 
 instance Monoid FileInfoDiff where
-  mempty = FileInfoDiff mempty mempty
+  mempty = FileInfoDiff mempty mempty mempty
 
 -- | All information regarding a single file we care about.
 data FileInfo = FileInfo
   { _fiReferences :: [Reference]
   , _fiAnchors    :: [Anchor]
+  , _fiCopyPastes :: [CopyPaste]
   }
   deriving stock (Show, Generic)
   deriving anyclass NFData

@@ -11,7 +11,8 @@ module Xrefcheck.Util
   , postfixFields
   , (-:)
   , aesonConfigOption
-  , invalidURIVerbose
+  , searchBrackets
+  , octet
   ) where
 
 import Universum
@@ -20,11 +21,12 @@ import Control.Lens (LensRules, lensField, lensRules, mappingNamer)
 import Data.Aeson qualified as Aeson
 import Data.Aeson.Casing (aesonPrefix, camelCase)
 import Data.Char (toUpper)
-import qualified Data.Map as M
-import qualified Data.Text as T (map, replicate)
+import Data.Text qualified as T
 import Data.Text.Format (hex)
-import Fmt (Builder, build, fmt, indentF, nameF, unlinesF)
-import System.Console.Pretty (Color (..), Pretty (..), Style (..))
+import Fmt (Builder, build, fmt, nameF)
+import System.Console.Pretty (Pretty (..), Style (..))
+import Text.Megaparsec (ParseError (..), bundleErrors)
+import Text.URI (ParseException (..), URI (..), mkURI)
 
 instance Pretty Builder where
     colorize s c = build @Text . colorize s c . fmt
@@ -49,53 +51,51 @@ infixr 0 -:
 aesonConfigOption :: Aeson.Options
 aesonConfigOption = aesonPrefix camelCase
 
-invalidURIVerbose :: Char -> Int -> Text -> Text
-invalidURIVerbose characterInQuestion position link = fmt . indentF 3 . unlinesF $
-  pinpointInvalidCharacter <>
-  suggestPercentEncoding
+-- | Identify the positions of all the illegal square brackets in the URI.
+searchBrackets :: Text -> [Int]
+searchBrackets = withAccumulator []
   where
-    pinpointInvalidCharacter  =
-      [ "unexpected character " <> show characterInQuestion
-      , style Bold (color Magenta "|")
-      , style Bold (color Magenta "|") <> "  " <>
-        applyPrettyAt position link Bold Magenta
-      , style Bold (color Magenta "|") <> "  " <>
-        T.replicate position " " <> style Bold (color Magenta "^")
-      , show characterInQuestion <>
-        " is not allowed to be explcitily used in the URIs by the WHATWG URL standard"
-      , "Consider using its percent-encoded counterpart: " <>
-        style Bold (color Magenta $ octet characterInQuestion)
-      ]
+    -- | On every iteration, call @mkURI@ to attempt the parsing of the link.
+    -- If the attempt is successful, return the accumulated list of indecies of illegal
+    -- square brackets; if not, call @bracketIndex@, returning the index of the first
+    -- spotted illegal bracket (read from left to right) and the link with that character
+    -- replaced by '_', and call @withAccumulator@ recursively, appending the index to the
+    -- accumulator.
+    withAccumulator :: [Int] -> Text -> [Int]
+    withAccumulator bracketIndexAcc link =
+      case mkURI link :: Either SomeException URI of
+        Left se -> let (index, link') = bracketIndex se link
+                   in withAccumulator (index ++ bracketIndexAcc) link'
+        Right _uri -> reverse bracketIndexAcc
 
-    suggestPercentEncoding = maybeToList $ do
-      paired <- characterInQuestion `M.lookup` pairedEnclosingGlyphs
-      return $
-        "Similarly for " <> show paired <>
-        " if it is present in the URI: " <>
-        style Bold (color Magenta (octet paired))
+    bracketIndex :: SomeException -> Text -> ([Int], Text)
+    bracketIndex se lnk = case (fromException se :: Maybe ParseException) of
+      Nothing -> ([], lnk)
+      Just pe ->
+        let peBundle = (\(ParseException bundle) -> bundle) pe
+            err :| _ = bundleErrors peBundle
+        in case err of
+          -- The value @position@ contains the location of the first spotted illegal
+          -- character after parsing the link.
+          TrivialError position _ _ ->
+            let characterInQuestion = lnk `T.index` position
+                newLink = toText . replaceOnce characterInQuestion '_' $ toString lnk
+            in
+              -- If the spotted character is *not* a square bracket, do not include
+              -- its location.
+              ( [position | characterInQuestion `elem` illegalCharactersToDisplay]
+              , newLink
+              )
+          _ -> ([], lnk)
 
-    applyPrettyAt :: Int -> Text -> Style -> Color -> Text
-    applyPrettyAt pos text sty col =
-      let s = splitAt pos $ toString text
-      in toText $ case s of
-        (prefix, []) -> prefix
-        ([], suffix@(h : t)) ->
-          if pos < 0
-          then suffix
-          else style sty (color col [h]) <> t
-        (prefix, h : t) -> prefix <> color col [h] <> t
+    replaceOnce :: Eq a => a -> a -> [a] -> [a]
+    replaceOnce _ _ [] = []
+    replaceOnce pattern replacement (x : xs)
+      | pattern == x = replacement : xs
+      | otherwise = x : replaceOnce pattern replacement xs
 
-    pairedEnclosingGlyphs :: M.Map Char Char
-    pairedEnclosingGlyphs = M.fromList
-      [ ('(', ')')
-      , (')', '(')
-      , ('[', ']')
-      , (']', '[')
-      , ('{', '}')
-      , ('}', '{')
-      , ('<', '>')
-      , ('>', '<')
-      ]
+    illegalCharactersToDisplay :: String
+    illegalCharactersToDisplay = "[]"
 
-    octet :: Char -> Text
-    octet = ("%" <>) . T.map toUpper . fmt @Text . hex . ord
+octet :: Char -> Text
+octet = ("%" <>) . T.map toUpper . fmt @Text . hex . ord

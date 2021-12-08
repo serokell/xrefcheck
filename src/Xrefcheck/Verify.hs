@@ -28,6 +28,7 @@ import Control.Concurrent.Async (wait, withAsync)
 import Control.Exception (throwIO)
 import Control.Monad.Except (MonadError (..))
 import Data.ByteString qualified as BS
+import Data.List qualified as L
 import Data.Map qualified as M
 import Data.Text qualified as T
 import Data.Text.Metrics (damerauLevenshteinNorm)
@@ -41,13 +42,12 @@ import Network.HTTP.Req
   (AllowsBody, CanHaveBody (NoBody), GET (..), HEAD (..), HttpBodyAllowed, HttpException (..),
   HttpMethod, NoReqBody (..), defaultHttpConfig, ignoreResponse, req, runReq, useURI)
 import Network.HTTP.Types.Status (Status, statusCode, statusMessage)
-import System.Console.Pretty (Style (..), style)
+import System.Console.Pretty (Color (..), Pretty (..), Style (..), style)
 import System.Directory (canonicalizePath, doesDirectoryExist, doesFileExist)
 import System.FilePath (takeDirectory, (</>))
 import System.FilePath.Glob qualified as Glob
-import Text.Megaparsec (ParseError (..), bundleErrors)
 import Text.Regex.TDFA.Text (Regex, regexec)
-import Text.URI (Authority (..), ParseException (..), URI (..), mkURI)
+import Text.URI (Authority (..), URI (..), mkURI)
 import Time (RatioNat, Second, Time (..), ms, threadDelay, timeout)
 
 import Data.Bits (toIntegralSized)
@@ -341,7 +341,7 @@ checkExternalResource :: VerifyConfig -> Text -> IO (VerifyResult VerifyError)
 checkExternalResource VerifyConfig{..} link
   | skipCheck = return mempty
   | otherwise = fmap toVerifyRes $ runExceptT $ do
-      uri <- mkURI link & either processBrackets pure
+      uri <- analyzeURI
 
       case toString <$> uriScheme uri of
         Just "http" -> checkHttp uri
@@ -364,23 +364,61 @@ checkExternalResource VerifyConfig{..} link
           Nothing -> False
         Left _ -> False
 
-    processBrackets se = case (fromException se :: Maybe ParseException) of
-      Nothing -> throwError $ ExternalResourceInvalidUri Nothing
-      Just pe ->
-        let peBundle = (\(ParseException bundle) -> bundle) pe
-            err :| _ = bundleErrors peBundle
-        in case err of
-          TrivialError position _ _ ->
-            let characterInQuestion = link `T.index` position
-            in
-              if characterInQuestion `elem` illegalCharactersToDisplay
-              then throwError . ExternalResourceInvalidUri . Just $
-                invalidURIVerbose characterInQuestion position link
-              else throwError $ ExternalResourceInvalidUri Nothing
-          _ -> throwError $ ExternalResourceInvalidUri Nothing
+    analyzeURI :: ExceptT VerifyError IO URI
+    analyzeURI =
+      let initialMkURIRequest = mkURI link :: Maybe URI
+          bracketIndices = searchBrackets link
+      in case initialMkURIRequest of
+        Just uri -> pure uri
+        Nothing -> throwError . ExternalResourceInvalidUri $
+          if null bracketIndices
+          then Nothing
+          else Just $ invalidURIVerbose bracketIndices
+
+    invalidURIVerbose :: [Int] -> Text
+    invalidURIVerbose bracketIndices = fmt . indentF 3 . unlinesF $
+      [ "unexpected bracket" <> pluralize'
+      , boldMagenta "|"
+      , boldMagenta "|" <> "  " <>
+        applyPrettyAt link
+      , boldMagenta "|" <> "  " <>
+        foldMap (\i ->
+          if i `elem` bracketIndices
+          then boldMagenta "^"
+          else " ") [0 .. length link - 1]
+      , "According to RFC 3986 section 2.2, " <> pluralize "they are" "it is" <>
+        " not allowed to be explicitly written in the URIs"
+      , "if used outside " <>
+        pluralize "their" "its" <> " reserved purpose, and must be percent-encoded."
+      , "Please use " <> pluralize "their" "its" <>
+        " percent-encoded counterpart" <> pluralize' <> ":"
+      , percentEncodedCounterparts
+      ]
       where
-        illegalCharactersToDisplay :: String
-        illegalCharactersToDisplay = "[]"
+        pluralize replacement original =
+          if length bracketIndices > 1
+          then replacement
+          else original
+
+        pluralize' = pluralize "s" ""
+
+        percentEncodedCounterparts
+          = fmt . indentF 2 . unlinesF
+          . map (\c -> show c <> " = " <> octet c)
+          . L.nub
+          . map (link `T.index`)
+          $ bracketIndices
+
+        applyPrettyAt :: Text -> Text
+        applyPrettyAt lnk
+          = mconcat
+          $ zipWith (\ind ch -> T.singleton ch &
+            if ind `L.elem` bracketIndices
+            then boldMagenta
+            else id) [0 :: Int ..] (toString lnk)
+
+        boldMagenta :: Pretty a => a -> a
+        boldMagenta s = style Bold $ color Magenta s
 
     checkHttp :: URI -> ExceptT VerifyError IO ()
     checkHttp uri = makeHttpRequest uri HEAD 0.3 `catchError` \_ ->

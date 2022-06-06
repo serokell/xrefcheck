@@ -11,7 +11,7 @@ module Xrefcheck.Util
   , postfixFields
   , (-:)
   , aesonConfigOption
-  , searchBrackets
+  , searchReservedChars
   , octet
   ) where
 
@@ -51,25 +51,27 @@ infixr 0 -:
 aesonConfigOption :: Aeson.Options
 aesonConfigOption = aesonPrefix camelCase
 
--- | Identify the positions of all the illegal square brackets in the URI.
-searchBrackets :: Text -> [Int]
-searchBrackets = withAccumulator []
+-- | Identify the positions of all the non-percent-encoded reserved characters in the URI.
+searchReservedChars :: Text -> ([Int], Text)
+searchReservedChars = withAccumulator 0 []
   where
-    -- | On every iteration, call @mkURI@ to attempt the parsing of the link.
-    -- If the attempt is successful, return the accumulated list of indecies of illegal
-    -- square brackets; if not, call @bracketIndex@, returning the index of the first
-    -- spotted illegal bracket (read from left to right) and the link with that character
-    -- replaced by '_', and call @withAccumulator@ recursively, appending the index to the
-    -- accumulator.
-    withAccumulator :: [Int] -> Text -> [Int]
-    withAccumulator bracketIndexAcc link =
+    -- | At every iteration, call @mkURI@ to attempt the parsing of the link.
+    -- If the attempt is successful, return the pair of the accumulated list of indices of
+    -- the non-percent-encoded reserved characters and the resulting link; if not,
+    -- call @reservedCharIndex@, returning the index of the first reserved character
+    -- (read left to right) and the link with that character replaced by its percent-encoded
+    -- octet, and call @withAccumulator@ recursively, appending the index to the accumulator.
+    -- Each recursive call increments the offset by 2 as a result of replacing a character with
+    -- an octet, the length of which is always equal to 3.
+    withAccumulator :: Int -> [Int] -> Text -> ([Int], Text)
+    withAccumulator offset indexAcc link =
       case mkURI link :: Either SomeException URI of
-        Left se -> let (index, link') = bracketIndex se link
-                   in withAccumulator (index ++ bracketIndexAcc) link'
-        Right _uri -> reverse bracketIndexAcc
+        Left se -> let (index, link') = reservedCharIndex se link offset
+                   in withAccumulator (offset + 2) (index ++ indexAcc) link'
+        Right _uri -> (reverse indexAcc, link)
 
-    bracketIndex :: SomeException -> Text -> ([Int], Text)
-    bracketIndex se lnk = case (fromException se :: Maybe ParseException) of
+    reservedCharIndex :: SomeException -> Text -> Int -> ([Int], Text)
+    reservedCharIndex se lnk offset = case (fromException se :: Maybe ParseException) of
       Nothing -> ([], lnk)
       Just pe ->
         let peBundle = (\(ParseException bundle) -> bundle) pe
@@ -79,23 +81,19 @@ searchBrackets = withAccumulator []
           -- character after parsing the link.
           TrivialError position _ _ ->
             let characterInQuestion = lnk `T.index` position
-                newLink = toText . replaceOnce characterInQuestion '_' $ toString lnk
+                newLink = toText . replaceOnce characterInQuestion (octet characterInQuestion) $
+                  toString lnk
             in
-              -- If the spotted character is *not* a square bracket, do not include
-              -- its location.
-              ( [position | characterInQuestion `elem` illegalCharactersToDisplay]
+              ( [position - offset]
               , newLink
               )
           _ -> ([], lnk)
 
-    replaceOnce :: Eq a => a -> a -> [a] -> [a]
+    replaceOnce :: Eq a => a -> [a] -> [a] -> [a]
     replaceOnce _ _ [] = []
     replaceOnce pattern replacement (x : xs)
-      | pattern == x = replacement : xs
+      | pattern == x = replacement <> xs
       | otherwise = x : replaceOnce pattern replacement xs
 
-    illegalCharactersToDisplay :: String
-    illegalCharactersToDisplay = "[]"
-
-octet :: Char -> Text
-octet = ("%" <>) . T.map toUpper . fmt @Text . hex . ord
+octet :: Char -> String
+octet = ("%" <>) . map toUpper . fmt @String . hex . ord

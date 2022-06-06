@@ -13,16 +13,16 @@ import Xrefcheck.Util (searchBrackets)
 
 spec :: Spec
 spec =
-  describe "Reserved square brackets should be recognized if present in the URI" $ do
-    it "No square brackets" $
+  describe "Reserved characters, if present, should be recognized in the URI" $ do
+    it "No reserved characters" $
       forM_ noSB $ \link ->
         searchBrackets link `shouldBe` []
-    it "One square bracket per link" $
+    it "One reserved character per link" $
       forM_ oneSB $ \link ->
-        searchBrackets link `shouldBe` findSB (toString link)
-    it "Many square brackets in every link" $
+        searchBrackets link `shouldBe` findSBTrivialCase (toString link)
+    it "Many reserved characters in every link" $
       forM_ manySB $ \link ->
-        searchBrackets link `shouldBe` findSB (toString link)
+        searchBrackets link `shouldBe` findSBTrivialCase (toString link)
   where
     noSB =
       [ "https://example.com/"
@@ -30,15 +30,15 @@ spec =
       , "https://example.com/enter/shikari/alexandra/palace"
       ]
     oneSB =
-      [ "https://example[.com/"
+      [ "https://example{.com/"
       , "https://example.com/whatever/codata?data]=co&universal=eliminator"
-      , "https://example.com/enter/shi[kari/alexandra/palace"
+      , "https://example.com/enter/shi>kari/alexandra/palace"
       ]
     manySB =
-      [ "https://examp[le[.c]o]m/"
-      , "https://example.com/whatever/codata?[data]=[co]&[universal]=[eliminator]"
+      [ "https://examp{le[.c]o}m/"
+      , "https://example.com/whatever/codata?{data}=<co>&{universal}=[eliminator]"
       , "https://example.com/ent[[[[er/sh[]]][i[kari/a]]]lexandra/]palace"
       ]
 
-    findSB :: String -> [Int]
-    findSB = map fst . filter (\(_, ch) -> ch `elem` ("[]" :: String)) . zip [0..]
+    findSBTrivialCase :: String -> [Int]
+    findSBTrivialCase = map fst . filter (\(_, ch) -> ch `elem` ("[]" :: String)) . zip [0..]

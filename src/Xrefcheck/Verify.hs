@@ -27,6 +27,7 @@ import Universum
 import Control.Concurrent.Async (wait, withAsync)
 import Control.Exception (throwIO)
 import Control.Monad.Except (MonadError (..))
+import Data.Bits (toIntegralSized)
 import Data.ByteString qualified as BS
 import Data.List qualified as L
 import Data.Map qualified as M
@@ -50,7 +51,6 @@ import Text.Regex.TDFA.Text (Regex, regexec)
 import Text.URI (Authority (..), URI (..), mkURI)
 import Time (RatioNat, Second, Time (..), ms, threadDelay, timeout)
 
-import Data.Bits (toIntegralSized)
 import Xrefcheck.Config
 import Xrefcheck.Core
 import Xrefcheck.Orphans ()
@@ -136,10 +136,10 @@ instance Buildable VerifyError where
       \   can change silently whereas the document containing it evolves.\n"
 
     ExternalResourceInvalidUri Nothing ->
-      "⛂  Invalid URI\n"
+      "⛂  Invalid URL\n"
 
     ExternalResourceInvalidUri (Just message) ->
-      "⛂  Invalid URI\n" +| message |+ "\n"
+      "⛂  Invalid URL\n" +| message |+ "\n"
 
     ExternalResourceInvalidUrl Nothing ->
       "⛂  Invalid URL\n"
@@ -148,7 +148,7 @@ instance Buildable VerifyError where
       "⛂  Invalid URL (" +| message |+ ")\n"
 
     ExternalResourceUnknownProtocol ->
-      "⛂  Bad url (expected 'http','https', 'ftp' or 'ftps')\n"
+      "⛂  Bad url (expected 'http', 'https', 'ftp' or 'ftps')\n"
 
     ExternalHttpResourceUnavailable status ->
       "⛂  Resource unavailable (" +| statusCode status |+ " " +|
@@ -367,53 +367,44 @@ checkExternalResource VerifyConfig{..} link
     analyzeURI :: ExceptT VerifyError IO URI
     analyzeURI =
       let initialMkURIRequest = mkURI link :: Maybe URI
-          bracketIndices = searchBrackets link
+          (reservedCharIndices, alternative) = searchReservedChars link
       in case initialMkURIRequest of
         Just uri -> pure uri
         Nothing -> throwError . ExternalResourceInvalidUri $
-          if null bracketIndices
+          if null reservedCharIndices
           then Nothing
-          else Just $ invalidURIVerbose bracketIndices
+          else Just $ invalidURIVerbose reservedCharIndices alternative
 
-    invalidURIVerbose :: [Int] -> Text
-    invalidURIVerbose bracketIndices = fmt . indentF 3 . unlinesF $
-      [ "unexpected bracket" <> pluralize'
+    invalidURIVerbose :: [Int] -> Text -> Text
+    invalidURIVerbose reservedCharIndices alternative = fmt . indentF 3 . unlinesF $
+      [ "unexpected character" <> pluralize'
       , boldMagenta "|"
-      , boldMagenta "|" <> "  " <>
-        applyPrettyAt link
+      , boldMagenta "|" <> "  " <> applyPrettyAt link
       , boldMagenta "|" <> "  " <>
         foldMap (\i ->
-          if i `elem` bracketIndices
+          if i `elem` reservedCharIndices
           then boldMagenta "^"
           else " ") [0 .. length link - 1]
-      , "According to RFC 3986 section 2.2, " <> pluralize "they are" "it is" <>
-        " not allowed to be explicitly written in the URIs"
-      , "if used outside " <>
-        pluralize "their" "its" <> " reserved purpose, and must be percent-encoded."
-      , "Please use " <> pluralize "their" "its" <>
-        " percent-encoded counterpart" <> pluralize' <> ":"
-      , percentEncodedCounterparts
+      , "According to the Web Hypertext Application Technology Working Group's URL Standard, "
+      , "it is highly recommended to percent-encode " <> pluralize "these" "this" <>
+        " character" <> pluralize' <> " if " <> pluralize "they are" "it is" <> " used outside"
+      , pluralize "their" "its" <> " reserved purpose."
+      , "Please use this link instead:"
+      , "   " <> alternative
       ]
       where
         pluralize replacement original =
-          if length bracketIndices > 1
+          if length reservedCharIndices > 1
           then replacement
           else original
 
         pluralize' = pluralize "s" ""
 
-        percentEncodedCounterparts
-          = fmt . indentF 2 . unlinesF
-          . map (\c -> show c <> " = " <> octet c)
-          . L.nub
-          . map (link `T.index`)
-          $ bracketIndices
-
         applyPrettyAt :: Text -> Text
         applyPrettyAt lnk
           = mconcat
           $ zipWith (\ind ch -> T.singleton ch &
-            if ind `L.elem` bracketIndices
+            if ind `L.elem` reservedCharIndices
             then boldMagenta
             else id) [0 :: Int ..] (toString lnk)
 

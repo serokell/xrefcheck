@@ -25,18 +25,18 @@ spec =
         fst (searchReservedChars link) `shouldBe` findRCTrivialCase (toString link)
   where
     noRC =
-      [ "https://example.com/"
+      [ "https://userinfo@example.com:8888"
       , "https://example.com/whatever/codata?data=co&universal=eliminator"
       , "https://example.com/enter/shikari/alexandra/palace"
       ]
     oneRC =
-      [ "https://example{.com/"
+      [ "https://userinf]o@example.com:8888"
       , "https://example.com/whatever/codata?data]=co&universal=eliminator"
       , "https://example.com/enter/shi>kari/alexandra/palace"
       ]
     manyRC =
-      [ "https://examp{le[.c]o}m/"
-      , "https://example.com/whatever/codata?{data}=<co>&{universal}=[eliminator]"
+      [ "https://user{info@example.com:888>8"
+      , "https://example.com/whatever/codata?{data}=<co>&universal=[eliminator]"
       , "https://example.com/ent[[[[er/sh[]]][i[kari/a]]]lexandra/]palace"
       ]
 

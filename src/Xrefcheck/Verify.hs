@@ -23,6 +23,7 @@ module Xrefcheck.Verify
   ) where
 
 import Universum
+import qualified Universum.Unsafe as Unsafe
 
 import Control.Concurrent.Async (wait, withAsync)
 import Control.Exception (throwIO)
@@ -48,7 +49,8 @@ import System.Directory (canonicalizePath, doesDirectoryExist, doesFileExist)
 import System.FilePath (takeDirectory, (</>))
 import System.FilePath.Glob qualified as Glob
 import Text.Regex.TDFA.Text (Regex, regexec)
-import Text.URI (Authority (..), URI (..), mkURI)
+import Text.URI (Authority (..), ParseException (..), URI (..), mkURI)
+import Text.Megaparsec (ParseErrorBundle, errorBundlePretty)
 import Time (RatioNat, Second, Time (..), ms, threadDelay, timeout)
 
 import Xrefcheck.Config
@@ -366,14 +368,26 @@ checkExternalResource VerifyConfig{..} link
 
     analyzeURI :: ExceptT VerifyError IO URI
     analyzeURI =
-      let initialMkURIRequest = mkURI link :: Maybe URI
-          (reservedCharIndices, alternative) = searchReservedChars link
-      in case initialMkURIRequest of
-        Just uri -> pure uri
-        Nothing -> throwError . ExternalResourceInvalidUri $
-          if null reservedCharIndices
-          then Nothing
-          else Just $ invalidURIVerbose reservedCharIndices alternative
+      case (mkURI link :: Either SomeException URI) of
+        Right uri -> pure uri
+        Left se ->
+          let (reservedCharIndices, alternative, wasFixed) = searchReservedChars link
+          in throwError . ExternalResourceInvalidUri $
+            if
+              | null reservedCharIndices -> Nothing
+              | not wasFixed -> Just . formatErrorBundle . toText . errorBundlePretty $
+                unsafeRetrieveParseErrorBundle se
+              | otherwise -> Just $ invalidURIVerbose reservedCharIndices alternative
+      where
+        unsafeRetrieveParseErrorBundle :: SomeException -> ParseErrorBundle Text Void
+        unsafeRetrieveParseErrorBundle se = case (fromException se :: Maybe ParseException) of
+          Nothing -> error "Could not retrieve the ParseErrorBundle object."
+          Just pe -> (\(ParseException bundle) -> bundle) pe
+
+    formatErrorBundle :: Text -> Text
+    formatErrorBundle = fmt . indentF 3 . unlinesF
+                      . zipWith (\index -> if index < 3 then T.tail . T.tail else id) [0 :: Int ..]
+                      . Unsafe.tail . T.lines
 
     invalidURIVerbose :: [Int] -> Text -> Text
     invalidURIVerbose reservedCharIndices alternative = fmt . indentF 3 . unlinesF $

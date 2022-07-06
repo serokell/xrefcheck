@@ -23,10 +23,8 @@ import Text.Regex.TDFA qualified as R
 import Text.Regex.TDFA.ByteString ()
 import Text.Regex.TDFA.Text qualified as R
 
--- FIXME: Use </> from System.FilePath
--- </> from Posix is used only because we cross-compile to Windows and \ doesn't work on Linux
 import Data.FileEmbed (embedFile)
-import System.FilePath.Posix ((</>))
+import System.FilePath ((</>))
 import Time (KnownRatName, Second, Time, unitsP)
 
 import Xrefcheck.Core
@@ -182,6 +180,12 @@ defConfigText flavor =
           ]
     ]
 
+foldMap (deriveFromJSON aesonConfigOption)
+  [ ''VerifyConfig
+  , ''Config
+  , ''ScannersConfig
+  ]
+
 defConfig :: HasCallStack => Flavor -> Config
 defConfig flavor =
   either (error . toText . prettyPrintParseException) id $
@@ -190,10 +194,6 @@ defConfig flavor =
 -----------------------------------------------------------
 -- Yaml instances
 -----------------------------------------------------------
-
-deriveFromJSON aesonConfigOption ''Config
-deriveFromJSON aesonConfigOption ''ScannersConfig
-deriveFromJSON aesonConfigOption ''VerifyConfig
 
 instance KnownRatName unit => FromJSON (Time unit) where
   parseJSON = withText "time" $

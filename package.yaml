@@ -71,7 +71,7 @@ dependencies:
   - directory
   - dlist
   - filepath
-  - file-embed
+  - file-embed  < 0.14
   - fmt
   - ftp-client
   - Glob
@@ -92,7 +92,6 @@ dependencies:
   - text
   - text-metrics
   - th-lift-instances
-  - th-utilities
   - transformers
   - universum
   - yaml

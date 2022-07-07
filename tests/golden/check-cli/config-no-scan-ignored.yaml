@@ -1,0 +1,19 @@
+# SPDX-FileCopyrightText: 2021 Serokell <https://serokell.io>
+#
+# SPDX-License-Identifier: Unlicense
+
+traversal:
+  ignored: []
+
+verification:
+  anchorSimilarityThreshold: 0.5
+  externalRefCheckTimeout: 10s
+  notScanned: [ "to-ignore/broken-link.md" ]
+  virtualFiles: []
+  ignoreRefs: []
+  checkLocalhost: false
+  ignoreAuthFailures: true
+
+scanners:
+  markdown:
+    flavor: GitHub

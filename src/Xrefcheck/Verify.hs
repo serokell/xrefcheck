@@ -43,7 +43,7 @@ import Network.HTTP.Req
 import Network.HTTP.Types.Status (Status, statusCode, statusMessage)
 import System.Console.Pretty (Style (..), style)
 import System.Directory (canonicalizePath, doesDirectoryExist, doesFileExist)
-import System.FilePath (takeDirectory, (</>))
+import System.FilePath (takeDirectory, (</>), normalise)
 import System.FilePath.Glob qualified as Glob
 import Text.Regex.TDFA.Text (Regex, regexec)
 import Text.URI (Authority (..), URI (..), mkURI)
@@ -211,7 +211,7 @@ verifyRepo
     = do
   let toScan = do
         (file, fileInfo) <- M.toList repoInfo
-        guard . not $ any ((`isPrefixOf` file) . (root </>)) vcNotScanned
+        guard . not $ any ((`isPrefixOf` file) . normalise . (root </>)) vcNotScanned
         ref <- _fiReferences fileInfo
         return (file, ref)
 

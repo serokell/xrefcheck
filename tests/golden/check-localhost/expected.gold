@@ -1,6 +1,6 @@
 === Invalid references found ===
 
-  ➥  In file ./check-localhost/check-localhost.md
+  ➥  In file check-localhost.md
      bad reference (external) at src:7:10-47:
        - text: "web-site"
        - link: https://localhost/web-site
@@ -10,7 +10,7 @@
 
 
 
-  ➥  In file ./check-localhost/check-localhost.md
+  ➥  In file check-localhost.md
      bad reference (external) at src:9:10-39:
        - text: "team"
        - link: https://127.0.0.1/team
@@ -20,7 +20,7 @@
 
 
 
-  ➥  In file ./check-localhost/check-localhost.md
+  ➥  In file check-localhost.md
      bad reference (external) at src:11:10-38:
        - text: "blog"
        - link: http://localhost/blog
@@ -30,7 +30,7 @@
 
 
 
-  ➥  In file ./check-localhost/check-localhost.md
+  ➥  In file check-localhost.md
      bad reference (external) at src:13:10-38:
        - text: "labs"
        - link: http://127.0.0.1/labs

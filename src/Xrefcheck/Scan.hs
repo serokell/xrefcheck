@@ -12,6 +12,7 @@ module Xrefcheck.Scan
   , FormatsSupport
   , RepoInfo (..)
 
+  , normaliseTraversalConfigFilePaths
   , gatherRepoInfo
   , specificFormatsSupport
   ) where
@@ -23,17 +24,20 @@ import Data.Foldable qualified as F
 import Data.Map qualified as M
 import GHC.Err (errorWithoutStackTrace)
 import System.Directory.Tree qualified as Tree
-import System.FilePath (dropTrailingPathSeparator, takeDirectory, takeExtension, (</>))
+import System.FilePath (dropTrailingPathSeparator, takeDirectory, takeExtension, (</>), equalFilePath)
 
 import Xrefcheck.Core
 import Xrefcheck.Progress
-import Xrefcheck.Util (aesonConfigOption)
+import Xrefcheck.Util (aesonConfigOption, normaliseWithNoTrailing)
 
 -- | Config of repositry traversal.
 data TraversalConfig = TraversalConfig
   { tcIgnored   :: [FilePath]
     -- ^ Files and folders, files in which we completely ignore.
   }
+
+normaliseTraversalConfigFilePaths :: TraversalConfig -> TraversalConfig
+normaliseTraversalConfigFilePaths = TraversalConfig . map normaliseWithNoTrailing . tcIgnored
 
 deriveFromJSON aesonConfigOption ''TraversalConfig
 
@@ -55,34 +59,19 @@ specificFormatsSupport formats = \ext -> M.lookup ext formatsMap
         , extension <- extensions
         ]
 
--- | Returns the context location of the given path.
--- This is done by removing the last component from the path.
---
--- > locationOf "./folder/file.md"  == "./folder"
--- > locationOf "./folder/subfolder"  == "./folder"
--- > locationOf "./folder/subfolder/"  == "./folder"
--- > locationOf "./folder/subfolder/./"  == "./folder/subfolder"
--- > locationOf "."  == ""
--- > locationOf "/absolute/path"  == "/absolute"
--- > locationOf "/"  == "/"
-locationOf :: FilePath -> FilePath
-locationOf fp
-  | fp == "" || fp == "." = ""
-  | otherwise = takeDirectory $ dropTrailingPathSeparator fp
-
 gatherRepoInfo
   :: MonadIO m
   => Rewrite -> FormatsSupport -> TraversalConfig -> FilePath -> m RepoInfo
 gatherRepoInfo rw formatsSupport config root = do
   putTextRewrite rw "Scanning repository..."
-  _ Tree.:/ repoTree <- liftIO $ Tree.readDirectoryWithL processFile rootNE
-  let fileInfos = filter (\(path, _) -> not $ isIgnored path)
+  _ Tree.:/ repoTree <- liftIO $ Tree.readDirectoryWithL processFile root
+  let fileInfos = map (first normaliseWithNoTrailing)
+        $ filter (\(path, _) -> not $ isIgnored path)
         $ dropSndMaybes . F.toList
-        $ Tree.zipPaths . (locationOf root Tree.:/)
+        $ Tree.zipPaths . (location Tree.:/)
         $ filterExcludedDirs root repoTree
   return $ RepoInfo (M.fromList fileInfos)
   where
-    rootNE = if null root then "." else root
     processFile file = do
       let ext = takeExtension file
       let mscanner = formatsSupport ext
@@ -90,7 +79,7 @@ gatherRepoInfo rw formatsSupport config root = do
     dropSndMaybes l = [(a, b) | (a, Just b) <- l]
 
     ignored = map (root </>) (tcIgnored config)
-    isIgnored path = path `elem` ignored
+    isIgnored path = any (equalFilePath path) ignored
     filterExcludedDirs cur = \case
       Tree.Dir name subfiles ->
         let subfiles' =
@@ -102,3 +91,17 @@ gatherRepoInfo rw formatsSupport config root = do
       file@Tree.File{} -> file
       Tree.Failed _name err ->
         errorWithoutStackTrace $ "Repository traversal failed: " <> show err
+
+    -- The context location of the root.
+    -- This is done by removing the last component from the path.
+    -- > root = "./folder/file.md"       ==> location = "./folder"
+    -- > root = "./folder/subfolder"     ==> location = "./folder"
+    -- > root = "./folder/subfolder/"    ==> location = "./folder"
+    -- > root = "./folder/subfolder/./"  ==> location = "./folder/subfolder"
+    -- > root = "."                      ==> location = ""
+    -- > root = "/absolute/path"         ==> location = "/absolute"
+    -- > root = "/"                      ==> location = "/"
+    location =
+      if root `equalFilePath` "."
+        then ""
+        else takeDirectory $ dropTrailingPathSeparator root

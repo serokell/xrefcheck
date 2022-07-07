@@ -11,7 +11,7 @@ module Xrefcheck.Util
   , postfixFields
   , (-:)
   , aesonConfigOption
-  ) where
+  , normaliseWithNoTrailing) where
 
 import Universum
 
@@ -20,6 +20,7 @@ import Data.Aeson qualified as Aeson
 import Data.Aeson.Casing (aesonPrefix, camelCase)
 import Fmt (Builder, build, fmt, nameF)
 import System.Console.Pretty (Pretty (..), Style (Faint))
+import System.FilePath (dropTrailingPathSeparator, normalise)
 
 instance Pretty Builder where
     colorize s c = build @Text . colorize s c . fmt
@@ -43,3 +44,6 @@ infixr 0 -:
 -- | Options that we use to derive JSON instances for config types.
 aesonConfigOption :: Aeson.Options
 aesonConfigOption = aesonPrefix camelCase
+
+normaliseWithNoTrailing :: FilePath -> FilePath
+normaliseWithNoTrailing =  dropTrailingPathSeparator . normalise

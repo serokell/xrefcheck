@@ -27,13 +27,14 @@ import Data.Text qualified as T
 import Data.Version (showVersion)
 import Options.Applicative
   (Parser, ReadM, command, eitherReader, execParser, flag, flag', footerDoc, fullDesc, help, helper,
-  hsubparser, info, infoOption, long, metavar, option, progDesc, short, strOption, switch, value)
+  hsubparser, info, infoOption, long, metavar, option, progDesc, short, strOption, switch, value, OptionFields, Mod)
 import Options.Applicative.Help.Pretty (Doc, displayS, fill, fillSep, indent, renderPretty, text)
 
 import Paths_xrefcheck (version)
 import Xrefcheck.Config (VerifyConfig (..))
 import Xrefcheck.Core
 import Xrefcheck.Scan
+import Xrefcheck.Util (normaliseWithNoTrailing)
 
 modeReadM :: ReadM VerifyMode
 modeReadM = eitherReader $ \s ->
@@ -97,6 +98,9 @@ defaultConfigPaths = ["./xrefcheck.yaml", "./.xrefcheck.yaml"]
 -- and flavors, so we write a type alias here.
 type RepoType = Flavor
 
+filepathOption :: Mod OptionFields FilePath -> Parser FilePath
+filepathOption = fmap normaliseWithNoTrailing <$> strOption
+
 repoTypeReadM :: ReadM RepoType
 repoTypeReadM = eitherReader $ \name ->
   maybeToRight (failureText name) $ L.lookup (map C.toLower name) allRepoTypesNamed
@@ -110,7 +114,7 @@ repoTypeReadM = eitherReader $ \name ->
 
 optionsParser :: Parser Options
 optionsParser = do
-  oConfigPath <- optional . strOption $
+  oConfigPath <- optional . filepathOption $
     short 'c' <>
     long "config" <>
     metavar "FILEPATH" <>
@@ -119,7 +123,7 @@ optionsParser = do
           (mconcat . intersperse ", " $ map show defaultConfigPaths) <> ". \
           \If none of these files exist, default configuration is used."
          )
-  oRoot <- strOption $
+  oRoot <- filepathOption $
     short 'r' <>
     long "root" <>
     metavar "DIRECTORY" <>
@@ -154,7 +158,7 @@ optionsParser = do
 
 traversalOptionsParser :: Parser TraversalOptions
 traversalOptionsParser = do
-  toIgnored <- many . strOption $
+  toIgnored <- many . filepathOption $
     long "ignored" <>
     metavar "FILEPATH" <>
     help "Files and folders which we pretend do not exist."
@@ -183,7 +187,7 @@ dumpConfigOptions = hsubparser $
       help "Git repository type."
 
     outputOption =
-      strOption $
+      filepathOption $
       short 'o' <>
       long "output" <>
       metavar "FILEPATH" <>

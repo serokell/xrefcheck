@@ -13,7 +13,8 @@ import Control.Exception qualified as E
 import Data.ByteString qualified as BS
 import Network.HTTP.Types (Status (..))
 import Test.Hspec (Spec, before, describe, it, shouldBe)
-import Test.QuickCheck (counterexample, ioProperty, once)
+import Test.Hspec.Expectations (expectationFailure)
+import Test.QuickCheck (ioProperty, once)
 
 import Xrefcheck.Config (Config (..), VerifyConfig (..), defConfig, defConfigText)
 import Xrefcheck.Core (Flavor (GitHub), allFlavors)
@@ -34,16 +35,13 @@ spec = do
       -- stack exec xrefcheck -- dump-config -t GitHub -o tests/configs/github-config.yaml
       it "Config matches" $
         \config ->
-          let matches =
-                [ "Config does not match the expected format."
-                , "Run"
-                , "`stack exec xrefcheck -- dump-config -t GitHub -o tests/configs/github-config.yaml`"
-                , "and verify changes"
-                ]
-          in
-            counterexample
-            (toString $ unwords matches)
-            (config == defConfigText GitHub)
+          when (config /= defConfigText GitHub) $
+            expectationFailure $ toString $ unwords
+              [ "Config does not match the expected format."
+              , "Run"
+              , "`stack exec xrefcheck -- dump-config -t GitHub -o tests/configs/github-config.yaml`"
+              , "and verify changes"
+              ]
 
   describe "`ignoreAuthFailures` working as expected" $ do
     let config = (cVerification $ defConfig GitHub) { vcCheckLocalhost = True }

@@ -17,7 +17,6 @@ description:         Please see the README on GitHub at <https://github.com/sero
 extra-source-files:
   - README.md
   - CHANGES.md
-  - src-files/*
 
 default-extensions:
   - AllowAmbiguousTypes
@@ -71,7 +70,7 @@ dependencies:
   - directory
   - dlist
   - filepath
-  - file-embed  < 0.14
+  - raw-strings-qq
   - fmt
   - ftp-client
   - Glob
@@ -126,6 +125,7 @@ tests:
     dependencies:
       - firefly
       - hspec
+      - hspec-expectations
       - QuickCheck
       - xrefcheck
     build-tools:

@@ -1,8 +1,19 @@
-# SPDX-FileCopyrightText: 2019-2021 Serokell <https://serokell.io>
-#
-# SPDX-License-Identifier: Unlicense
+{- SPDX-FileCopyrightText: 2022 Serokell <https://serokell.io>
+ -
+ - SPDX-License-Identifier: MPL-2.0
+ -}
 
-# Parameters of repository traversal.
+{-# LANGUAGE QuasiQuotes #-}
+
+module Xrefcheck.Config.Default where
+
+import Universum
+
+import Text.RawString.QQ
+
+defConfigUnfilled :: ByteString
+defConfigUnfilled =
+  [r|# Parameters of repository traversal.
 traversal:
   # Files and folders which we pretend do not exist
   # (so they are neither analyzed nor can be referenced).
@@ -50,3 +61,4 @@ scanners:
     #
     # This affects which anchors are generated for headers.
     flavor: :PLACEHOLDER:flavor:
+|]

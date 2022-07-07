@@ -27,13 +27,6 @@ packages:
     hackage: with-utf8-1.0.2.3
 - completed:
     pantry-tree:
-      sha256: 6c8f71ca993658844b93a2120f2ff1536400e705890a6fbf0f4e9889ff502649
-      size: 477
-    hackage: file-embed-0.0.13.0@sha256:a819e90b91cab919ffef5895ab6e1b2a44eac395a585f489b0c289a4a12d1c54,1396
-  original:
-    hackage: file-embed-0.0.13.0
-- completed:
-    pantry-tree:
       sha256: 8c577d112a8398a5542aa4205b2e8a470a66d57590e6606d752d71e75d7425ea
       size: 882
     hackage: th-utilities-0.2.4.0@sha256:ba19cd8441aa43dbaed40e9055bb5a7cbd7cf9e154f5253c6bf9293af8b1f96b,1869

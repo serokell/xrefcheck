@@ -13,6 +13,5 @@ extra-deps:
 - pretty-terminal-0.1.0.0
 - roman-numerals-0.5.1.5
 - with-utf8-1.0.2.3
-- file-embed-0.0.13.0
 - th-utilities-0.2.4.0@sha256:ba19cd8441aa43dbaed40e9055bb5a7cbd7cf9e154f5253c6bf9293af8b1f96b,1869
 - firefly-0.2.1.0@sha256:e9d73486464c3e223ec457e02b30ddd5b550fdbf6292b268c64581e2b07d888b,1519

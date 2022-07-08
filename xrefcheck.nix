@@ -11,7 +11,9 @@ let
     src = pkgs.haskell-nix.haskellLib.cleanGit { src = ./.; };
     modules = [{
       packages.xrefcheck = {
-        ghcOptions = [ "-Werror" ];
+        ghcOptions =
+          [ "-Werror" ];
+
         components.tests = {
           links-tests = {
             build-tools = [ pkgs.vsftpd ];
@@ -40,4 +42,5 @@ let
       };
     }];
   };
-in project.xrefcheck
+in
+project.xrefcheck

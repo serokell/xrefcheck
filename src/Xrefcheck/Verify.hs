@@ -70,9 +70,7 @@ deriving newtype instance Semigroup (VerifyResult e)
 deriving newtype instance Monoid (VerifyResult e)
 
 instance Buildable e => Buildable (VerifyResult e) where
-  build vr = case verifyErrors vr of
-    Nothing   -> "ok"
-    Just errs -> listF errs
+  build vr = maybe "ok" listF (verifyErrors vr)
 
 verifyOk :: VerifyResult e -> Bool
 verifyOk (VerifyResult errors) = null errors

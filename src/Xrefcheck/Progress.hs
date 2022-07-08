@@ -43,11 +43,11 @@ initProgress :: Num a => a -> Progress a
 initProgress a = Progress{ pTotal = a, pCurrent = 0, pErrors = 0 }
 
 -- | Increase progress amount.
-incProgress :: (Num a, Show a) => Progress a -> Progress a
+incProgress :: (Num a) => Progress a -> Progress a
 incProgress Progress{..} = Progress{ pCurrent = pCurrent + 1, .. }
 
 -- | Increase errors amount.
-incProgressErrors :: (Num a, Show a) => Progress a -> Progress a
+incProgressErrors :: (Num a) => Progress a -> Progress a
 incProgressErrors Progress{..} = Progress{ pErrors = pErrors + 1, .. }
 
 -- | Visualise progress bar.
@@ -59,8 +59,8 @@ showProgress name width col Progress{..} = mconcat
   , status
   ]
   where
-    done = floor $ (pCurrent % pTotal) * fromIntegral width
-    errs = ceiling $ (pErrors % pTotal) * fromIntegral width
+    done = floor $ (pCurrent % pTotal) * fromIntegral @Int @(Ratio Int) width
+    errs = ceiling $ (pErrors % pTotal) * fromIntegral @Int @(Ratio Int) width
     done' = max 0 $ done - errs
     remained' = width - errs - done'
     bar

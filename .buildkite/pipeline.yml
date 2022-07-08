@@ -25,6 +25,9 @@ steps:
   - command: nix run -f ci.nix xrefcheck-static -c xrefcheck --ignored tests/markdowns
     label: Xrefcheck itself
 
+  - label: lint
+    command: nix run -f ci.nix pkgs.haskellPackages.hlint -c hlint .
+
   - command: nix run -f ci.nix pkgs.reuse -c reuse lint
     label: REUSE lint
 

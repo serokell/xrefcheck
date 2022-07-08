@@ -3,8 +3,7 @@
 -- SPDX-License-Identifier: MPL-2.0
 
 module Test.Xrefcheck.FtpLinks
-  ( FtpHostOpt(..)
-  , ftpOptions
+  ( ftpOptions
   , test_FtpLinks
   ) where
 

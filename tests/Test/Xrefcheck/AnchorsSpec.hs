@@ -3,7 +3,7 @@
  - SPDX-License-Identifier: MPL-2.0
  -}
 
-module Test.Xrefcheck.AnchorsSpec where
+module Test.Xrefcheck.AnchorsSpec (spec) where
 
 import Universum
 

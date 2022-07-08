@@ -23,10 +23,6 @@ import Text.Regex.TDFA qualified as R
 import Text.Regex.TDFA.ByteString ()
 import Text.Regex.TDFA.Text qualified as R
 
--- FIXME: Use </> from System.FilePath
--- </> from Posix is used only because we cross-compile to Windows and \ doesn't work on Linux
-import Data.FileEmbed (embedFile)
-import System.FilePath.Posix ((</>))
 import Time (KnownRatName, Second, Time, unitsP)
 
 import Xrefcheck.Core
@@ -34,6 +30,7 @@ import Xrefcheck.Scan
 import Xrefcheck.Scanners.Markdown
 import Xrefcheck.System (RelGlobPattern)
 import Xrefcheck.Util (aesonConfigOption, postfixFields, (-:))
+import Xrefcheck.Config.Default
 
 -- | Overall config.
 data Config = Config
@@ -66,14 +63,6 @@ data ScannersConfig = ScannersConfig
 
 makeLensesWith postfixFields ''Config
 makeLensesWith postfixFields ''VerifyConfig
-
------------------------------------------------------------
--- Default config
------------------------------------------------------------
-
-defConfigUnfilled :: ByteString
-defConfigUnfilled =
-  $(embedFile ("src-files" </> "def-config.yaml"))
 
 -- | Picks raw config with @:PLACEHOLDER:<key>:@ and fills the specified fields
 -- in it, picking a replacement suitable for the given key. Only strings and lists
@@ -182,6 +171,12 @@ defConfigText flavor =
           ]
     ]
 
+foldMap (deriveFromJSON aesonConfigOption)
+  [ ''VerifyConfig
+  , ''Config
+  , ''ScannersConfig
+  ]
+
 defConfig :: HasCallStack => Flavor -> Config
 defConfig flavor =
   either (error . toText . prettyPrintParseException) id $
@@ -190,10 +185,6 @@ defConfig flavor =
 -----------------------------------------------------------
 -- Yaml instances
 -----------------------------------------------------------
-
-deriveFromJSON aesonConfigOption ''Config
-deriveFromJSON aesonConfigOption ''ScannersConfig
-deriveFromJSON aesonConfigOption ''VerifyConfig
 
 instance KnownRatName unit => FromJSON (Time unit) where
   parseJSON = withText "time" $

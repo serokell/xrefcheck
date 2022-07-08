@@ -7,3 +7,7 @@ License: Unlicense
 Files: links-tests/ftp_root/**/*
 Copyright: 2021 Serokell <https://serokell.io>
 License: Unlicense
+
+Files: tests/configs/github-config.yaml
+Copyright: 2019-2021 Serokell <https://serokell.io>
+License: Unlicense

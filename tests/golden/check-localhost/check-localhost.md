@@ -4,10 +4,10 @@
  - SPDX-License-Identifier: MPL-2.0
  -->
 
-Serokell [web-site](https://localhost/web-site)
+Serokell [web-site](https://localhost:20000/web-site)
 
-Serokell [team](https://127.0.0.1/team)
+Serokell [team](https://127.0.0.1:20000/team)
 
-Serokell [blog](http://localhost/blog)
+Serokell [blog](http://localhost:20000/blog)
 
-Serokell [labs](http://127.0.0.1/labs)
+Serokell [labs](http://127.0.0.1:20000/labs)

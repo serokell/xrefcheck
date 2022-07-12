@@ -27,7 +27,8 @@ import Data.Text qualified as T
 import Data.Version (showVersion)
 import Options.Applicative
   (Parser, ReadM, command, eitherReader, execParser, flag, flag', footerDoc, fullDesc, help, helper,
-  hsubparser, info, infoOption, long, metavar, option, progDesc, short, strOption, switch, value, OptionFields, Mod)
+  hsubparser, info, infoOption, long, metavar, option, progDesc, short, strOption, switch, value, auto,
+  OptionFields, Mod)
 import Options.Applicative.Help.Pretty (Doc, displayS, fill, fillSep, indent, renderPretty, text)
 
 import Paths_xrefcheck (version)
@@ -76,14 +77,16 @@ addTraversalOptions TraversalConfig{..} (TraversalOptions ignored) =
   , ..
   }
 
-newtype VerifyOptions = VerifyOptions
+data VerifyOptions = VerifyOptions
   { voCheckLocalhost :: Maybe Bool
+  , voMaxRetries     :: Maybe Int
   }
 
 addVerifyOptions :: VerifyConfig -> VerifyOptions -> VerifyConfig
-addVerifyOptions VerifyConfig{..} (VerifyOptions checkLocalhost) =
+addVerifyOptions VerifyConfig{..} (VerifyOptions checkLocalhost maxRetries) =
   VerifyConfig
   { vcCheckLocalhost = fromMaybe vcCheckLocalhost checkLocalhost
+  , vcMaxRetries = fromMaybe vcMaxRetries maxRetries
   , ..
   }
 
@@ -169,6 +172,12 @@ verifyOptionsParser = do
   voCheckLocalhost <- flag Nothing (Just True) $
     long "check-localhost" <>
     help "Check localhost links."
+  voMaxRetries <- option (Just <$> auto) $
+    long "retries" <>
+    metavar "INT" <>
+    value Nothing <>
+    help "How many attempts to retry an external link after getting \
+         \a \"429 Too Many Requests\" response."
   return VerifyOptions{..}
 
 dumpConfigOptions :: Parser Command

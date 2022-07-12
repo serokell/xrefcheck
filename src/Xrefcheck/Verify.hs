@@ -302,7 +302,7 @@ verifyReference
     retryVerification numberOfRetries resIO = do
       res@(VerifyResult ves) <- resIO
 
-      let toRetry = any isFixable ves && numberOfRetries < maxRetries
+      let toRetry = any isFixable ves && numberOfRetries < vcMaxRetries
           currentRetryAfter = extractRetryAfterInfo res
 
       let moveProgress = alterOverallProgress numberOfRetries
@@ -346,17 +346,17 @@ verifyReference
       -> Progress a
       -> Progress a
     alterProgressErrors res@(VerifyResult ves) retryNumber
-      | maxRetries == 0 =
+      | vcMaxRetries == 0 =
           if ok then id
           else incProgressUnfixableErrors
       | retryNumber == 0 =
           if ok then id
           else if fixable then incProgressFixableErrors
           else incProgressUnfixableErrors
-      | retryNumber == maxRetries =
+      | retryNumber == vcMaxRetries =
           if ok then decProgressFixableErrors
           else fixableToUnfixable
-      -- 0 < retryNumber < maxRetries
+      -- 0 < retryNumber < vcMaxRetries
       | otherwise =
           if ok then decProgressFixableErrors
           else if fixable then id
@@ -369,10 +369,6 @@ verifyReference
     extractRetryAfterInfo = \case
       VerifyResult [ExternalHttpTooManyRequests retryAfter] -> retryAfter
       _ -> vcDefaultRetryAfter
-
-    -- | Maximum number of retries available until a fixable error becomes unfixable.
-    -- Soon to become a configurable value.
-    maxRetries = 20
 
     checkRef mAnchor referredFile = verifying $ do
       checkReferredFileExists referredFile

@@ -60,6 +60,7 @@ data VerifyConfig = VerifyConfig
   , vcDefaultRetryAfter         :: Time Second
     -- ^ Default Retry-After delay, applicable when we receive a 429 response
     -- and it does not contain a @Retry-After@ header.
+  , vcMaxRetries                :: Int
   }
 
 -- | Configs for all the supported scanners.

@@ -51,56 +51,60 @@ default-extensions:
   - TypeOperators
 
 ghc-options:
-  - -Wall
+  - -Weverything
   - -Wincomplete-record-updates
   - -Wincomplete-uni-patterns
   - -Wmissing-deriving-strategies
+  - -Wno-missing-safe-haskell-mode
+  - -Wno-unsafe
+  - -Wno-missing-import-lists
+  - -Wno-missing-local-signatures
+  - -Wno-missing-export-lists
+  - -Wno-all-missed-specialisations
+  - -Wno-prepositive-qualified-module
+  - -Wno-monomorphism-restriction
 
 dependencies:
-  - aeson
-  - aeson-casing
-  - async
   - base
-  - bytestring
-  - containers
-  - cmark-gfm
-  - data-default
-  - deepseq
-  - directory-tree
-  - directory
-  - dlist
-  - filepath
-  - raw-strings-qq
-  - fmt
-  - ftp-client
-  - Glob
-  - http-client
-  - http-types
-  - HUnit
-  - lens
-  - pretty-terminal
-  - modern-uri
-  - mtl
-  - o-clock
-  - optparse-applicative
-  - regex-tdfa
-  - req
-  - regex-tdfa
-  - roman-numerals
-  - template-haskell
-  - text
-  - text-metrics
-  - th-lift-instances
-  - transformers
-  - universum
-  - yaml
-  - with-utf8
 
 library:
   source-dirs: src
 
   generated-other-modules:
     - Paths_xrefcheck
+
+  dependencies:
+    - aeson
+    - aeson-casing
+    - async
+    - bytestring
+    - containers
+    - cmark-gfm
+    - data-default
+    - directory-tree
+    - directory
+    - dlist
+    - filepath
+    - raw-strings-qq
+    - fmt
+    - ftp-client
+    - Glob
+    - http-client
+    - http-types
+    - lens
+    - pretty-terminal
+    - modern-uri
+    - mtl
+    - o-clock
+    - optparse-applicative
+    - regex-tdfa
+    - req
+    - roman-numerals
+    - text
+    - text-metrics
+    - th-lift-instances
+    - universum
+    - yaml
 
 executables:
   xrefcheck:
@@ -115,6 +119,9 @@ executables:
       - -O2
     dependencies:
       - xrefcheck
+      - bytestring
+      - universum
+      - with-utf8
 
 tests:
   xrefcheck-tests:
@@ -128,6 +135,14 @@ tests:
       - hspec-expectations
       - QuickCheck
       - xrefcheck
+      - bytestring
+      - directory
+      - fmt
+      - http-types
+      - HUnit
+      - regex-tdfa
+      - universum
+      - yaml
     build-tools:
       - hspec-discover
 
@@ -143,3 +158,4 @@ tests:
       - tasty
       - tasty-hunit
       - xrefcheck
+      - universum

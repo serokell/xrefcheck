@@ -119,7 +119,6 @@ foldNode action node@(Node _ _ subs) = do
 nodeExtractInfo
   :: forall m
   .  ( MonadError Text m
-     , MonadState IgnoreMode m
      , MonadReader MarkdownConfig m
      )
   => Node

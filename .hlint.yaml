@@ -1,0 +1,100 @@
+# SPDX-FileCopyrightText: 2022 Serokell <https://serokell.io>
+#
+# SPDX-License-Identifier: Unlicense
+
+###########################################################################
+# Settings
+###########################################################################
+
+- arguments: [-XTypeApplications, -XRecursiveDo, -XBlockArguments, -XQuasiQuotes]
+
+# These are just too annoying
+- ignore: { name: Redundant do }
+- ignore: { name: Redundant bracket }
+- ignore: { name: Redundant lambda }
+- ignore: { name: Redundant $ }
+- ignore: { name: Redundant flip }
+- ignore: { name: Move brackets to avoid $ }
+- ignore: { name: Avoid lambda using `infix` }
+
+# Losing variable names can be not-nice
+- ignore: { name: Eta reduce }
+- ignore: { name: Avoid lambda }
+
+# Humans know better
+- ignore: { name: Use camelCase }
+- ignore: { name: Use const }
+- ignore: { name: Use section }
+- ignore: { name: Use if }
+- ignore: { name: Use notElem }
+- ignore: { name: Use fromMaybe }
+- ignore: { name: Replace case with fromMaybe }
+- ignore: { name: Use maybe }
+- ignore: { name: Use fmap }
+- ignore: { name: Use foldl }
+- ignore: { name: "Use :" }
+- ignore: { name: Use ++ }
+- ignore: { name: Use || }
+- ignore: { name: Use && }
+- ignore: { name: 'Use ?~' }
+- ignore: { name: Use <$> }
+- ignore: { name: Use unless }
+
+# Sometimes [Char] is okay (if it means "a sequence of characters")
+- ignore: { name: Use String }
+
+# Sometimes TemplateHaskell is needed to please stylish-haskell
+- ignore: { name: Unused LANGUAGE pragma }
+
+# Some 'data' records will be extended with more fields later,
+# so they shouldn't be replaced with 'newtype' blindly
+- ignore: { name: Use newtype instead of data }
+
+###########################################################################
+# Various stuff
+###########################################################################
+
+- warn:
+    name: "Avoid 'both'"
+    lhs: both
+    rhs: Control.Lens.each
+    note: |
+      If you use 'both' on a 2-tuple and later it's accidentally
+      replaced with a longer tuple, 'both' will be silently applied to only
+      the *last two elements* instead of failing with a type error.
+        * If you want to traverse all elements of the tuple, use 'each'.
+        * If 'both' is used on 'Either' here, replace it with 'chosen'.
+
+- warn: { lhs: either (const True) (const False), rhs: isLeft }
+- warn: { lhs: either (const False) (const True), rhs: isRight }
+
+- warn: { lhs: map fst &&& map snd, rhs: unzip }
+
+- warn:
+    name: "'fromIntegral' is unsafe without type annotations."
+    lhs: fromIntegral x
+    rhs: fromIntegral @t1 @t2 x
+- warn:
+    name: "'fromIntegral' is unsafe without TWO type annotations."
+    lhs: fromIntegral @t1 x
+    rhs: fromIntegral @t1 @t2 x
+- warn:
+    name: "Avoid the use of '(+||)' and '(||+)'"
+    lhs: '(Fmt.+||)'
+    rhs: '(Fmt.+|)'
+    note: "The use of '(+||)' may result in outputting raw Haskell into user-facing code"
+- warn:
+    name: "Avoid the use of '(+||)' and '(||+)'"
+    lhs: '(Fmt.||+)'
+    rhs: '(Fmt.|+)'
+    note: "The use of '(||+)' may result in outputting raw Haskell into user-facing code"
+- warn:
+    name: "Avoid the use of '(||++||)'"
+    lhs: '(Fmt.||++||)'
+    rhs: '(Fmt.|++|)'
+    note: "The use of '(||++||)' may result in outputting raw Haskell into user-facing code"
+- warn:
+    name: "Avoid the use of '(||++|)'"
+    lhs: '(Fmt.||++|)'
+    rhs: '(Fmt.|++|)'
+    note: "The use of '(||++|)' may result in outputting raw Haskell into user-facing code"

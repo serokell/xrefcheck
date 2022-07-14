@@ -26,6 +26,9 @@ module Xrefcheck.Verify
   , verifyRepo
   , verifyReference
   , checkExternalResource
+
+    -- * URI parsing
+  , parseUri
   ) where
 
 import Universum
@@ -59,8 +62,9 @@ import System.FilePath (takeDirectory, (</>), normalise)
 import System.FilePath.Glob qualified as Glob
 import Text.ParserCombinators.ReadPrec qualified as ReadPrec (lift)
 import Text.Regex.TDFA.Text (Regex, regexec)
-import Text.URI (Authority (..), URI (..), mkURI)
+import Text.URI (Authority (..), URI (..), mkURIBs)
 import Time (RatioNat, Second, Time (..), ms, sec, threadDelay, timeout, (+:+), (-:-))
+import URI.ByteString qualified as URIBS
 
 import Data.Bits (toIntegralSized)
 import Xrefcheck.Config
@@ -444,12 +448,41 @@ verifyReference
                 givenAnchors
           in throwError $ AnchorDoesNotExist anchor similarAnchors
 
+-- | Parse URI according to RFC 3986 extended by allowing non-encoded
+-- `[` and `]` in query string.
+parseUri :: Text -> ExceptT VerifyError IO URI
+parseUri link = do
+      -- There exist two main standards of URL parsing: RFC 3986 and the Web
+      -- Hypertext Application Technology Working Group's URL standard. Ideally,
+      -- we want to be able to parse the URLs in accordance with the latter
+      -- standard, because it provides a much less ambiguous set of rules for
+      -- percent-encoding special characters, and is essentially a living
+      -- standard that gets updated constantly.
+      --
+      -- We have chosen the 'uri-bytestring' library for URI parsing because
+      -- of the 'laxURIParseOptions' parsing configuration. 'mkURI' from
+      -- the 'modern-uri' library parses URIs in accordance with RFC 3986 and does
+      -- not provide a means of parsing customization, which contrasts with
+      -- 'parseURI' that accepts a 'URIParserOptions'. One of the predefined
+      -- configurations of this type is 'strictURIParserOptions', which follows
+      -- RFC 3986, and the other -- 'laxURIParseOptions' -- allows brackets
+      -- in the queries, which draws us closer to the WHATWG URL standard.
+      uri' <- URIBS.parseURI URIBS.laxURIParserOptions (encodeUtf8 link)
+            & either (const $ throwError ExternalResourceInvalidUri) pure
+
+      -- We stick to our infrastructure by continuing to operate on the datatypes
+      -- from `modern-uri`, which are used in the 'req' library. First we
+      -- serialize our URI parsed with 'parseURI' so it becomes a 'ByteString'
+      -- with all the necessary special characters *percent-encoded*, and then
+      -- call 'mkURIBs'.
+      mkURIBs (URIBS.serializeURIRef' uri')
+           & maybe (throwError ExternalResourceInvalidUri) pure
+
 checkExternalResource :: VerifyConfig -> Text -> IO (VerifyResult VerifyError)
 checkExternalResource VerifyConfig{..} link
   | skipCheck = return mempty
   | otherwise = fmap toVerifyRes $ runExceptT $ do
-      uri <- mkURI link & maybe (throwError ExternalResourceInvalidUri) pure
-
+      uri <- parseUri link
       case toString <$> uriScheme uri of
         Just "http" -> checkHttp uri
         Just "https" -> checkHttp uri

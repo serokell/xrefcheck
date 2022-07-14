@@ -25,12 +25,14 @@ Unreleased
   + Add the duplication detection & verification result caching algorithm for external references.
 * [#82](https://github.com/serokell/xrefcheck/pull/82)
   + Fix the issue of having the lowest level context duplicated, caused by the root's trailing path separator.
-* [#31](https://github.com/serokell/xrefcheck/pull/88)
+* [#88](https://github.com/serokell/xrefcheck/pull/88)
   + Handle the "429 too many requests" errors & attempt to eliminate them during verification.
 * [#128](https://github.com/serokell/xrefcheck/pull/128)
   + Make `ignoreRefs` a required parameter.
 * [#129](https://github.com/serokell/xrefcheck/pull/129)
-  + Add support for the `id` attribute in anchors
+  + Add support for the `id` attribute in anchors.
+* [#116](https://github.com/serokell/xrefcheck/pull/116)
+  + Allow certain reserved characters to be present in the query strings of the URLs.
 
 0.2.1
 ==========

@@ -18,19 +18,19 @@ import Data.ByteString qualified as BS
 import Data.Map qualified as Map
 import Data.Yaml (FromJSON (..), decodeEither', prettyPrintParseException, withText)
 import Instances.TH.Lift ()
-import Text.Regex.TDFA (CompOption (..), ExecOption (..), Regex)
 import Text.Regex.TDFA qualified as R
 import Text.Regex.TDFA.ByteString ()
 import Text.Regex.TDFA.Text qualified as R
 
-import Time (KnownRatName, Second, Time, unitsP)
+import Time (KnownRatName, Second, Time(..), unitsP)
 
 import Xrefcheck.Core
 import Xrefcheck.Scan
 import Xrefcheck.Scanners.Markdown
-import Xrefcheck.System (RelGlobPattern)
-import Xrefcheck.Util (aesonConfigOption, postfixFields, (-:))
+import Xrefcheck.System (RelGlobPattern, normaliseGlobPattern)
+import Xrefcheck.Util (aesonConfigOption, postfixFields, (-:), normaliseWithNoTrailing)
 import Xrefcheck.Config.Default
+import Text.Regex.TDFA.Common
 
 -- | Overall config.
 data Config = Config
@@ -38,6 +38,14 @@ data Config = Config
   , cVerification :: VerifyConfig
   , cScanners     :: ScannersConfig
   }
+
+normaliseConfigFilePaths :: Config -> Config
+normaliseConfigFilePaths Config{..}
+  = Config
+    { cTraversal = normaliseTraversalConfigFilePaths cTraversal
+    , cVerification = normaliseVerifyConfigFilePaths cVerification
+    , cScanners
+    }
 
 -- | Config of verification.
 data VerifyConfig = VerifyConfig
@@ -55,6 +63,13 @@ data VerifyConfig = VerifyConfig
     -- ^ If True - links which return 403 or 401 code will be skipped,
     -- otherwise – will be marked as broken, because we can't check it.
   }
+
+normaliseVerifyConfigFilePaths :: VerifyConfig -> VerifyConfig
+normaliseVerifyConfigFilePaths vc@VerifyConfig{ vcVirtualFiles, vcNotScanned}
+  = vc
+    { vcVirtualFiles = map normaliseGlobPattern vcVirtualFiles
+    , vcNotScanned = map normaliseWithNoTrailing vcNotScanned
+    }
 
 -- | Configs for all the supported scanners.
 data ScannersConfig = ScannersConfig
@@ -178,7 +193,7 @@ foldMap (deriveFromJSON aesonConfigOption)
   ]
 
 defConfig :: HasCallStack => Flavor -> Config
-defConfig flavor =
+defConfig flavor = normaliseConfigFilePaths $
   either (error . toText . prettyPrintParseException) id $
   decodeEither' (defConfigText flavor)
 

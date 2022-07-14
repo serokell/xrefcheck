@@ -7,6 +7,7 @@ module Xrefcheck.System
   ( readingSystem
   , askWithinCI
   , RelGlobPattern (..)
+  , normaliseGlobPattern
   , bindGlobPattern
   ) where
 
@@ -19,6 +20,8 @@ import System.Directory (canonicalizePath)
 import System.Environment (lookupEnv)
 import System.FilePath ((</>))
 import System.FilePath.Glob qualified as Glob
+import Data.Coerce (coerce)
+import Xrefcheck.Util (normaliseWithNoTrailing)
 
 -- | We can quite safely treat surrounding filesystem as frozen,
 -- so IO reading operations can be turned into pure values.
@@ -35,6 +38,9 @@ askWithinCI = lookupEnv "CI" <&> \case
 
 -- | Glob pattern relative to repository root.
 newtype RelGlobPattern = RelGlobPattern FilePath
+
+normaliseGlobPattern :: RelGlobPattern -> RelGlobPattern
+normaliseGlobPattern = RelGlobPattern . normaliseWithNoTrailing . coerce
 
 bindGlobPattern :: FilePath -> RelGlobPattern -> Glob.Pattern
 bindGlobPattern root (RelGlobPattern relPat) = readingSystem $ do

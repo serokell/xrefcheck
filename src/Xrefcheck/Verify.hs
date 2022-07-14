@@ -16,9 +16,14 @@ module Xrefcheck.Verify
 
   , WithReferenceLoc (..)
 
+    -- * Concurrent traversal with caching
+  , NeedsCaching (..)
+  , forConcurrentlyCaching
+
     -- * Cross-references validation
   , VerifyError (..)
   , verifyRepo
+  , verifyReference
   , checkExternalResource
   ) where
 
@@ -28,18 +33,22 @@ import Control.Concurrent.Async (wait, withAsync)
 import Control.Exception (throwIO)
 import Control.Monad.Except (MonadError (..))
 import Data.ByteString qualified as BS
+import Data.List qualified as L
 import Data.Map qualified as M
 import Data.Text qualified as T
 import Data.Text.Metrics (damerauLevenshteinNorm)
+import Data.Time.Clock.POSIX (getPOSIXTime)
 import Data.Traversable (for)
 import Fmt (Buildable (..), blockListF', listF, (+|), (|+))
 import GHC.Exts qualified as Exts
 import Network.FTP.Client
   (FTPException (..), FTPResponse (..), ResponseStatus (..), login, nlst, size, withFTP, withFTPS)
-import Network.HTTP.Client (HttpException (..), HttpExceptionContent (..), responseStatus)
+import Network.HTTP.Client
+  (HttpException (..), HttpExceptionContent (..), Response, responseHeaders, responseStatus)
 import Network.HTTP.Req
   (AllowsBody, CanHaveBody (NoBody), GET (..), HEAD (..), HttpBodyAllowed, HttpException (..),
   HttpMethod, NoReqBody (..), defaultHttpConfig, ignoreResponse, req, runReq, useURI)
+import Network.HTTP.Types.Header (hRetryAfter)
 import Network.HTTP.Types.Status (Status, statusCode, statusMessage)
 import System.Console.Pretty (Style (..), style)
 import System.Directory (canonicalizePath, doesDirectoryExist, doesFileExist)
@@ -47,7 +56,7 @@ import System.FilePath (takeDirectory, (</>), normalise)
 import System.FilePath.Glob qualified as Glob
 import Text.Regex.TDFA.Text (Regex, regexec)
 import Text.URI (Authority (..), URI (..), mkURI)
-import Time (RatioNat, Second, Time (..), ms, threadDelay, timeout)
+import Time (RatioNat, Second, Time (..), ms, sec, threadDelay, timeout, (+:+))
 
 import Data.Bits (toIntegralSized)
 import Xrefcheck.Config
@@ -55,6 +64,7 @@ import Xrefcheck.Core
 import Xrefcheck.Orphans ()
 import Xrefcheck.Progress
 import Xrefcheck.System
+import Xrefcheck.Util
 
 {-# ANN module ("HLint: ignore Use uncurry" :: Text) #-}
 {-# ANN module ("HLint: ignore Use 'runExceptT' from Universum" :: Text) #-}
@@ -108,6 +118,7 @@ data VerifyError
   | ExternalResourceInvalidUrl (Maybe Text)
   | ExternalResourceUnknownProtocol
   | ExternalHttpResourceUnavailable Status
+  | ExternalHttpTooManyRequests (Time Second)
   | ExternalFtpResourceUnavailable FTPResponse
   | ExternalFtpException FTPException
   | FtpEntryDoesNotExist FilePath
@@ -147,6 +158,10 @@ instance Buildable VerifyError where
       "⛂  Resource unavailable (" +| statusCode status |+ " " +|
       decodeUtf8 @Text (statusMessage status) |+ ")\n"
 
+    ExternalHttpTooManyRequests retryAfter ->
+      "⛂  Resource unavailable (429 Too Many Requests; retry after " +|
+      show @Text retryAfter |+ ")\n"
+
     ExternalFtpResourceUnavailable response ->
       "⛂  Resource unavailable:\n" +| response |+ "\n"
 
@@ -163,6 +178,11 @@ instance Buildable VerifyError where
         []  -> "\n"
         [h] -> ",\n   did you mean " +| h |+ "?\n"
         hs  -> ", did you mean:\n" +| blockListF' "    -" build hs
+
+-- | Determine whether the verification result contains a fixable error.
+isFixable :: VerifyError -> Bool
+isFixable (ExternalHttpTooManyRequests _) = True
+isFixable _ = False
 
 data NeedsCaching key
   = NoCaching
@@ -223,7 +243,14 @@ verifyRepo
   return $ fold accumulated
   where
     printer progressRef = forever $ do
-      readIORef progressRef >>= reprintAnalyseProgress rw mode
+      posixTime <- getPOSIXTime <&> posixTimeToTimeSecond
+      progress <- atomicModifyIORef' progressRef $ \VerifyProgress{..} ->
+        let prog = VerifyProgress{ vrExternal =
+          checkTaskTimestamp posixTime vrExternal
+                                 , ..
+                                 }
+        in (prog, prog)
+      reprintAnalyseProgress rw mode posixTime progress
       threadDelay (ms 100)
 
     ifExternalThenCache (_, Reference{..}) = case locationType rLink of
@@ -253,32 +280,94 @@ verifyReference
   root
   fileWithReference
   ref@Reference{..}
-    = do
-  let locType = locationType rLink
-
-  if shouldCheckLocType mode locType
-  then do
-    res <- case locType of
-      LocalLoc    -> checkRef rAnchor fileWithReference
-      RelativeLoc -> checkRef rAnchor
-                    (takeDirectory fileWithReference
-                      </> toString (canonizeLocalRef rLink))
-      AbsoluteLoc -> checkRef rAnchor (root <> toString rLink)
-      ExternalLoc -> checkExternalResource config rLink
-      OtherLoc    -> verifying pass
-
-    let moveProgress = incProgress .
-          (if verifyOk res then id else incProgressErrors)
-
-    atomicModifyIORef' progressRef $ \VerifyProgress{..} ->
-      ( if isExternal locType
-        then VerifyProgress{ vrExternal = moveProgress vrExternal, .. }
-        else VerifyProgress{ vrLocal = moveProgress vrLocal, .. }
-      , ()
-      )
-    return $ fmap (WithReferenceLoc fileWithReference ref) res
-  else return mempty
+    = retryVerification 0 $ do
+        let locType = locationType rLink
+        if shouldCheckLocType mode locType
+        then case locType of
+          LocalLoc    -> checkRef rAnchor fileWithReference
+          RelativeLoc -> checkRef rAnchor
+                        (takeDirectory fileWithReference
+                          </> toString (canonizeLocalRef rLink))
+          AbsoluteLoc -> checkRef rAnchor (root <> toString rLink)
+          ExternalLoc -> checkExternalResource config rLink
+          OtherLoc    -> verifying pass
+        else return mempty
   where
+    retryVerification
+      :: Int
+      -> IO (VerifyResult VerifyError)
+      -> IO (VerifyResult $ WithReferenceLoc VerifyError)
+    retryVerification numberOfRetries resIO = do
+      res@(VerifyResult ves) <- resIO
+
+      let toRetry = any isFixable ves && numberOfRetries < vcMaxRetries
+          currentRetryAfter = extractRetryAfterInfo res
+
+      let moveProgress = alterOverallProgress numberOfRetries
+                       . alterProgressErrors res numberOfRetries
+
+      posixTime' <- getPOSIXTime
+      let posixTime = posixTimeToTimeSecond posixTime'
+
+      atomicModifyIORef' progressRef $ \VerifyProgress{..} ->
+        ( if isExternal $ locationType rLink
+          then VerifyProgress{ vrExternal =
+            let vrExternalAdvanced = moveProgress vrExternal
+            in if toRetry
+               then case pTaskTimestamp vrExternal of
+                      Just (TaskTimestamp ttc start)
+                        | currentRetryAfter +:+ posixTime <= ttc +:+ start -> vrExternalAdvanced
+                      _ -> setTaskTimestamp currentRetryAfter posixTime vrExternalAdvanced
+               else vrExternalAdvanced, .. }
+          else VerifyProgress{ vrLocal = moveProgress vrLocal, .. }
+        , ()
+        )
+      if toRetry
+      then do
+        threadDelay currentRetryAfter
+        retryVerification (numberOfRetries + 1) resIO
+      else return $ fmap (WithReferenceLoc fileWithReference ref) res
+
+    alterOverallProgress
+      :: (Num a)
+      => Int
+      -> Progress a
+      -> Progress a
+    alterOverallProgress retryNumber
+      | retryNumber > 0 = id
+      | otherwise = incProgress
+
+    alterProgressErrors
+      :: (Num a)
+      => VerifyResult VerifyError
+      -> Int
+      -> Progress a
+      -> Progress a
+    alterProgressErrors res@(VerifyResult ves) retryNumber
+      | vcMaxRetries == 0 =
+          if ok then id
+          else incProgressUnfixableErrors
+      | retryNumber == 0 =
+          if ok then id
+          else if fixable then incProgressFixableErrors
+          else incProgressUnfixableErrors
+      | retryNumber == vcMaxRetries =
+          if ok then decProgressFixableErrors
+          else fixableToUnfixable
+      -- 0 < retryNumber < vcMaxRetries
+      | otherwise =
+          if ok then decProgressFixableErrors
+          else if fixable then id
+          else fixableToUnfixable
+      where
+        ok = verifyOk res
+        fixable = any isFixable ves
+
+    extractRetryAfterInfo :: VerifyResult VerifyError -> Time Second
+    extractRetryAfterInfo = \case
+      VerifyResult [ExternalHttpTooManyRequests retryAfter] -> retryAfter
+      _ -> vcDefaultRetryAfter
+
     checkRef mAnchor referredFile = verifying $ do
       checkReferredFileExists referredFile
       case M.lookup referredFile repoInfo of
@@ -358,8 +447,9 @@ checkExternalResource VerifyConfig{..} link
         Left _ -> False
 
     checkHttp :: URI -> ExceptT VerifyError IO ()
-    checkHttp uri = makeHttpRequest uri HEAD 0.3 `catchError` \_ ->
-      makeHttpRequest uri GET 0.7
+    checkHttp uri = makeHttpRequest uri HEAD 0.3 `catchError` \case
+      e | isFixable e -> throwError e
+      _ -> makeHttpRequest uri GET 0.7
 
     makeHttpRequest
       :: (HttpMethod method, HttpBodyAllowed (AllowsBody method) 'NoBody)
@@ -404,8 +494,18 @@ checkExternalResource VerifyConfig{..} link
         HttpExceptionRequest _ exc -> case exc of
           StatusCodeException resp _
             | isAllowedErrorCode (statusCode $ responseStatus resp) -> Right ()
-            | otherwise -> Left $ ExternalHttpResourceUnavailable (responseStatus resp)
+            | otherwise -> case statusCode (responseStatus resp) of
+              429 -> Left . ExternalHttpTooManyRequests $ retryAfterInfo resp
+              _ -> Left . ExternalHttpResourceUnavailable $ responseStatus resp
           other -> Left . ExternalResourceSomeError $ show other
+      where
+        retryAfterInfo :: Response a -> Time Second
+        retryAfterInfo response =
+          fromMaybe vcDefaultRetryAfter $ do
+            retryAfterByteString <- L.lookup hRetryAfter $ responseHeaders response
+            retryAfterString <- rightToMaybe $ decodeUtf8Strict @String retryAfterByteString
+            retryAfter <- readMaybe @Natural retryAfterString
+            pure . sec $ fromIntegral @Natural @RatioNat retryAfter
 
     checkFtp :: URI -> Bool -> ExceptT VerifyError IO ()
     checkFtp uri secure = do

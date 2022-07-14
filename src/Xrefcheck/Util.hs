@@ -11,16 +11,23 @@ module Xrefcheck.Util
   , postfixFields
   , (-:)
   , aesonConfigOption
-  , normaliseWithNoTrailing) where
+  , normaliseWithNoTrailing
+  , posixTimeToTimeSecond
+  ) where
 
 import Universum
 
 import Control.Lens (LensRules, lensField, lensRules, mappingNamer)
 import Data.Aeson qualified as Aeson
 import Data.Aeson.Casing (aesonPrefix, camelCase)
+import Data.Fixed (Fixed (MkFixed), HasResolution (resolution))
+import Data.Ratio ((%))
+import Data.Time.Clock (nominalDiffTimeToSeconds)
+import Data.Time.Clock.POSIX (POSIXTime)
 import Fmt (Builder, build, fmt, nameF)
 import System.Console.Pretty (Pretty (..), Style (Faint))
 import System.FilePath (dropTrailingPathSeparator, normalise)
+import Time (Second, Time (..), sec)
 
 instance Pretty Builder where
     colorize s c = build @Text . colorize s c . fmt
@@ -47,3 +54,8 @@ aesonConfigOption = aesonPrefix camelCase
 
 normaliseWithNoTrailing :: FilePath -> FilePath
 normaliseWithNoTrailing =  dropTrailingPathSeparator . normalise
+
+posixTimeToTimeSecond :: POSIXTime -> Time Second
+posixTimeToTimeSecond posixTime =
+  let picos@(MkFixed ps) = nominalDiffTimeToSeconds posixTime
+  in sec . fromRational $ ps % resolution picos

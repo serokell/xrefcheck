@@ -23,6 +23,7 @@ import Fmt (Buildable (..), blockListF, blockListF', nameF, (+|), (|+))
 import System.Console.Pretty (Color (..), Style (..), color, style)
 import System.FilePath (isPathSeparator, pathSeparator)
 import Text.Numeral.Roman (toRoman)
+import Time (Second, Time)
 
 import Xrefcheck.Progress
 import Xrefcheck.Util
@@ -189,7 +190,7 @@ data LocationType
     -- ^ Reference to a file at outer site
   | OtherLoc
     -- ^ Entry not to be processed (e.g. "mailto:e-mail")
-  deriving stock (Show)
+  deriving stock (Eq, Show)
 
 instance Buildable LocationType where
   build = \case
@@ -308,21 +309,21 @@ data VerifyProgress = VerifyProgress
 initVerifyProgress :: [Reference] -> VerifyProgress
 initVerifyProgress references = VerifyProgress
   { vrLocal = initProgress (length localRefs)
-  , vrExternal = initProgress (length extRefs)
+  , vrExternal = initProgress (length (L.nubBy ((==) `on` rLink) extRefs))
   }
   where
-    (extRefs, localRefs) = L.partition isExternal $
-      map (locationType . rLink) references
+    (extRefs, localRefs) = L.partition (isExternal . locationType . rLink) references
 
-showAnalyseProgress :: VerifyMode -> VerifyProgress -> Text
-showAnalyseProgress mode VerifyProgress{..} = mconcat . mconcat $
-  [ [ "Verifying " ]
-  , [ showProgress "local" 10 White vrLocal <> " "
-    | shouldCheckLocal mode ]
-  , [ showProgress "external" 15 Yellow vrExternal
-    | shouldCheckExternal mode ]
-  ]
+showAnalyseProgress :: VerifyMode -> Time Second -> VerifyProgress -> Text
+showAnalyseProgress mode posixTime VerifyProgress{..} =
+  mconcat . mconcat $
+    [ [ "Verifying " ]
+    , [ showProgress "local" 10 White posixTime vrLocal <> " "
+      | shouldCheckLocal mode ]
+    , [ showProgress "external" 15 Yellow posixTime vrExternal
+      | shouldCheckExternal mode ]
+    ]
 
-reprintAnalyseProgress :: Rewrite -> VerifyMode -> VerifyProgress -> IO ()
-reprintAnalyseProgress rw mode p = putTextRewrite rw $
-  showAnalyseProgress mode p
+reprintAnalyseProgress :: Rewrite -> VerifyMode -> Time Second -> VerifyProgress -> IO ()
+reprintAnalyseProgress rw mode posixTime p = putTextRewrite rw $
+  showAnalyseProgress mode posixTime p

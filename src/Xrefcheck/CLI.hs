@@ -188,12 +188,14 @@ dumpConfigOptions = hsubparser $
   where
     parser = DumpConfig <$> repoTypeOption <*> outputOption
 
+    allRepoTypes = "(" <> intercalate " | " (map (show @String) allFlavors) <> ")"
+
     repoTypeOption =
       option repoTypeReadM $
       short 't' <>
       long "type" <>
       metavar "REPOSITORY TYPE" <>
-      help "Git repository type."
+      help ("Git repository type. Can be " <> allRepoTypes <> ". Case insensitive.")
 
     outputOption =
       filepathOption $

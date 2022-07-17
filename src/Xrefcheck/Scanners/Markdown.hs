@@ -26,6 +26,7 @@ import Data.Default (def)
 import Data.Text qualified as T
 import Data.Text.Lazy qualified as LT
 import Fmt (Buildable (..), blockListF, nameF, (+|), (|+))
+import Text.HTML.TagSoup
 
 import Xrefcheck.Core
 import Xrefcheck.Scan
@@ -146,7 +147,16 @@ nodeExtractInfo input@(Node _ _ nSubs) = do
           return $ FileInfoDiff DList.empty $ DList.singleton $ Anchor {aType, aName, aPos}
 
         HTML_INLINE text -> do
-          let mName = T.stripSuffix "\">" =<< T.stripPrefix "<a name=\"" text
+          let
+            mName = do
+              tag <- safeHead $ parseTags text
+              attributes <- case tag of
+                TagOpen a attrs
+                  | T.toLower a == "a" -> Just attrs
+                _ -> Nothing
+              (_, name) <- find (\(field, _) -> T.toLower field == "name") attributes
+              pure name
+
           case mName of
             Just aName -> do
               let aType = HandAnchor

@@ -101,6 +101,7 @@ library:
     - regex-tdfa
     - req
     - roman-numerals
+    - tagsoup
     - text
     - text-metrics
     - th-lift-instances

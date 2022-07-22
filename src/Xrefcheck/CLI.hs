@@ -26,10 +26,11 @@ import Data.List qualified as L
 import Data.Text qualified as T
 import Data.Version (showVersion)
 import Options.Applicative
-  (Parser, ReadM, command, eitherReader, execParser, flag, flag', footerDoc, fullDesc, help, helper,
-  hsubparser, info, infoOption, long, metavar, option, progDesc, short, strOption, switch, value, auto,
-  OptionFields, Mod)
+  (Mod, OptionFields, Parser, ReadM, auto, command, eitherReader, execParser, flag, flag',
+  footerDoc, fullDesc, help, helpDoc, helper, hsubparser, info, infoOption, long, metavar, option,
+  progDesc, short, strOption, switch, value)
 import Options.Applicative.Help.Pretty (Doc, displayS, fill, fillSep, indent, renderPretty, text)
+import Options.Applicative.Help.Pretty qualified as Pretty
 
 import Paths_xrefcheck (version)
 import Xrefcheck.Config (VerifyConfig (..))
@@ -39,18 +40,28 @@ import Xrefcheck.Util (normaliseWithNoTrailing)
 
 modeReadM :: ReadM VerifyMode
 modeReadM = eitherReader $ \s ->
-  case find ((== s) . fst) modes of
-    Just (_, mode) -> Right mode
+  case find (\mi -> miName mi == s) modes of
+    Just mi -> Right $ miMode mi
     Nothing -> Left . mconcat $ intersperse "\n"
       [ "Unknown mode " <> show s <> "."
-      , "Allowed values: " <> mconcat (intersperse ", " $ map (show . fst) modes)
+      , "Allowed values: " <> mconcat (intersperse ", " $ map (show . miName) modes)
       ]
-  where
-    modes =
-      [ ("local-only", LocalOnlyMode)
-      , ("external-only", ExternalOnlyMode)
-      , ("full", FullMode)
-      ]
+
+data ModeInfo = ModeInfo
+  { miName :: String
+  , miMode :: VerifyMode
+  , miHelpText :: String
+  }
+
+modes :: [ModeInfo]
+modes =
+  [ ModeInfo "local-only" LocalOnlyMode
+      "Verify only references to local files."
+  , ModeInfo "external-only" ExternalOnlyMode
+      "Verify only external references (e.g. http or ftp URLs)."
+  , ModeInfo "full" FullMode
+      "Verify all references."
+  ]
 
 data Command
   = DefaultCommand Options
@@ -137,10 +148,12 @@ optionsParser = do
     long "mode" <>
     metavar "KEYWORD" <>
     value FullMode <>
-    help "Which parts of verification to invoke. \
-         \You can enable only verification of repository-local references, \
-         \only verification of external references or both. \
-         \Default mode: full."
+    helpDoc
+      ( Just $ Pretty.vsep $
+          (modes <&> \mi -> fromString $ miName mi <> ": " <> miHelpText mi)
+          <>
+          [ "Default mode: full."]
+      )
   oVerbose <- switch $
     short 'v' <>
     long "verbose" <>

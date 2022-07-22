@@ -23,11 +23,13 @@ import Data.Aeson.TH (deriveFromJSON)
 import Data.Foldable qualified as F
 import Data.Map qualified as M
 import GHC.Err (errorWithoutStackTrace)
+import System.Directory (doesDirectoryExist)
 import System.Directory.Tree qualified as Tree
 import System.FilePath (dropTrailingPathSeparator, takeDirectory, takeExtension, (</>), equalFilePath)
 
 import Xrefcheck.Core
 import Xrefcheck.Progress
+import Xrefcheck.System (readingSystem)
 import Xrefcheck.Util (aesonConfigOption, normaliseWithNoTrailing)
 
 -- | Config of repositry traversal.
@@ -64,6 +66,10 @@ gatherRepoInfo
   => Rewrite -> FormatsSupport -> TraversalConfig -> FilePath -> m RepoInfo
 gatherRepoInfo rw formatsSupport config root = do
   putTextRewrite rw "Scanning repository..."
+
+  when (not $ isDirectory root) $
+    die $ "Repository's root does not seem to be a directory: " <> root
+
   _ Tree.:/ repoTree <- liftIO $ Tree.readDirectoryWithL processFile root
   let fileInfos = map (first normaliseWithNoTrailing)
         $ filter (\(path, _) -> not $ isIgnored path)
@@ -72,6 +78,8 @@ gatherRepoInfo rw formatsSupport config root = do
         $ filterExcludedDirs root repoTree
   return $ RepoInfo (M.fromList fileInfos)
   where
+    isDirectory = readingSystem . doesDirectoryExist
+
     processFile file = do
       let ext = takeExtension file
       let mscanner = formatsSupport ext

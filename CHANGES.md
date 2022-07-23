@@ -6,6 +6,10 @@
 
 Unreleased
 ==========
+* [#115](https://github.com/serokell/xrefcheck/pull/115)
+  + Improved parsing of anchor html tags inside headers.
+* [#109](https://github.com/serokell/xrefcheck/pull/109)
+  + Fixed bug when prefixing `--ignored` and `--root` paths with `./`
 * [#85](https://github.com/serokell/xrefcheck/pull/85)
   + Make possible to specify whether ignore localhost links, use
   `check-localhost` CLA argument (by default localhost links will not be checked).

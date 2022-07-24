@@ -77,3 +77,11 @@ load '../helpers'
 
   rm /tmp/check-cli.test
 }
+
+@test "Single file as root" {
+  run xrefcheck \
+    --root single-file.md
+
+  assert_failure
+  assert_output --partial "Repository's root does not seem to be a directory: single-file.md"
+}

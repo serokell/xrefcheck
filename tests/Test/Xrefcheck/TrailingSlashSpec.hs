@@ -45,6 +45,4 @@ spec = do
       [ "tests/markdowns/without-annotations"
       , "tests/markdowns/without-annotations/"
       , "tests/markdowns/without-annotations/./"
-      , "tests/markdowns/without-annotations/all_checked.md"
-      , "tests/markdowns/without-annotations/./all_checked.md"
       ]

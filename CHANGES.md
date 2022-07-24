@@ -6,6 +6,8 @@
 
 Unreleased
 ==========
+* [#117](https://github.com/serokell/xrefcheck/pull/117)
+  + Forbid verifying a single file using `--root` command line option.
 * [#115](https://github.com/serokell/xrefcheck/pull/115)
   + Improved parsing of anchor html tags inside headers.
 * [#109](https://github.com/serokell/xrefcheck/pull/109)

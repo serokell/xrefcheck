@@ -14,6 +14,7 @@ module Xrefcheck.Verify
   , verifyErrors
   , verifying
 
+  , RetryAfter (..)
   , WithReferenceLoc (..)
 
     -- * Concurrent traversal with caching
@@ -37,10 +38,12 @@ import Data.List qualified as L
 import Data.Map qualified as M
 import Data.Text qualified as T
 import Data.Text.Metrics (damerauLevenshteinNorm)
+import Data.Time (UTCTime, defaultTimeLocale, formatTime, readPTime, rfc822DateFormat)
 import Data.Time.Clock.POSIX (getPOSIXTime)
 import Data.Traversable (for)
-import Fmt (Buildable (..), blockListF', listF, (+|), (|+))
+import Fmt (Buildable (..), blockListF', listF, maybeF, nameF, (+|), (|+))
 import GHC.Exts qualified as Exts
+import GHC.Read (Read (readPrec))
 import Network.FTP.Client
   (FTPException (..), FTPResponse (..), ResponseStatus (..), login, nlst, size, withFTP, withFTPS)
 import Network.HTTP.Client
@@ -54,9 +57,10 @@ import System.Console.Pretty (Style (..), style)
 import System.Directory (canonicalizePath, doesDirectoryExist, doesFileExist)
 import System.FilePath (takeDirectory, (</>), normalise)
 import System.FilePath.Glob qualified as Glob
+import Text.ParserCombinators.ReadPrec qualified as ReadPrec (lift)
 import Text.Regex.TDFA.Text (Regex, regexec)
 import Text.URI (Authority (..), URI (..), mkURI)
-import Time (RatioNat, Second, Time (..), ms, sec, threadDelay, timeout, (+:+))
+import Time (RatioNat, Second, Time (..), ms, sec, threadDelay, timeout, (+:+), (-:-))
 
 import Data.Bits (toIntegralSized)
 import Xrefcheck.Config
@@ -118,7 +122,7 @@ data VerifyError
   | ExternalResourceInvalidUrl (Maybe Text)
   | ExternalResourceUnknownProtocol
   | ExternalHttpResourceUnavailable Status
-  | ExternalHttpTooManyRequests (Time Second)
+  | ExternalHttpTooManyRequests (Maybe RetryAfter)
   | ExternalFtpResourceUnavailable FTPResponse
   | ExternalFtpException FTPException
   | FtpEntryDoesNotExist FilePath
@@ -160,7 +164,7 @@ instance Buildable VerifyError where
 
     ExternalHttpTooManyRequests retryAfter ->
       "⛂  Resource unavailable (429 Too Many Requests; retry after " +|
-      show @Text retryAfter |+ ")\n"
+      maybeF retryAfter |+ ")\n"
 
     ExternalFtpResourceUnavailable response ->
       "⛂  Resource unavailable:\n" +| response |+ "\n"
@@ -178,6 +182,20 @@ instance Buildable VerifyError where
         []  -> "\n"
         [h] -> ",\n   did you mean " +| h |+ "?\n"
         hs  -> ", did you mean:\n" +| blockListF' "    -" build hs
+
+data RetryAfter = Date UTCTime | Seconds (Time Second)
+  deriving stock (Show, Eq)
+
+instance Read RetryAfter where
+  readPrec = asum
+    [ ReadPrec.lift $ Date <$> readPTime True defaultTimeLocale rfc822DateFormat
+    , readPrec @Natural <&> Seconds . sec . fromIntegral @_ @RatioNat
+    ]
+
+instance Buildable RetryAfter where
+  build (Date d) = nameF "date" $
+    fromString $ formatTime defaultTimeLocale rfc822DateFormat d
+  build (Seconds s) = nameF "seconds" $ show s
 
 -- | Determine whether the verification result contains a fixable error.
 isFixable :: VerifyError -> Bool
@@ -300,14 +318,21 @@ verifyReference
     retryVerification numberOfRetries resIO = do
       res@(VerifyResult ves) <- resIO
 
+      now <- getPOSIXTime <&> posixTimeToTimeSecond
+
+      let toSeconds = \case
+            Seconds s -> s
+            -- Calculates the seconds left until @Retry-After@ date.
+            -- Defaults to 0 if the date has already passed.
+            Date date | utcTimeToTimeSecond date >= now -> utcTimeToTimeSecond date -:- now
+            _ -> sec 0
+
       let toRetry = any isFixable ves && numberOfRetries < vcMaxRetries
-          currentRetryAfter = extractRetryAfterInfo res
+          currentRetryAfter = fromMaybe vcDefaultRetryAfter $
+            extractRetryAfterInfo res <&> toSeconds
 
       let moveProgress = alterOverallProgress numberOfRetries
                        . alterProgressErrors res numberOfRetries
-
-      posixTime' <- getPOSIXTime
-      let posixTime = posixTimeToTimeSecond posixTime'
 
       atomicModifyIORef' progressRef $ \VerifyProgress{..} ->
         ( if isExternal $ locationType rLink
@@ -316,8 +341,8 @@ verifyReference
             in if toRetry
                then case pTaskTimestamp vrExternal of
                       Just (TaskTimestamp ttc start)
-                        | currentRetryAfter +:+ posixTime <= ttc +:+ start -> vrExternalAdvanced
-                      _ -> setTaskTimestamp currentRetryAfter posixTime vrExternalAdvanced
+                        | currentRetryAfter +:+ now <= ttc +:+ start -> vrExternalAdvanced
+                      _ -> setTaskTimestamp currentRetryAfter now vrExternalAdvanced
                else vrExternalAdvanced, .. }
           else VerifyProgress{ vrLocal = moveProgress vrLocal, .. }
         , ()
@@ -363,10 +388,10 @@ verifyReference
         ok = verifyOk res
         fixable = any isFixable ves
 
-    extractRetryAfterInfo :: VerifyResult VerifyError -> Time Second
+    extractRetryAfterInfo :: VerifyResult VerifyError -> Maybe RetryAfter
     extractRetryAfterInfo = \case
       VerifyResult [ExternalHttpTooManyRequests retryAfter] -> retryAfter
-      _ -> vcDefaultRetryAfter
+      _ -> Nothing
 
     checkRef mAnchor referredFile = verifying $ do
       checkReferredFileExists referredFile
@@ -499,13 +524,8 @@ checkExternalResource VerifyConfig{..} link
               _ -> Left . ExternalHttpResourceUnavailable $ responseStatus resp
           other -> Left . ExternalResourceSomeError $ show other
       where
-        retryAfterInfo :: Response a -> Time Second
-        retryAfterInfo response =
-          fromMaybe vcDefaultRetryAfter $ do
-            retryAfterByteString <- L.lookup hRetryAfter $ responseHeaders response
-            retryAfterString <- rightToMaybe $ decodeUtf8Strict @String retryAfterByteString
-            retryAfter <- readMaybe @Natural retryAfterString
-            pure . sec $ fromIntegral @Natural @RatioNat retryAfter
+        retryAfterInfo :: Response a -> Maybe RetryAfter
+        retryAfterInfo = readMaybe . decodeUtf8 <=< L.lookup hRetryAfter . responseHeaders
 
     checkFtp :: URI -> Bool -> ExceptT VerifyError IO ()
     checkFtp uri secure = do

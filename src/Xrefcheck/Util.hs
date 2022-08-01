@@ -13,6 +13,7 @@ module Xrefcheck.Util
   , aesonConfigOption
   , normaliseWithNoTrailing
   , posixTimeToTimeSecond
+  , utcTimeToTimeSecond
   ) where
 
 import Universum
@@ -22,8 +23,9 @@ import Data.Aeson qualified as Aeson
 import Data.Aeson.Casing (aesonPrefix, camelCase)
 import Data.Fixed (Fixed (MkFixed), HasResolution (resolution))
 import Data.Ratio ((%))
+import Data.Time (UTCTime)
 import Data.Time.Clock (nominalDiffTimeToSeconds)
-import Data.Time.Clock.POSIX (POSIXTime)
+import Data.Time.Clock.POSIX (POSIXTime, utcTimeToPOSIXSeconds)
 import Fmt (Builder, build, fmt, nameF)
 import System.Console.Pretty (Pretty (..), Style (Faint))
 import System.FilePath (dropTrailingPathSeparator, normalise)
@@ -59,3 +61,6 @@ posixTimeToTimeSecond :: POSIXTime -> Time Second
 posixTimeToTimeSecond posixTime =
   let picos@(MkFixed ps) = nominalDiffTimeToSeconds posixTime
   in sec . fromRational $ ps % resolution picos
+
+utcTimeToTimeSecond :: UTCTime -> Time Second
+utcTimeToTimeSecond = posixTimeToTimeSecond . utcTimeToPOSIXSeconds

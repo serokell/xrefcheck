@@ -19,6 +19,10 @@ spec = do
         it "Check if anchors in headers are recognized" $ do
             fi <- getFI "tests/markdowns/without-annotations/anchors_in_headers.md"
             getAnchors fi `shouldBe` ["some-stuff", "stuff-section"]
+
+        it "Check if anchors with id attributes are recognized" $ do
+            fi <- getFI "tests/markdowns/without-annotations/anchors_in_headers_with_id_attribute.md"
+            getAnchors fi `shouldBe` ["some-stuff-with-id-attribute", "stuff-section-with-id-attribute"]
     where
         parse :: FilePath -> IO (Either Text FileInfo)
         parse path =

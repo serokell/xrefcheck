@@ -45,7 +45,6 @@ verification:
 
   # POSIX extended regular expressions that match external references
   # that have to be ignored (not verified).
-  # It is an optional parameter, so it can be omitted.
   ignoreRefs: []
 
   # Check localhost links.

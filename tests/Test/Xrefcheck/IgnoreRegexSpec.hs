@@ -77,11 +77,10 @@ spec = do
             Just neWithRefLoc -> map (rLink . wrlReference) $ toList neWithRefLoc
             Nothing -> []
 
-      linksToRegexs :: [Text] -> Maybe [Regex]
+      linksToRegexs :: [Text] -> [Regex]
       linksToRegexs links =
         let errOrRegexs = map (decodeEither' . encodeUtf8) links
-            maybeRegexs = map (either (error . show) Just) errOrRegexs
-        in sequence maybeRegexs
+        in map (either (error . show) id) errOrRegexs
 
-      setIgnoreRefs :: Maybe [Regex] -> Config -> Config
+      setIgnoreRefs :: [Regex] -> Config -> Config
       setIgnoreRefs regexs = (cVerificationL . vcIgnoreRefsL) .~ regexs

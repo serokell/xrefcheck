@@ -55,7 +55,7 @@ data VerifyConfig = VerifyConfig
     -- ^ Files which we pretend do exist.
   , vcNotScanned                :: [FilePath]
     -- ^ Prefixes of files, references in which we should not analyze.
-  , vcIgnoreRefs                :: Maybe [Regex]
+  , vcIgnoreRefs                :: [Regex]
     -- ^ Regular expressions that match external references we should not verify.
   , vcCheckLocalhost            :: Bool
     -- ^ If True - we will check localhost links.

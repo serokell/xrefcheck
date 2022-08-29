@@ -154,7 +154,7 @@ nodeExtractInfo input@(Node _ _ nSubs) = do
                 TagOpen a attrs
                   | T.toLower a == "a" -> Just attrs
                 _ -> Nothing
-              (_, name) <- find (\(field, _) -> T.toLower field == "name") attributes
+              (_, name) <- find (\(field, _) -> T.toLower field `elem` ["name", "id"]) attributes
               pure name
 
           case mName of

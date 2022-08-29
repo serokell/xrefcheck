@@ -27,6 +27,8 @@ Unreleased
   + Handle the "429 too many requests" errors & attempt to eliminate them during verification.
 * [#128](https://github.com/serokell/xrefcheck/pull/128)
   + Make `ignoreRefs` a required parameter.
+* [#129](https://github.com/serokell/xrefcheck/pull/129)
+  + Add support for the `id` attribute in anchors
 
 0.2.1
 ==========

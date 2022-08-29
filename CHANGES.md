@@ -25,6 +25,8 @@ Unreleased
   + Fix the issue of having the lowest level context duplicated, caused by the root's trailing path separator.
 * [#31](https://github.com/serokell/xrefcheck/pull/88)
   + Handle the "429 too many requests" errors & attempt to eliminate them during verification.
+* [#128](https://github.com/serokell/xrefcheck/pull/128)
+  + Make `ignoreRefs` a required parameter.
 
 0.2.1
 ==========

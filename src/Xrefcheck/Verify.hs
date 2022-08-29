@@ -434,7 +434,7 @@ checkExternalResource VerifyConfig{..} link
   where
     skipCheck = isIgnored || (not vcCheckLocalhost && isLocalLink)
       where
-        isIgnored =  maybe False (doesMatchAnyRegex link) vcIgnoreRefs
+        isIgnored = doesMatchAnyRegex link vcIgnoreRefs
         isLocalLink = any (`T.isInfixOf` link) ["://localhost", "://127.0.0.1"]
 
     doesMatchAnyRegex :: Text -> ([Regex] -> Bool)

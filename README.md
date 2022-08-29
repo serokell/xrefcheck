@@ -84,7 +84,7 @@ xrefcheck --help
 
   If you want some external links to not be verified, you can use one of the following ways to ignore those links:
 
-1. Add the regular expression that matches the ignoring link to the optional `ignoreRefs` parameter of your config file.
+1. Add the regular expression that matches the ignoring link to the `ignoreRefs` parameter of your config file.
 
     For example:
     ```yaml

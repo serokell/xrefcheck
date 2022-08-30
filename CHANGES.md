@@ -33,6 +33,8 @@ Unreleased
   + Add support for the `id` attribute in anchors.
 * [#116](https://github.com/serokell/xrefcheck/pull/116)
   + Allow certain reserved characters to be present in the query strings of the URLs.
+* [#130](https://github.com/serokell/xrefcheck/pull/130)
+  + Fixed bug with ignoring checks for relative anchors.
 
 0.2.1
 ==========

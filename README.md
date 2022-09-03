@@ -159,7 +159,7 @@ xrefcheck dump-config -t GitHub
 
 Currently supported options include:
 * Timeout for checking external references;
-* List of ignored folders.
+* List of ignored files.
 
 ## Build instructions [↑](#xrefcheck)
 

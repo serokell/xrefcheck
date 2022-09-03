@@ -37,6 +37,7 @@ import Xrefcheck.Config (VerifyConfig (..))
 import Xrefcheck.Core
 import Xrefcheck.Scan
 import Xrefcheck.Util (normaliseWithNoTrailing)
+import Xrefcheck.System (RelGlobPattern (..))
 
 modeReadM :: ReadM VerifyMode
 modeReadM = eitherReader $ \s ->
@@ -78,7 +79,7 @@ data Options = Options
   }
 
 data TraversalOptions = TraversalOptions
-  { toIgnored :: [FilePath]
+  { toIgnored :: [RelGlobPattern]
   }
 
 addTraversalOptions :: TraversalConfig -> TraversalOptions -> TraversalConfig
@@ -114,6 +115,9 @@ type RepoType = Flavor
 
 filepathOption :: Mod OptionFields FilePath -> Parser FilePath
 filepathOption = fmap normaliseWithNoTrailing <$> strOption
+
+globOption :: Mod OptionFields FilePath -> Parser RelGlobPattern
+globOption = fmap RelGlobPattern <$> filepathOption
 
 repoTypeReadM :: ReadM RepoType
 repoTypeReadM = eitherReader $ \name ->
@@ -174,10 +178,12 @@ optionsParser = do
 
 traversalOptionsParser :: Parser TraversalOptions
 traversalOptionsParser = do
-  toIgnored <- many . filepathOption $
+  toIgnored <- many . globOption $
     long "ignored" <>
-    metavar "FILEPATH" <>
-    help "Files and folders which we pretend do not exist."
+    metavar "GLOB PATTERN" <>
+    help "Files which we pretend do not exist.\
+         \ Glob patterns that contain wildcards MUST be enclosed\
+         \ in quotes to avoid being expanded by shell."
   return TraversalOptions{..}
 
 verifyOptionsParser :: Parser VerifyOptions

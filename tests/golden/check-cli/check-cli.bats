@@ -10,7 +10,7 @@ load '../helpers'
 
 @test "No redundant slashes" {
   run xrefcheck \
-    --ignored to-ignore \
+    --ignored to-ignore/* \
     --root .
 
   assert_output --partial "All repository links are valid."
@@ -18,7 +18,7 @@ load '../helpers'
 
 @test "Redundant slashes in root and ignored" {
   run xrefcheck \
-    --ignored ./././././././//to-ignore \
+    --ignored ./././././././//to-ignore/* \
     --root ./
 
   assert_output --partial "All repository links are valid."
@@ -34,7 +34,7 @@ load '../helpers'
 
 @test "Reduchant slashes in ignored" {
   run xrefcheck \
-    --ignored ./././././././//to-ignore \
+    --ignored ./././././././//to-ignore/* \
     --root .
 
   assert_output --partial "All repository links are valid."

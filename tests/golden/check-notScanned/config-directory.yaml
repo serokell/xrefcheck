@@ -1,0 +1,22 @@
+# SPDX-FileCopyrightText: 2022 Serokell <https://serokell.io>
+#
+# SPDX-License-Identifier: Unlicense
+
+traversal:
+  ignored: []
+
+verification:
+  anchorSimilarityThreshold: 0.5
+  externalRefCheckTimeout: 10s
+  notScanned:
+    - notScanned/inner-directory
+  virtualFiles: []
+  ignoreRefs: []
+  checkLocalhost: true
+  ignoreAuthFailures: true
+  defaultRetryAfter: 30s
+  maxRetries: 3
+
+scanners:
+  markdown:
+    flavor: GitHub

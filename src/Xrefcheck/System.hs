@@ -9,6 +9,7 @@ module Xrefcheck.System
   , RelGlobPattern (..)
   , normaliseGlobPattern
   , bindGlobPattern
+  , matchesGlobPatterns
   ) where
 
 import Universum
@@ -51,6 +52,14 @@ bindGlobPattern root (RelGlobPattern relPat) = readingSystem $ do
       "Glob pattern compilation failed after canonicalization: " <> toText err
     Right pat ->
       return pat
+
+matchesGlobPatterns :: FilePath -> [RelGlobPattern] -> FilePath -> Bool
+matchesGlobPatterns root globPatterns file = or
+  [ Glob.match pat cFile
+  | globPattern <- globPatterns
+  , let pat = bindGlobPattern root globPattern
+  , let cFile = readingSystem $ canonicalizePath file
+  ]
 
 instance FromJSON RelGlobPattern where
   parseJSON = withText "Repo-relative glob pattern" $ \path -> do

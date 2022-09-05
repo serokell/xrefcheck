@@ -107,6 +107,7 @@ library:
     - th-lift-instances
     - time
     - universum
+    - uri-bytestring
     - yaml
 
 executables:
@@ -149,6 +150,7 @@ tests:
       - regex-tdfa
       - time
       - universum
+      - modern-uri
       - yaml
     build-tools:
       - hspec-discover

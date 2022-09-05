@@ -6,6 +6,8 @@
 
 Unreleased
 ==========
+* [#127](https://github.com/serokell/xrefcheck/pull/127)
+  + Support `Retry-After` headers with dates.
 * [#117](https://github.com/serokell/xrefcheck/pull/117)
   + Forbid verifying a single file using `--root` command line option.
 * [#115](https://github.com/serokell/xrefcheck/pull/115)

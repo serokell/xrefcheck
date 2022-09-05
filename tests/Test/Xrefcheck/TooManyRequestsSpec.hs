@@ -11,6 +11,7 @@ import Control.Concurrent (forkIO, killThread)
 import Control.Exception qualified as E
 import Data.CaseInsensitive qualified as CI
 import Data.Map qualified as M
+import Data.Time (addUTCTime, formatTime, getCurrentTime, defaultTimeLocale, rfc822DateFormat)
 import Data.Time.Clock.POSIX (getPOSIXTime)
 import Fmt (indentF, pretty, unlinesF)
 import Network.HTTP.Types (Status (..), ok200, serviceUnavailable503, tooManyRequests429)
@@ -50,7 +51,7 @@ spec = do
           [ ExternalHttpResourceUnavailable $
               Status { statusCode = 503, statusMessage = "Service Unavailable"}
           ]
-    it "Successfully updates the new retry-after value" $ do
+    it "Successfully updates the new retry-after value (as seconds)" $ do
       E.bracket (forkIO $ mock429 "2" ok200) killThread $ \_ -> do
         now <- getPOSIXTime <&> posixTimeToTimeSecond
         progressRef <- newIORef VerifyProgress
@@ -70,6 +71,56 @@ spec = do
         let ttc = ttTimeToCompletion <$> pTaskTimestamp
         flip assertBool (ttc == Just (sec 2)) $
           "Expected time to completion be equal to " ++ show (Just $ sec 2) ++
+          ", but instead it's " ++ show ttc
+    it "Successfully updates the new retry-after value (as date)" $ do
+      utctime <- getCurrentTime
+      let
+        -- Set the @Retry-After@ response header value as (current datetime + 4 seconds)
+        retryAfter = formatTime defaultTimeLocale rfc822DateFormat (addUTCTime 4 utctime)
+        now = utcTimeToTimeSecond utctime
+      E.bracket (forkIO $ mock429 (fromString retryAfter) ok200) killThread $ \_ -> do
+        progressRef <- newIORef VerifyProgress
+              { vrLocal = initProgress 0
+              , vrExternal = Progress
+                  { pTotal = 2
+                  , pCurrent = 1
+                  , pErrorsUnfixable = 0
+                  , pErrorsFixable = 0
+                  , pTaskTimestamp = Just (TaskTimestamp (sec 2) (now -:- sec 1.5))
+                  }
+              }
+        _ <- verifyReferenceWithProgress
+          (Reference "" "http://127.0.0.1:5000/429" Nothing (Position Nothing))
+          progressRef
+        Progress{..} <- vrExternal <$> readIORef progressRef
+        let ttc = fromMaybe (sec 0) $ ttTimeToCompletion <$> pTaskTimestamp
+        flip assertBool (sec 3 <= ttc && ttc <= sec 4) $
+          "Expected time to completion be within range (seconds): 3 <= x <= 4" ++
+          ", but instead it's " ++ show ttc
+    it "Sets the new retry-after to 0 seconds if its value is a date && has already passed" $ do
+      utctime <- getCurrentTime
+      let
+        -- Set the @Retry-After@ response header value as (current datetime - 4 seconds)
+        retryAfter = formatTime defaultTimeLocale rfc822DateFormat (addUTCTime (-4) utctime)
+        now = utcTimeToTimeSecond utctime
+      E.bracket (forkIO $ mock429 (fromString retryAfter) ok200) killThread $ \_ -> do
+        progressRef <- newIORef VerifyProgress
+              { vrLocal = initProgress 0
+              , vrExternal = Progress
+                  { pTotal = 2
+                  , pCurrent = 1
+                  , pErrorsUnfixable = 0
+                  , pErrorsFixable = 0
+                  , pTaskTimestamp = Just (TaskTimestamp (sec 1) (now -:- sec 1.5))
+                  }
+              }
+        _ <- verifyReferenceWithProgress
+          (Reference "" "http://127.0.0.1:5000/429" Nothing (Position Nothing))
+          progressRef
+        Progress{..} <- vrExternal <$> readIORef progressRef
+        let ttc = ttTimeToCompletion <$> pTaskTimestamp
+        flip assertBool (ttc == Just (sec 0)) $
+          "Expected time to completion be 0 seconds" ++
           ", but instead it's " ++ show ttc
     it "The GET request should not be attempted after catching a 429" $ do
       let

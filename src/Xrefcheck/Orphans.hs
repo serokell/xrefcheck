@@ -17,6 +17,7 @@ import Fmt (Buildable (..), unlinesF, (+|), (|+))
 import Network.FTP.Client
   (FTPException (..), FTPMessage (..), FTPResponse (..), ResponseStatus (..))
 import Text.URI (RText, unRText)
+import URI.ByteString (URIParseError (..), SchemaError (..))
 
 instance ToString (RText t) where
   toString = toString . unRText
@@ -45,3 +46,20 @@ instance Buildable FTPException where
   build (BogusResponseFormatException e) = build e
 
 deriving stock instance Eq FTPException
+
+instance Buildable URIParseError where
+  build = \case
+    MalformedScheme e ->  build e
+    MalformedUserInfo -> "Malformed user info"
+    MalformedQuery -> "Malformed query"
+    MalformedFragment -> "Malformed fragment"
+    MalformedHost -> "Malformed host"
+    MalformedPort -> "Malformed port"
+    MalformedPath -> "Malformed path"
+    OtherError e -> build e
+
+instance Buildable SchemaError where
+  build = \case
+    NonAlphaLeading -> "Scheme must start with an alphabet character"
+    InvalidChars -> "Subsequent characters in the schema were invalid"
+    MissingColon -> "Schemas must be followed by a colon"

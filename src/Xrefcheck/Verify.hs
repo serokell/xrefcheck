@@ -44,7 +44,7 @@ import Data.Text.Metrics (damerauLevenshteinNorm)
 import Data.Time (UTCTime, defaultTimeLocale, formatTime, readPTime, rfc822DateFormat)
 import Data.Time.Clock.POSIX (getPOSIXTime)
 import Data.Traversable (for)
-import Fmt (Buildable (..), blockListF', listF, maybeF, nameF, (+|), (|+))
+import Fmt (Buildable (..), blockListF', listF, maybeF, nameF, (+|), (|+), unlinesF, indentF)
 import GHC.Exts qualified as Exts
 import GHC.Read (Read (readPrec))
 import Network.FTP.Client
@@ -62,9 +62,10 @@ import System.FilePath (takeDirectory, (</>), normalise)
 import System.FilePath.Glob qualified as Glob
 import Text.ParserCombinators.ReadPrec qualified as ReadPrec (lift)
 import Text.Regex.TDFA.Text (Regex, regexec)
-import Text.URI (Authority (..), URI (..), mkURIBs)
+import Text.URI (Authority (..), URI (..), mkURIBs, ParseExceptionBs)
 import Time (RatioNat, Second, Time (..), ms, sec, threadDelay, timeout, (+:+), (-:-))
 import URI.ByteString qualified as URIBS
+import Control.Monad.Catch (handleJust)
 
 import Data.Bits (toIntegralSized)
 import Xrefcheck.Config
@@ -122,7 +123,8 @@ data VerifyError
   = LocalFileDoesNotExist FilePath
   | AnchorDoesNotExist Text [Anchor]
   | AmbiguousAnchorRef FilePath Text (NonEmpty Anchor)
-  | ExternalResourceInvalidUri
+  | ExternalResourceInvalidUri URIBS.URIParseError
+  | ExternalResourceUriConversionError ParseExceptionBs
   | ExternalResourceInvalidUrl (Maybe Text)
   | ExternalResourceUnknownProtocol
   | ExternalHttpResourceUnavailable Status
@@ -150,8 +152,14 @@ instance Buildable VerifyError where
       "   Use of such anchors is discouraged because referenced object\n\
       \   can change silently whereas the document containing it evolves.\n"
 
-    ExternalResourceInvalidUri ->
-      "⛂  Invalid URI\n"
+    ExternalResourceInvalidUri err ->
+      "⛂  Invalid URI (" +| err |+ ")\n"
+
+    ExternalResourceUriConversionError err ->
+      unlinesF
+        [ "⛂  Invalid URI"
+        , indentF 4 . build $ displayException err
+        ]
 
     ExternalResourceInvalidUrl Nothing ->
       "⛂  Invalid URL\n"
@@ -468,7 +476,7 @@ parseUri link = do
       -- RFC 3986, and the other -- 'laxURIParseOptions' -- allows brackets
       -- in the queries, which draws us closer to the WHATWG URL standard.
       uri' <- URIBS.parseURI URIBS.laxURIParserOptions (encodeUtf8 link)
-            & either (const $ throwError ExternalResourceInvalidUri) pure
+            & either (throwError . ExternalResourceInvalidUri) pure
 
       -- We stick to our infrastructure by continuing to operate on the datatypes
       -- from `modern-uri`, which are used in the 'req' library. First we
@@ -476,7 +484,12 @@ parseUri link = do
       -- with all the necessary special characters *percent-encoded*, and then
       -- call 'mkURIBs'.
       mkURIBs (URIBS.serializeURIRef' uri')
-           & maybe (throwError ExternalResourceInvalidUri) pure
+           -- Ideally, this exception should never be thrown, as the URI
+           -- already *percent-encoded* with 'parseURI' from 'uri-bytestring'
+           -- and 'mkURIBs' is only used to convert to 'URI' type from
+           -- 'modern-uri' package.
+           & handleJust (fromException @ParseExceptionBs)
+           (throwError . ExternalResourceUriConversionError)
 
 checkExternalResource :: VerifyConfig -> Text -> IO (VerifyResult VerifyError)
 checkExternalResource VerifyConfig{..} link

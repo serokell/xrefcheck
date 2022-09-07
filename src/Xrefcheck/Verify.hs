@@ -308,7 +308,7 @@ verifyReference
         then case locType of
           LocalLoc    -> checkRef rAnchor fileWithReference
           RelativeLoc -> checkRef rAnchor
-                        (takeDirectory fileWithReference
+                        (normalise $ takeDirectory fileWithReference
                           </> toString (canonizeLocalRef rLink))
           AbsoluteLoc -> checkRef rAnchor (root <> toString rLink)
           ExternalLoc -> checkExternalResource config rLink

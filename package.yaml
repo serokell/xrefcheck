@@ -85,6 +85,7 @@ library:
     - directory-tree
     - directory
     - dlist
+    - exceptions
     - filepath
     - raw-strings-qq
     - fmt
@@ -151,6 +152,7 @@ tests:
       - time
       - universum
       - modern-uri
+      - uri-bytestring
       - yaml
     build-tools:
       - hspec-discover

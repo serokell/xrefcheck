@@ -12,6 +12,7 @@ import Universum
 import Test.Hspec (Spec, describe, it, shouldReturn)
 import Text.URI (URI)
 import Text.URI.QQ (uri)
+import URI.ByteString (URIParseError (..), SchemaError (..))
 
 import Xrefcheck.Verify (parseUri, VerifyError (..))
 
@@ -35,10 +36,18 @@ spec = do
   describe "URI parsing should be unsuccessful" $ do
     it "With the special characters anywhere else" do
       parseUri' "https://exa<mple.co>m/?q=a&p=b#fra{g}ment" `shouldReturn`
-        Left ExternalResourceInvalidUri
+        Left (ExternalResourceInvalidUri MalformedPath)
 
       parseUri' "https://example.com/pa[t]h/to[/]smth?q=a&p=b" `shouldReturn`
-        Left ExternalResourceInvalidUri
+        Left (ExternalResourceInvalidUri MalformedPath)
+
+    it "With malformed scheme" do
+      parseUri' "https//example.com/" `shouldReturn`
+        Left (ExternalResourceInvalidUri $ MalformedScheme MissingColon)
+
+    it "With malformed fragment" do
+      parseUri' "https://example.com/?q=a&p=b#fra{g}ment" `shouldReturn`
+        Left (ExternalResourceInvalidUri MalformedFragment)
   where
     parseUri' :: Text -> IO $ Either VerifyError URI
     parseUri' = runExceptT . parseUri

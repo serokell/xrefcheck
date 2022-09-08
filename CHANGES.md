@@ -35,6 +35,8 @@ Unreleased
   + Allow certain reserved characters to be present in the query strings of the URLs.
 * [#130](https://github.com/serokell/xrefcheck/pull/130)
   + Fixed bug with ignoring checks for relative anchors.
+* [#132](https://github.com/serokell/xrefcheck/pull/132)
+  + Display URL parsing errors.
 
 0.2.1
 ==========

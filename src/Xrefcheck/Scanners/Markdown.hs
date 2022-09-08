@@ -9,16 +9,18 @@
 
 module Xrefcheck.Scanners.Markdown
   ( MarkdownConfig (..)
+  , IgnoreMode (..)
   , defGithubMdConfig
   , markdownScanner
   , markdownSupport
   , parseFileInfo
+  , makeError
   ) where
 
 import Universum
 
 import CMarkGFM (Node (..), NodeType (..), PosInfo (..), commonmarkToNode)
-import Control.Monad.Except (MonadError, throwError)
+import Control.Monad.Trans.Writer.CPS (Writer, runWriter, tell)
 import Data.Aeson.TH (deriveFromJSON)
 import Data.ByteString.Lazy qualified as BSL
 import Data.DList qualified as DList
@@ -53,7 +55,7 @@ toPosition = Position . \case
     | startLine == endLine -> Just $
         startLine |+ ":" +| startColumn |+ "-" +| endColumn |+ ""
     | otherwise -> Just $
-        " " +|
+        "" +|
         startLine |+ ":" +| startColumn |+ " - " +|
         endLine |+ ":" +| endColumn |+ ""
 
@@ -76,38 +78,107 @@ data IgnoreMode
   | None
   deriving stock (Eq)
 
+-- | Bind `IgnoreMode` to its `PosInfo` so that we can tell where the
+-- corresponding annotation was declared.
+data Ignore = Ignore IgnoreMode (Maybe PosInfo)
+
+type ScannerM a = StateT Ignore (Writer [ScanError]) a
+
+-- | Empty `Ignore` state
+ignoreNone :: Ignore
+ignoreNone = Ignore None Nothing
+
 -- | A fold over a `Node`.
 cataNode :: (Maybe PosInfo -> NodeType -> [c] -> c) -> Node -> c
 cataNode f (Node pos ty subs) = f pos ty (cataNode f <$> subs)
 
 -- | Remove nodes with accordance with global `MarkdownConfig` and local
 --   overrides.
-removeIgnored :: Node -> Either Text Node
-removeIgnored = runIdentity . runExceptT . flip evalStateT None . cataNode remove
+removeIgnored :: FilePath -> Node -> Writer [ScanError] Node
+removeIgnored fp = withIgnoreMode . cataNode remove
   where
     remove
-      :: (MonadError Text m, MonadState IgnoreMode m)
-      => Maybe PosInfo
+      :: Maybe PosInfo
       -> NodeType
-      -> [m Node]
-      -> m Node
+      -> [ScannerM Node]
+      -> ScannerM Node
     remove pos ty subs = do
-      mode <- get
+      Ignore mode modePos <- get
+      let node = Node pos ty []
       case (mode, ty) of
-        (Paragraph, PARAGRAPH) -> put None $> defNode
-        (Paragraph, x)         -> throwError (makeError mode (prettyType x) pos)
-        (File, _)              -> throwError (makeError mode "" pos)
-        (Link, LINK {})        -> put None $> defNode
-        (Link, _)              -> Node pos ty <$> sequence subs
-        (None, _) -> do
-          case getIgnoreMode (Node pos ty []) of
-            Just mode' -> put mode' $> defNode
+        -- We expect to find a paragraph immediately after the
+        -- `ignore paragraph` annotanion. If the paragraph is not
+        -- found we should report an error.
+        (Paragraph, PARAGRAPH) -> put ignoreNone $> defNode
+        (Paragraph, x)         -> do
+          lift . tell . makeError modePos fp mode $ prettyType x
+          put ignoreNone
+          Node pos ty <$> sequence subs
+
+        -- We don't expect to find an `ignore file` annotation here,
+        -- since that annotation should be at the top of the file and
+        -- the file should already be ignored when `checkIgnoreFile` is called.
+        -- We should report an error if we find it anyway.
+        (File, _)              -> do
+          lift . tell $ makeError modePos fp mode ""
+          put ignoreNone
+          Node pos ty <$> sequence subs
+
+        -- When we find an `ignore link` annotation, we skip nodes until
+        -- we find a link and ignore it, or we find another ignore annotation,
+        -- then we should report an error and set new `Ignore` state.
+        (Link, LINK {})        -> put ignoreNone $> defNode
+        (Link, _)            ->
+          case getIgnoreMode node of
+            Just mode'  -> do
+              lift . tell $ makeError modePos fp mode ""
+              handleMode node mode'
+            Nothing     -> Node pos ty <$> sequence subs
+
+        -- When no `Ignore` state is set check next node for annotation,
+        -- if found then set it as new `IgnoreMode` otherwise skip node.
+        (None, _)              ->
+          case getIgnoreMode node of
+            Just mode' -> handleMode node mode'
             Nothing    -> Node pos ty <$> sequence subs
+
+    handleMode
+      :: Node
+      -> IgnoreMode
+      -> ScannerM Node
+    handleMode node = \case
+      -- Report unknown `IgnoreMode`.
+      None   -> do
+        let unrecognised = fromMaybe ""
+              $ safeHead . drop 1 . words =<< getXrefcheckContent node
+        lift . tell $ makeError (getPosition node) fp None unrecognised
+        put ignoreNone $> defNode
+      -- Set new `Ignore` state.
+      mode'  -> put (Ignore mode' $ getPosition node) $> defNode
 
     prettyType :: NodeType -> Text
     prettyType ty =
       let mType = safeHead $ words $ show ty
       in fromMaybe "" mType
+
+    withIgnoreMode
+      :: ScannerM Node
+      -> Writer [ScanError] Node
+    withIgnoreMode action = action `runStateT` ignoreNone >>= \case
+      -- We expect `IgnoreMode` to be `None` when we reach EOF,
+      -- otherwise that means there was an annotation that didn't match
+      -- any node, so we have to report that.
+      (node, Ignore None _) -> pure node
+      (node, (Ignore mode pos))
+        | mode == Paragraph -> do
+            tell $ makeError pos fp mode "EOF"
+            pure node
+        -- Link and File scan errors do not require extra text info
+        -- to make error description.
+        | otherwise      -> do
+            tell $ makeError pos fp mode ""
+            pure node
+
 
 -- | Custom `foldMap` for source tree.
 foldNode :: (Monoid a, Monad m) => (Node -> m a) -> Node -> m a
@@ -116,24 +187,20 @@ foldNode action node@(Node _ _ subs) = do
   b <- concatForM subs (foldNode action)
   return (a <> b)
 
+type ExtractorM a = ReaderT MarkdownConfig (Writer [ScanError]) a
+
 -- | Extract information from source tree.
 nodeExtractInfo
-  :: forall m
-  .  ( MonadError Text m
-     , MonadReader MarkdownConfig m
-     )
-  => Node
-  -> m FileInfo
-nodeExtractInfo input@(Node _ _ nSubs) = do
+  :: FilePath
+  -> Node
+  -> ExtractorM FileInfo
+nodeExtractInfo fp input@(Node _ _ nSubs) = do
   if checkIgnoreFile nSubs
   then return def
-  else case removeIgnored input of
-    Left err -> throwError err
-    Right relevant ->
-      diffToFileInfo <$> foldNode extractor relevant
+  else diffToFileInfo <$> (foldNode extractor =<< lift (removeIgnored fp input))
 
   where
-    extractor :: Node -> m FileInfoDiff
+    extractor :: Node -> ExtractorM FileInfoDiff
     extractor node@(Node pos ty _) =
       case ty of
         HTML_BLOCK _ -> do
@@ -182,6 +249,8 @@ nodeExtractInfo input@(Node _ _ nSubs) = do
 
         _ -> return mempty
 
+-- | Check if there is `ignore file` at the beginning of the file,
+-- ignoring preceding comments if there are any.
 checkIgnoreFile :: [Node] -> Bool
 checkIgnoreFile nodes =
   let isSimpleComment :: Node -> Bool
@@ -196,48 +265,39 @@ checkIgnoreFile nodes =
     isIgnoreFile :: Node -> Bool
     isIgnoreFile = (Just File ==) . getIgnoreMode
 
-
 defNode :: Node
 defNode = Node Nothing DOCUMENT [] -- hard-coded default Node
 
 makeError
-  :: IgnoreMode
+  :: Maybe PosInfo
+  -> FilePath
+  -> IgnoreMode
   -> Text
-  -> Maybe PosInfo
-  -> Text
-makeError mode txt pos =
-  let errMsg = case mode of
-        Link      -> linkMsg
-        Paragraph -> paragraphMsg
-        File      -> fileMsg
-        None      -> unrecognisedMsg
-  in errMsg <> posInfo
+  -> [ScanError]
+makeError pos fp mode txt = one . ScanError (toPosition pos) fp $ case mode of
+  Link      -> linkMsg
+  Paragraph -> paragraphMsg
+  File      -> fileMsg
+  None      -> unrecognisedMsg
   where
-    posInfo :: Text
-    posInfo =
-      let posToText :: Position -> Text
-          posToText (Position mPos) = fromMaybe "" mPos
-      in "(" <> posToText (toPosition pos) <> ")"
-
     fileMsg :: Text
     fileMsg =
-      "\"ignore file\" must be at the top of \
+      "Annotation \"ignore file\" must be at the top of \
       \markdown or right after comments at the top"
 
     linkMsg :: Text
-    linkMsg = "expected a LINK after \"ignore link\" "
+    linkMsg = "Expected a LINK after \"ignore link\" annotation"
 
     paragraphMsg :: Text
     paragraphMsg = unwords
-      [ "expected a PARAGRAPH after \
-          \\"ignore paragraph\", but found"
+      [ "Expected a PARAGRAPH after \
+          \\"ignore paragraph\" annotation, but found"
       , txt
-      , ""
       ]
 
     unrecognisedMsg :: Text
     unrecognisedMsg = unwords
-      [ "unrecognised option"
+      [ "Unrecognised option"
       , "\"" <> txt <> "\""
       , "perhaps you meant \
           \<\"ignore link\"|\"ignore paragraph\"|\"ignore file\"> "
@@ -247,11 +307,11 @@ getCommentContent :: Node -> Maybe Text
 getCommentContent node = do
   txt <- getHTMLText node
   T.stripSuffix "-->" =<< T.stripPrefix "<!--" (T.strip txt)
-  where
-    getHTMLText :: Node -> Maybe Text
-    getHTMLText (Node _ (HTML_BLOCK txt) _) = Just txt
-    getHTMLText (Node _ (HTML_INLINE txt) _) = Just txt
-    getHTMLText _ = Nothing
+
+getHTMLText :: Node -> Maybe Text
+getHTMLText (Node _ (HTML_BLOCK txt) _) = Just txt
+getHTMLText (Node _ (HTML_INLINE txt) _) = Just txt
+getHTMLText _ = Nothing
 
 getXrefcheckContent :: Node -> Maybe Text
 getXrefcheckContent node =
@@ -259,11 +319,21 @@ getXrefcheckContent node =
         getCommentContent node
   in T.strip <$> notStripped
 
-getIgnoreMode :: Node -> Maybe IgnoreMode
-getIgnoreMode node =
-  let mContent = getXrefcheckContent node
+-- | Get the correct position of an annotation node. There is a bug in
+-- `commonmarkToNode` from the `cmark-gfm` package that affects one line
+-- `HTML_BLOCK` nodes, those node have wrong end line and end column positions.
+-- As our annotations are always oneliners, we can fix this by simply setting
+-- end line equals to start line and calculating end column from start column
+-- and annotation length.
+getPosition :: Node -> Maybe PosInfo
+getPosition node@(Node pos _ _) = do
+  annLength <- length . T.strip <$> getHTMLText node
+  PosInfo sl sc _ _ <- pos
+  pure $ PosInfo sl sc sl (sc + annLength - 1)
 
-  in textToMode . words =<< mContent
+-- | Extract `IgnoreMode` if current node is xrefcheck annotation.
+getIgnoreMode :: Node -> Maybe IgnoreMode
+getIgnoreMode node = textToMode . words =<< getXrefcheckContent node
 
 textToMode :: [Text] -> Maybe IgnoreMode
 textToMode ("ignore" : [x])
@@ -273,23 +343,16 @@ textToMode ("ignore" : [x])
   | otherwise        = return None
 textToMode _         = Nothing
 
-parseFileInfo :: MarkdownConfig -> LT.Text -> Either Text FileInfo
-parseFileInfo config input
-  = runIdentity
-  $ runExceptT
+parseFileInfo :: MarkdownConfig -> FilePath -> LT.Text -> (FileInfo, [ScanError])
+parseFileInfo config fp input
+  = runWriter
   $ flip runReaderT config
-  $ flip evalStateT None
-  $ nodeExtractInfo
+  $ nodeExtractInfo fp
   $ commonmarkToNode [] []
   $ toStrict input
 
 markdownScanner :: MarkdownConfig -> ScanAction
-markdownScanner config path = do
-  errOrInfo <- parseFileInfo config . decodeUtf8 <$> BSL.readFile path
-  case errOrInfo of
-    Left errTxt -> do
-      die $ "Error when scanning " <> path <> ": " <> T.unpack errTxt
-    Right fileInfo -> return fileInfo
+markdownScanner config path = parseFileInfo config path . decodeUtf8 <$> BSL.readFile path
 
 markdownSupport :: MarkdownConfig -> ([Extension], ScanAction)
 markdownSupport config = ([".md"], markdownScanner config)

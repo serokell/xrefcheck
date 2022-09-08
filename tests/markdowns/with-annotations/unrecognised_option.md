@@ -4,5 +4,5 @@
  - SPDX-License-Identifier: MPL-2.0
  -->
 
-<!-- xrefcheck: ignore link -->
+<!-- xrefcheck: ignore unrecognised-option -->
 Serokell [web-site](https://serokell.io/)

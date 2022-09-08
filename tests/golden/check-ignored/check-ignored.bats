@@ -34,7 +34,13 @@ load '../helpers'
 }
 
 @test "Ignore file with broken xrefcheck annotation: directory, check filure" {
-  run xrefcheck --ignored ./to-ignore/inner-directory/
+  xrefcheck --ignored ./to-ignore/inner-directory/ \
+  | prepare > /tmp/check-ignored.test || true
 
-  assert_output --partial "Error when scanning ./to-ignore/inner-directory/broken_annotation.md"
+  diff /tmp/check-ignored.test expected.gold \
+    --ignore-space-change \
+    --ignore-blank-lines \
+    --new-file # treat absent files as empty
+
+  rm /tmp/check-ignored.test
 }

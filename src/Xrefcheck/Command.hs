@@ -17,7 +17,7 @@ import Xrefcheck.CLI (Options (..), addTraversalOptions, addVerifyOptions, defau
 import Xrefcheck.Config (Config (..), ScannersConfig (..), defConfig, normaliseConfigFilePaths)
 import Xrefcheck.Core (Flavor (..))
 import Xrefcheck.Progress (allowRewrite)
-import Xrefcheck.Scan (FormatsSupport, gatherRepoInfo, specificFormatsSupport)
+import Xrefcheck.Scan (FormatsSupport, scanRepo, specificFormatsSupport, ScanResult (..), ScanError (..))
 import Xrefcheck.Scanners.Markdown (markdownSupport)
 import Xrefcheck.System (askWithinCI)
 import Xrefcheck.Verify (verifyErrors, verifyRepo)
@@ -56,22 +56,33 @@ defaultAction Options{..} = do
     withinCI <- askWithinCI
     let showProgressBar = oShowProgressBar ?: not withinCI
 
-    repoInfo <- allowRewrite showProgressBar $ \rw -> do
+    (ScanResult scanErrs repoInfo) <- allowRewrite showProgressBar $ \rw -> do
       let fullConfig = addTraversalOptions (cTraversal config) oTraversalOptions
-      gatherRepoInfo rw (formats $ cScanners config) fullConfig oRoot
+      scanRepo rw (formats $ cScanners config) fullConfig oRoot
 
     when oVerbose $
       fmtLn $ "=== Repository data ===\n\n" <> indentF 2 (build repoInfo)
+
+    unless (null scanErrs) . reportScanErrs $ sortBy (compare `on` seFile) scanErrs
 
     verifyRes <- allowRewrite showProgressBar $ \rw -> do
       let fullConfig = addVerifyOptions (cVerification config) oVerifyOptions
       verifyRepo rw fullConfig oMode oRoot repoInfo
 
     case verifyErrors verifyRes of
-      Nothing ->
-        fmtLn "All repository links are valid."
-      Just (toList -> errs) -> do
-        fmt $ "=== Invalid references found ===\n\n" <>
-              indentF 2 (blockListF' "➥ " build errs)
-        fmtLn $ "Invalid references dumped, " <> build (length errs) <> " in total."
+      Nothing | null scanErrs -> fmtLn "All repository links are valid."
+      Nothing -> exitFailure
+      Just (toList -> verifyErrs) -> do
+        fmt "\n\n"
+        reportVerifyErrs verifyErrs
         exitFailure
+  where
+    reportScanErrs errs = do
+      void . fmt $ "=== Scan errors found ===\n\n" <>
+        indentF 2 (blockListF' "➥ " build errs)
+      fmtLn $ "Scan errors dumped, " <> build (length errs) <> " in total."
+
+    reportVerifyErrs errs = do
+      void . fmt $ "=== Invalid references found ===\n\n" <>
+              indentF 2 (blockListF' "➥ " build errs)
+      fmtLn $ "Invalid references dumped, " <> build (length errs) <> " in total."

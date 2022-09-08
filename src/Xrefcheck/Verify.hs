@@ -57,9 +57,8 @@ import Network.HTTP.Req
 import Network.HTTP.Types.Header (hRetryAfter)
 import Network.HTTP.Types.Status (Status, statusCode, statusMessage)
 import System.Console.Pretty (Style (..), style)
-import System.Directory (canonicalizePath, doesDirectoryExist, doesFileExist)
+import System.Directory (doesDirectoryExist, doesFileExist)
 import System.FilePath (takeDirectory, (</>), normalise)
-import System.FilePath.Glob qualified as Glob
 import Text.ParserCombinators.ReadPrec qualified as ReadPrec (lift)
 import Text.Regex.TDFA.Text (Regex, regexec)
 import Text.URI (Authority (..), URI (..), mkURIBs, ParseExceptionBs)
@@ -261,7 +260,7 @@ verifyRepo
     = do
   let toScan = do
         (file, fileInfo) <- M.toList repoInfo
-        guard . not $ any ((`isPrefixOf` file) . normalise . (root </>)) vcNotScanned
+        guard . not $ matchesGlobPatterns root vcNotScanned file
         ref <- _fiReferences fileInfo
         return (file, ref)
 
@@ -416,12 +415,7 @@ verifyReference
       let fileExists = readingSystem $ doesFileExist file
       let dirExists = readingSystem $ doesDirectoryExist file
 
-      let cfile = readingSystem $ canonicalizePath file
-      let isVirtual = or
-            [ Glob.match pat cfile
-            | virtualFile <- vcVirtualFiles
-            , let pat = bindGlobPattern root virtualFile
-            ]
+      let isVirtual = matchesGlobPatterns root vcVirtualFiles file
 
       unless (fileExists || dirExists || isVirtual) $
         throwError (LocalFileDoesNotExist file)

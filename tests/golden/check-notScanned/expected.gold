@@ -1,0 +1,13 @@
+=== Invalid references found ===
+
+  ➥  In file notScanned/inner-directory/bad-reference.md
+     bad reference (absolute) at src:7:1-28:
+       - text: "Bad reference"
+       - link: /no-file.md
+       - anchor: -
+
+     ⛀  File does not exist:
+        ./no-file.md
+
+
+Invalid references dumped, 1 in total.

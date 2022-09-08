@@ -28,7 +28,7 @@ import Xrefcheck.Core
 import Xrefcheck.Scan
 import Xrefcheck.Scanners.Markdown
 import Xrefcheck.System (RelGlobPattern, normaliseGlobPattern)
-import Xrefcheck.Util (aesonConfigOption, postfixFields, (-:), normaliseWithNoTrailing)
+import Xrefcheck.Util (aesonConfigOption, postfixFields, (-:))
 import Xrefcheck.Config.Default
 import Text.Regex.TDFA.Common
 
@@ -53,8 +53,8 @@ data VerifyConfig = VerifyConfig
   , vcExternalRefCheckTimeout   :: Time Second
   , vcVirtualFiles              :: [RelGlobPattern]
     -- ^ Files which we pretend do exist.
-  , vcNotScanned                :: [FilePath]
-    -- ^ Prefixes of files, references in which we should not analyze.
+  , vcNotScanned                :: [RelGlobPattern]
+    -- ^ Files, references in which we should not analyze.
   , vcIgnoreRefs                :: [Regex]
     -- ^ Regular expressions that match external references we should not verify.
   , vcCheckLocalhost            :: Bool
@@ -72,7 +72,7 @@ normaliseVerifyConfigFilePaths :: VerifyConfig -> VerifyConfig
 normaliseVerifyConfigFilePaths vc@VerifyConfig{ vcVirtualFiles, vcNotScanned}
   = vc
     { vcVirtualFiles = map normaliseGlobPattern vcVirtualFiles
-    , vcNotScanned = map normaliseWithNoTrailing vcNotScanned
+    , vcNotScanned = map normaliseGlobPattern vcNotScanned
     }
 
 -- | Configs for all the supported scanners.
@@ -167,12 +167,12 @@ defConfigText flavor =
         GitHub ->
           [ ".github/pull_request_template.md"
           , ".github/issue_template.md"
-          , ".github/PULL_REQUEST_TEMPLATE"
-          , ".github/ISSUE_TEMPLATE"
+          , ".github/PULL_REQUEST_TEMPLATE/**/*"
+          , ".github/ISSUE_TEMPLATE/**/*"
           ]
         GitLab ->
-          [ ".gitlab/merge_request_templates/"
-          , ".gitlab/issue_templates/"
+          [ ".gitlab/merge_request_templates/**/*"
+          , ".gitlab/issue_templates/**/*"
           ]
 
     , "virtualFiles" -: Right $ case flavor of

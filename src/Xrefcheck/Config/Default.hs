@@ -15,14 +15,14 @@ defConfigUnfilled :: ByteString
 defConfigUnfilled =
   [r|# Parameters of repository traversal.
 traversal:
-  # Files and folders which we pretend do not exist
+  # Glob patterns describing files which we pretend do not exist
   # (so they are neither analyzed nor can be referenced).
   ignored:
     # Git files
-    - .git
+    - .git/**/*
 
     # Stack files
-    - .stack-work
+    - .stack-work/**/*
 
 # Verification parameters.
 verification:
@@ -34,7 +34,7 @@ verification:
   # declaring "Response timeout".
   externalRefCheckTimeout: 10s
 
-  # Prefixes of files, references in which should not be analyzed.
+  # Glob patterns describing the files, references in which should not be analyzed.
   notScanned:
     - :PLACEHOLDER:notScanned:
 

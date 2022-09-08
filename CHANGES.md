@@ -37,6 +37,10 @@ Unreleased
   + Fixed bug with ignoring checks for relative anchors.
 * [#132](https://github.com/serokell/xrefcheck/pull/132)
   + Display URL parsing errors.
+* [#131](https://github.com/serokell/xrefcheck/pull/131)
+  + Add support for glob patterns to `ignored` and `notScanned`.
+  + Remove support for directory names from `ignored` and `notScanned`.
+  + Fix bug with `ignored` not ignoring files with broken xrefcheck annotations.
 
 0.2.1
 ==========

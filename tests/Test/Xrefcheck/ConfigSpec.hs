@@ -44,7 +44,7 @@ spec = do
               ]
 
   describe "`ignoreAuthFailures` working as expected" $ do
-    let config = (cVerification $ defConfig GitHub) { vcCheckLocalhost = True }
+    let config = (cVerification $ defConfig GitHub) { vcIgnoreRefs = [] }
 
     it "when True - assume 401 status is valid" $
       checkLinkWithServer (config { vcIgnoreAuthFailures = True })

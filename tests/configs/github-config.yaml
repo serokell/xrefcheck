@@ -36,10 +36,9 @@ verification:
 
   # POSIX extended regular expressions that match external references
   # that have to be ignored (not verified).
-  ignoreRefs: []
-
-  # Check localhost links.
-  checkLocalhost: false
+  ignoreRefs:
+    # Ignore localhost links by default
+    - ^(https?|ftps?)://(localhost|127\.0\.0\.1).*
 
   # Skip links which return 403 or 401 code.
   ignoreAuthFailures: true

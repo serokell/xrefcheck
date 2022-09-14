@@ -11,7 +11,6 @@ verification:
   notScanned: [ "to-ignore/broken-link.md" ]
   virtualFiles: []
   ignoreRefs: []
-  checkLocalhost: false
   ignoreAuthFailures: true
   defaultRetryAfter: 30s
   maxRetries: 3

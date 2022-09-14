@@ -26,7 +26,7 @@ import Data.List qualified as L
 import Data.Text qualified as T
 import Data.Version (showVersion)
 import Options.Applicative
-  (Mod, OptionFields, Parser, ReadM, auto, command, eitherReader, execParser, flag, flag',
+  (Mod, OptionFields, Parser, ReadM, auto, command, eitherReader, execParser, flag',
   footerDoc, fullDesc, help, helpDoc, helper, hsubparser, info, infoOption, long, metavar, option,
   progDesc, short, strOption, switch, value)
 import Options.Applicative.Help.Pretty (Doc, displayS, fill, fillSep, indent, renderPretty, text)
@@ -90,15 +90,13 @@ addTraversalOptions TraversalConfig{..} (TraversalOptions ignored) =
   }
 
 data VerifyOptions = VerifyOptions
-  { voCheckLocalhost :: Maybe Bool
-  , voMaxRetries     :: Maybe Int
+  { voMaxRetries     :: Maybe Int
   }
 
 addVerifyOptions :: VerifyConfig -> VerifyOptions -> VerifyConfig
-addVerifyOptions VerifyConfig{..} (VerifyOptions checkLocalhost maxRetries) =
+addVerifyOptions VerifyConfig{..} (VerifyOptions maxRetries) =
   VerifyConfig
-  { vcCheckLocalhost = fromMaybe vcCheckLocalhost checkLocalhost
-  , vcMaxRetries = fromMaybe vcMaxRetries maxRetries
+  { vcMaxRetries = fromMaybe vcMaxRetries maxRetries
   , ..
   }
 
@@ -188,9 +186,6 @@ traversalOptionsParser = do
 
 verifyOptionsParser :: Parser VerifyOptions
 verifyOptionsParser = do
-  voCheckLocalhost <- flag Nothing (Just True) $
-    long "check-localhost" <>
-    help "Check localhost links."
   voMaxRetries <- option (Just <$> auto) $
     long "retries" <>
     metavar "INT" <>

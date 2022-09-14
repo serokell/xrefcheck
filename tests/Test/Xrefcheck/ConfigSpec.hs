@@ -12,11 +12,11 @@ import Control.Exception qualified as E
 
 import Data.ByteString qualified as BS
 import Data.List (isInfixOf)
-import Data.Yaml (decodeEither', ParseException (..))
+import Data.Yaml (ParseException (..), decodeEither')
 import Network.HTTP.Types (Status (..))
 import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.HUnit (assertFailure, testCase, (@?=))
 import Test.Tasty.QuickCheck (ioProperty, testProperty)
-import Test.Tasty.HUnit (testCase, assertFailure, (@?=))
 
 
 import Xrefcheck.Config (Config, Config' (..), VerifyConfig' (..), defConfig, defConfigText)

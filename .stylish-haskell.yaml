@@ -44,7 +44,6 @@ language_extensions:
   - MultiParamTypeClasses
   - MultiWayIf
   - NamedFieldPuns
-  - NoImplicitPrelude
   - NumericUnderscores
   - OverloadedLabels
   - OverloadedStrings

@@ -10,8 +10,8 @@ import Universum
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 
-import Xrefcheck.Core
 import Test.Xrefcheck.Util
+import Xrefcheck.Core
 
 test_anchorsInHeaders :: TestTree
 test_anchorsInHeaders = testGroup "Anchors in headers"

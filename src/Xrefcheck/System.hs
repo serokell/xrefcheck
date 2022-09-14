@@ -16,12 +16,12 @@ import Universum
 
 import Data.Aeson (FromJSON (..), withText)
 import Data.Char qualified as C
+import Data.Coerce (coerce)
 import GHC.IO.Unsafe (unsafePerformIO)
 import System.Directory (canonicalizePath)
 import System.Environment (lookupEnv)
 import System.FilePath ((</>))
 import System.FilePath.Glob qualified as Glob
-import Data.Coerce (coerce)
 import Xrefcheck.Util (normaliseWithNoTrailing)
 
 -- | We can quite safely treat surrounding filesystem as frozen,

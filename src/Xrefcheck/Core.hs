@@ -25,10 +25,10 @@ import System.FilePath (isPathSeparator, pathSeparator)
 import Text.Numeral.Roman (toRoman)
 import Time (Second, Time)
 
-import Xrefcheck.Progress
-import Xrefcheck.Util
 import Data.DList (DList)
 import Data.DList qualified as DList
+import Xrefcheck.Progress
+import Xrefcheck.Util
 
 -----------------------------------------------------------
 -- Types

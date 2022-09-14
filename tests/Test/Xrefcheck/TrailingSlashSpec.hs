@@ -10,7 +10,7 @@ import Universum
 import Fmt (blockListF, pretty, unlinesF)
 import System.Directory (doesFileExist)
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (testCase, assertFailure)
+import Test.Tasty.HUnit (assertFailure, testCase)
 
 import Xrefcheck.Config
 import Xrefcheck.Core

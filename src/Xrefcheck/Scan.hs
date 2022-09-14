@@ -22,19 +22,19 @@ module Xrefcheck.Scan
 
 import Universum
 
-import Data.Aeson(FromJSON (..), genericParseJSON)
+import Data.Aeson (FromJSON (..), genericParseJSON)
 import Data.Foldable qualified as F
 import Data.Map qualified as M
-import Fmt (Buildable (..), (+|), (|+), nameF)
-import System.Console.Pretty (Pretty(..), Style (..))
+import Fmt (Buildable (..), nameF, (+|), (|+))
+import System.Console.Pretty (Pretty (..), Style (..))
 import System.Directory (doesDirectoryExist)
 import System.Directory.Tree qualified as Tree
-import System.FilePath (dropTrailingPathSeparator, takeDirectory, takeExtension, equalFilePath)
+import System.FilePath (dropTrailingPathSeparator, equalFilePath, takeDirectory, takeExtension)
 
 import Xrefcheck.Core
 import Xrefcheck.Progress
-import Xrefcheck.System (readingSystem, RelGlobPattern, normaliseGlobPattern, matchesGlobPatterns)
-import Xrefcheck.Util (aesonConfigOption, normaliseWithNoTrailing, Field)
+import Xrefcheck.System (RelGlobPattern, matchesGlobPatterns, normaliseGlobPattern, readingSystem)
+import Xrefcheck.Util (Field, aesonConfigOption, normaliseWithNoTrailing)
 
 -- | Type alias for TraversalConfig' with all required fields.
 type TraversalConfig = TraversalConfig' Identity

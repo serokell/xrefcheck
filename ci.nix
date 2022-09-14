@@ -24,6 +24,9 @@ rec {
     };
   };
 
+  # TODO: drop this when `serokell/nixpkgs` acquires stylish-haskell >= 0.13.0.0.
+  pkgs-stylish = import sources.nixpkgs-stylish {};
+
   xrefcheck-lib-and-tests = (import ./xrefcheck.nix { linux = true; });
   xrefcheck-static = (import ./xrefcheck.nix { linux-static = true; }).components.exes.xrefcheck;
   xrefcheck-windows = (import ./xrefcheck.nix { windows = true; }).components.exes.xrefcheck;

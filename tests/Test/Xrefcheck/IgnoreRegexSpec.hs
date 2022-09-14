@@ -9,13 +9,13 @@ import Universum
 
 import Data.Yaml (decodeEither')
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (testCase, assertFailure)
+import Test.Tasty.HUnit (assertFailure, testCase)
 import Text.Regex.TDFA (Regex)
 
 import Xrefcheck.Config
 import Xrefcheck.Core
 import Xrefcheck.Progress (allowRewrite)
-import Xrefcheck.Scan (scanRepo, specificFormatsSupport, ScanResult (..))
+import Xrefcheck.Scan (ScanResult (..), scanRepo, specificFormatsSupport)
 import Xrefcheck.Scanners.Markdown
 import Xrefcheck.Verify (VerifyError, VerifyResult, WithReferenceLoc (..), verifyErrors, verifyRepo)
 

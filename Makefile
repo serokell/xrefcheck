@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: MPL-2.0
 
-.PHONY: xrefcheck test lint clean bats all
+.PHONY: xrefcheck test lint stylish clean bats all
 
 # Build target from the common utility Makefile
 MAKEU = $(MAKE) -C make/
@@ -32,6 +32,9 @@ clean:
 
 lint:
 	hlint .
+
+stylish:
+	find . -name '.stack-work' -prune -o -name '.dist-newstyle' -prune -o -name '*.hs' -exec stylish-haskell -i '{}' \;
 
 ####################################
 # Individual test suites

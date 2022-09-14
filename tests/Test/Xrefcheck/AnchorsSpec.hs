@@ -7,8 +7,8 @@ module Test.Xrefcheck.AnchorsSpec (test_anchors) where
 
 import Universum
 
-import Test.Tasty (testGroup, TestTree)
-import Test.Tasty.HUnit ((@?=), testCase)
+import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.HUnit (testCase, (@?=))
 
 import Test.Xrefcheck.Util
 import Xrefcheck.Core

@@ -6,16 +6,25 @@
 
 load '../helpers/bats-support/load'
 load '../helpers/bats-assert/load'
+load '../helpers/bats-file/load'
 load '../helpers'
 
 
 @test "Relative anchor, check error report" {
-  xrefcheck | prepare > /tmp/check-anchors.test || true
+  to_temp xrefcheck
 
-  diff /tmp/check-anchors.test expected.gold \
-    --ignore-space-change \
-    --ignore-blank-lines \
-    --new-file # treat absent files as empty
+  assert_diff - <<EOF
+=== Invalid references found ===
 
-  rm /tmp/check-anchors.test
+       ➥  In file check-relative-anchor.md
+          bad reference (relative) at src:7:1-40:
+            - text: "no-anchor"
+            - link: no-anchor.md
+            - anchor: invalid-anchor
+
+          ⛀  Anchor 'invalid-anchor' is not present
+
+
+Invalid references dumped, 1 in total.
+EOF
 }

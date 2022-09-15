@@ -10,8 +10,8 @@ verification:
   externalRefCheckTimeout: 10s
   notScanned: []
   virtualFiles: []
-  ignoreRefs: []
-  checkLocalhost: false
+  ignoreRefs:
+    - ^(https?|ftps?)://(localhost|127\.0\.0\.1).*
   ignoreAuthFailures: true
   defaultRetryAfter: 30s
   maxRetries: 3

@@ -41,6 +41,9 @@ Unreleased
   + Add support for glob patterns to `ignored` and `notScanned`.
   + Remove support for directory names from `ignored` and `notScanned`.
   + Fix bug with `ignored` not ignoring files with broken xrefcheck annotations.
+* [#142](https://github.com/serokell/xrefcheck/pull/142)
+  + Remove `check-localhost` CLI option and `checkLocalhost` config option.
+  + Add a regex matching localhost links to the `ignoreRefs` field of the default config.
 
 0.2.1
 ==========

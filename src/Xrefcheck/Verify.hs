@@ -39,7 +39,6 @@ import Control.Monad.Except (MonadError (..))
 import Data.ByteString qualified as BS
 import Data.List qualified as L
 import Data.Map qualified as M
-import Data.Text qualified as T
 import Data.Text.Metrics (damerauLevenshteinNorm)
 import Data.Time (UTCTime, defaultTimeLocale, formatTime, readPTime, rfc822DateFormat)
 import Data.Time.Clock.POSIX (getPOSIXTime)
@@ -487,7 +486,7 @@ parseUri link = do
 
 checkExternalResource :: VerifyConfig -> Text -> IO (VerifyResult VerifyError)
 checkExternalResource VerifyConfig{..} link
-  | skipCheck = return mempty
+  | isIgnored = return mempty
   | otherwise = fmap toVerifyRes $ runExceptT $ do
       uri <- parseUri link
       case toString <$> uriScheme uri of
@@ -497,10 +496,7 @@ checkExternalResource VerifyConfig{..} link
         Just "ftps" -> checkFtp uri True
         _ -> throwError ExternalResourceUnknownProtocol
   where
-    skipCheck = isIgnored || (not vcCheckLocalhost && isLocalLink)
-      where
-        isIgnored = doesMatchAnyRegex link vcIgnoreRefs
-        isLocalLink = any (`T.isInfixOf` link) ["://localhost", "://127.0.0.1"]
+    isIgnored = doesMatchAnyRegex link vcIgnoreRefs
 
     doesMatchAnyRegex :: Text -> ([Regex] -> Bool)
     doesMatchAnyRegex src = any $ \regex ->

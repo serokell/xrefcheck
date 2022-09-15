@@ -196,7 +196,7 @@ spec = do
     verifyReferenceWithProgress :: Reference -> IORef VerifyProgress -> IO (VerifyResult VerifyError)
     verifyReferenceWithProgress reference progRef = do
       fmap wrlItem <$> verifyReference
-        ((cVerification $ defConfig GitHub) { vcCheckLocalhost = True }) FullMode
+        ((cVerification $ defConfig GitHub) { vcIgnoreRefs = [] }) FullMode
         progRef (RepoInfo M.empty) "." "" reference
 
     -- | When called for the first time, returns with a 429 and `Retry-After: @retryAfter@`.

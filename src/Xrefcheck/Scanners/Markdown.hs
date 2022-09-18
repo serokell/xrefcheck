@@ -18,11 +18,14 @@ module Xrefcheck.Scanners.Markdown
 import Universum
 
 import CMarkGFM (Node (..), NodeType (..), PosInfo (..), commonmarkToNode)
+import Control.Lens hiding ((^?))
 import Control.Monad.Except (MonadError, throwError)
 import Data.Aeson.TH (deriveFromJSON)
 import Data.ByteString.Lazy qualified as BSL
+import Data.Char (isAlpha)
 import Data.DList qualified as DList
 import Data.Default (def)
+import Data.List (isSubsequenceOf)
 import Data.Text qualified as T
 import Data.Text.Lazy qualified as LT
 import Fmt (Buildable (..), blockListF, nameF, (+|), (|+))
@@ -37,6 +40,8 @@ data MarkdownConfig = MarkdownConfig
   }
 
 deriveFromJSON aesonConfigOption ''MarkdownConfig
+
+makePrisms ''NodeType
 
 defGithubMdConfig :: MarkdownConfig
 defGithubMdConfig = MarkdownConfig
@@ -130,7 +135,7 @@ nodeExtractInfo input@(Node _ _ nSubs) = do
   else case removeIgnored input of
     Left err -> throwError err
     Right relevant ->
-      diffToFileInfo <$> foldNode extractor relevant
+      diffToFileInfo <$> foldNode (merge [extractor, copyPaste]) relevant
 
   where
     extractor :: Node -> m FileInfoDiff
@@ -144,7 +149,9 @@ nodeExtractInfo input@(Node _ _ nSubs) = do
           let aType = HeaderAnchor lvl
           let aName = headerToAnchor flavor $ nodeExtractText node
           let aPos  = toPosition pos
-          return $ FileInfoDiff DList.empty $ DList.singleton $ Anchor {aType, aName, aPos}
+          return mempty
+            { _fidAnchors = DList.singleton $ Anchor {aType, aName, aPos}
+            }
 
         HTML_INLINE text -> do
           let
@@ -161,9 +168,9 @@ nodeExtractInfo input@(Node _ _ nSubs) = do
             Just aName -> do
               let aType = HandAnchor
                   aPos  = toPosition pos
-              return $ FileInfoDiff
-                mempty
-                (pure $ Anchor {aType, aName, aPos})
+              return mempty
+                { _fidAnchors = DList.singleton $ Anchor {aType, aName, aPos}
+                }
 
             Nothing -> do
               return mempty
@@ -176,11 +183,45 @@ nodeExtractInfo input@(Node _ _ nSubs) = do
                   [t]    -> (t, Nothing)
                   t : ts -> (t, Just $ T.intercalate "#" ts)
                   []     -> error "impossible"
-          return $ FileInfoDiff
-            (DList.singleton $ Reference {rName, rPos, rLink, rAnchor})
-            DList.empty
+          return mempty
+            { _fidReferences = DList.singleton $ Reference {rName, rPos, rLink, rAnchor}
+            }
 
         _ -> return mempty
+
+    copyPaste :: Node -> m FileInfoDiff
+    copyPaste (Node _ (LIST _) nodes) = do
+      case items of
+        top : rest | urlIsASubsequence top -> do
+          let bad = filter (not . urlIsASubsequence) rest
+          pure mempty { _fidCopyPastes = DList.fromList bad }
+        _ -> do
+          pure mempty
+      where
+        items = do
+          (_, nodes',  _) <- takeOnly _ITEM nodes
+          (_, nodes'', _) <- takeOnly _PARAGRAPH nodes'
+          take 1 $ do
+            (_, texts, (url, _)) <- takeOnly _LINK nodes''
+            (pos, _, txt) <- take 1 $ takeOnly _TEXT texts
+            return (CopyPaste url txt (toPosition pos))
+
+    copyPaste _ = pure mempty
+
+    takeOnly prizm list = do
+      Node pos hdr nodes <- list
+      case hdr^?prizm of
+        Just res -> return (pos, nodes, res)
+        Nothing  -> []
+
+urlIsASubsequence :: CopyPaste -> Bool
+urlIsASubsequence paste =
+  gist (cpAnchorText paste) `isSubsequenceOf` gist (cpPlainText paste)
+  where
+    gist = T.unpack  . T.toLower . T.filter isAlpha
+
+merge :: (Monad m, Monoid b) => [a -> m b] -> a -> m b
+merge fs a = mconcat <$> traverse ($ a) fs
 
 checkIgnoreFile :: [Node] -> Bool
 checkIgnoreFile nodes =

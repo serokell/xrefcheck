@@ -36,6 +36,7 @@ import Universum
 import Control.Concurrent.Async (wait, withAsync)
 import Control.Exception (throwIO)
 import Control.Monad.Except (MonadError (..))
+import Data.Bits (toIntegralSized)
 import Data.ByteString qualified as BS
 import Data.List qualified as L
 import Data.Map qualified as M
@@ -65,7 +66,6 @@ import Time (RatioNat, Second, Time (..), ms, sec, threadDelay, timeout, (+:+), 
 import URI.ByteString qualified as URIBS
 import Control.Monad.Catch (handleJust)
 
-import Data.Bits (toIntegralSized)
 import Xrefcheck.Config
 import Xrefcheck.Core
 import Xrefcheck.Orphans ()
@@ -131,6 +131,7 @@ data VerifyError
   | ExternalFtpException FTPException
   | FtpEntryDoesNotExist FilePath
   | ExternalResourceSomeError Text
+  | PossiblyIncorrectCopyPaste Text Text
   deriving stock (Show, Eq)
 
 instance Buildable VerifyError where
@@ -183,10 +184,15 @@ instance Buildable VerifyError where
       "⛂  FTP exception (" +| err |+ ")\n"
 
     FtpEntryDoesNotExist entry ->
-      "⛂ File or directory does not exist:\n" +| entry |+ "\n"
+      "⛂  File or directory does not exist:\n" +| entry |+ "\n"
 
     ExternalResourceSomeError err ->
       "⛂  " +| build err |+ "\n\n"
+
+    PossiblyIncorrectCopyPaste url text ->
+      "⛂  Possibly incorrect copy-paste in list with references\n" +|
+      "   the url is " +| build url |+ "\n   " +|
+      "   but the text is " +| build text |+ "\n\n"
     where
       anchorHints = \case
         []  -> "\n"
@@ -265,10 +271,19 @@ verifyRepo
 
   progressRef <- newIORef $ initVerifyProgress (map snd toScan)
 
+  errorss <- for (M.toList repoInfo) $ \(file, info) -> do
+    let pasta = _fiCopyPastes info
+    return
+      $ VerifyResult
+      $ fmap (\(CopyPaste url txt pos) ->
+          WithReferenceLoc file (Reference "" "" Nothing pos)
+            $ PossiblyIncorrectCopyPaste url txt)
+        pasta
+
   accumulated <- withAsync (printer progressRef) $ \_ ->
     forConcurrentlyCaching toScan ifExternalThenCache $ \(file, ref) ->
       verifyReference config mode progressRef repoInfo' root file ref
-  return $ fold accumulated
+  return $ fold errorss <> fold accumulated
   where
     printer progressRef = forever $ do
       posixTime <- getPOSIXTime <&> posixTimeToTimeSecond

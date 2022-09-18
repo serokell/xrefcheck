@@ -15,6 +15,8 @@ import Control.Lens (makeLenses)
 import Data.Aeson (FromJSON (..), withText)
 import Data.Char (isAlphaNum)
 import Data.Char qualified as C
+import Data.DList (DList)
+import Data.DList qualified as DList
 import Data.Default (Default (..))
 import Data.List qualified as L
 import Data.Map qualified as M
@@ -27,8 +29,6 @@ import Time (Second, Time)
 
 import Xrefcheck.Progress
 import Xrefcheck.Util
-import Data.DList (DList)
-import Data.DList qualified as DList
 
 -----------------------------------------------------------
 -- Types
@@ -41,15 +41,10 @@ import Data.DList qualified as DList
 data Flavor
   = GitHub
   | GitLab
-  deriving stock (Show)
+  deriving stock (Show, Enum, Bounded)
 
 allFlavors :: [Flavor]
-allFlavors = [GitHub, GitLab]
-  where
-    _exhaustivenessCheck = \case
-      GitHub -> ()
-      GitLab -> ()
-      -- if you update this, also update the list above
+allFlavors = [minBound.. maxBound]
 
 instance FromJSON Flavor where
   parseJSON = withText "flavor" $ \txt ->
@@ -63,6 +58,7 @@ instance FromJSON Flavor where
 -- representation of this thing, and it actually appears in reports only.
 newtype Position = Position (Maybe Text)
   deriving stock (Show, Eq, Generic)
+  deriving anyclass NFData
 
 instance Buildable Position where
   build (Position pos) = case pos of
@@ -78,7 +74,9 @@ data Reference = Reference
   , rAnchor :: Maybe Text
     -- ^ Section or custom anchor tag.
   , rPos    :: Position
-  } deriving stock (Show, Generic)
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass NFData
 
 -- | Context of anchor.
 data AnchorType
@@ -89,35 +87,51 @@ data AnchorType
   | BiblioAnchor
     -- ^ Id of entry in bibliography
   deriving stock (Show, Eq, Generic)
+  deriving anyclass NFData
 
 -- | A referable anchor.
 data Anchor = Anchor
   { aType :: AnchorType
   , aName :: Text
   , aPos  :: Position
-  } deriving stock (Show, Eq, Generic)
+  }
+  deriving stock (Show, Eq, Generic)
+  deriving anyclass NFData
+
+data CopyPaste = CopyPaste
+  { cpAnchorText :: Text
+  , cpPlainText  :: Text
+  , cpPosition   :: Position
+  }
+  deriving stock (Show, Eq, Generic)
+  deriving anyclass NFData
 
 data FileInfoDiff = FileInfoDiff
   { _fidReferences :: DList Reference
   , _fidAnchors    :: DList Anchor
+  , _fidCopyPastes :: DList CopyPaste
   }
 makeLenses ''FileInfoDiff
 
 diffToFileInfo :: FileInfoDiff -> FileInfo
-diffToFileInfo (FileInfoDiff refs anchors) =
-    FileInfo (DList.toList refs) (DList.toList anchors)
+diffToFileInfo (FileInfoDiff refs anchors pastas) =
+    FileInfo (DList.toList refs) (DList.toList anchors) (DList.toList pastas)
 
 instance Semigroup FileInfoDiff where
-  FileInfoDiff a b <> FileInfoDiff c d = FileInfoDiff (a <> c) (b <> d)
+  FileInfoDiff a b e <> FileInfoDiff c d f = FileInfoDiff (a <> c) (b <> d) (e <> f)
 
 instance Monoid FileInfoDiff where
-  mempty = FileInfoDiff mempty mempty
+  mempty = FileInfoDiff mempty mempty mempty
 
 -- | All information regarding a single file we care about.
 data FileInfo = FileInfo
   { _fiReferences :: [Reference]
   , _fiAnchors    :: [Anchor]
-  } deriving stock (Show, Generic)
+  , _fiCopyPastes :: [CopyPaste]
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass NFData
+
 makeLenses ''FileInfo
 
 instance Default FileInfo where
@@ -129,12 +143,6 @@ newtype RepoInfo = RepoInfo (Map FilePath FileInfo)
 -----------------------------------------------------------
 -- Instances
 -----------------------------------------------------------
-
-instance NFData Position
-instance NFData Reference
-instance NFData AnchorType
-instance NFData Anchor
-instance NFData FileInfo
 
 instance Buildable Reference where
   build Reference{..} =

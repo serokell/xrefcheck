@@ -58,7 +58,7 @@ import Network.HTTP.Req
 import Network.HTTP.Types.Header (hRetryAfter)
 import Network.HTTP.Types.Status (Status, statusCode, statusMessage)
 import System.Directory (doesDirectoryExist, doesFileExist)
-import System.FilePath (normalise, takeDirectory, (</>))
+import System.FilePath (makeRelative, normalise, splitDirectories, takeDirectory, (</>))
 import Text.ParserCombinators.ReadPrec qualified as ReadPrec (lift)
 import Text.Regex.TDFA.Text (Regex, regexec)
 import Text.URI (Authority (..), ParseExceptionBs, URI (..), mkURIBs)
@@ -119,6 +119,7 @@ instance (Given ColorMode, Buildable a) => Buildable (WithReferenceLoc a) where
 
 data VerifyError
   = LocalFileDoesNotExist FilePath
+  | LocalFileOutsideRepo FilePath
   | AnchorDoesNotExist Text [Anchor]
   | AmbiguousAnchorRef FilePath Text (NonEmpty Anchor)
   | ExternalResourceInvalidUri URIBS.URIParseError
@@ -137,6 +138,9 @@ instance Given ColorMode => Buildable VerifyError where
   build = \case
     LocalFileDoesNotExist file ->
       "⛀  File does not exist:\n   " +| file |+ "\n"
+
+    LocalFileOutsideRepo file ->
+      "⛀  Link targets a local file outside repository:\n   " +| file |+ "\n"
 
     AnchorDoesNotExist anchor similar ->
       "⛀  Anchor '" +| anchor |+ "' is not present" +|
@@ -407,20 +411,38 @@ verifyReference
       VerifyResult [ExternalHttpTooManyRequests retryAfter] -> retryAfter
       _ -> Nothing
 
-    checkRef mAnchor referredFile = verifying $ do
-      checkReferredFileExists referredFile
-      case M.lookup referredFile repoInfo of
-        Nothing -> pass  -- no support for such file, can do nothing
-        Just referredFileInfo -> whenJust mAnchor $
-          checkAnchor referredFile (_fiAnchors referredFileInfo)
+    isVirtual = matchesGlobPatterns root vcVirtualFiles
+
+    checkRef mAnchor referredFile = verifying $
+      unless (isVirtual referredFile) do
+        checkReferredFileIsInsideRepo referredFile
+        checkReferredFileExists referredFile
+        case M.lookup referredFile repoInfo of
+          Nothing -> pass  -- no support for such file, can do nothing
+          Just referredFileInfo -> whenJust mAnchor $
+            checkAnchor referredFile (_fiAnchors referredFileInfo)
+
+    checkReferredFileIsInsideRepo file = unless
+      (noNegativeNesting $ makeRelative root file) $
+        throwError (LocalFileOutsideRepo file)
+      where
+        -- checks that relative filepath fully belongs to the root directory
+        -- noNegativeNesting "a/../b" = True
+        -- noNegativeNesting "a/../../b" = False
+        noNegativeNesting path = all (>= 0) $ scanl
+          (\n dir -> n + nestingChange dir)
+          (0 :: Integer)
+          $ splitDirectories path
+
+        nestingChange ".." = -1
+        nestingChange "." = 0
+        nestingChange _ = 1
 
     checkReferredFileExists file = do
       let fileExists = readingSystem $ doesFileExist file
       let dirExists = readingSystem $ doesDirectoryExist file
 
-      let isVirtual = matchesGlobPatterns root vcVirtualFiles file
-
-      unless (fileExists || dirExists || isVirtual) $
+      unless (fileExists || dirExists) $
         throwError (LocalFileDoesNotExist file)
 
     checkAnchor file fileAnchors anchor = do

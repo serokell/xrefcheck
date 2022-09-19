@@ -39,63 +39,53 @@
 
 
   ➥  In file dir1/dir2/d2f1.md
-     bad reference (absolute) at src:32:1-22:
-       - text: "file-abs-2"
-       - link: /d1f1.md
+     bad reference (absolute) at src:28:1-29:
+       - text: "file-abs-1"
+       - link: /dir1/./d1f1.md
        - anchor: -
 
      ⛀  File does not exist:
-        ./d1f1.md
+        dir1/dir1/./d1f1.md
 
 
   ➥  In file dir1/dir2/d2f1.md
-     bad reference (absolute) at src:33:1-27:
-       - text: "file-abs-3"
-       - link: /dir2/d2f2.md
-       - anchor: -
-
-     ⛀  File does not exist:
-        ./dir2/d2f2.md
-
-
-  ➥  In file dir1/dir2/d2f1.md
-     bad reference (absolute) at src:34:1-32:
-       - text: "file-abs-4"
-       - link: /./dir2/../d1f1.md
-       - anchor: -
-
-     ⛀  File does not exist:
-        ././dir2/../d1f1.md
-
-
-  ➥  In file dir1/dir2/d2f1.md
-     bad reference (absolute) at src:35:1-55:
-       - text: "anchor-abs-3"
-       - link: /./dir2/../d1f1.md
+     bad reference (absolute) at src:29:1-58:
+       - text: "anchor-abs-1"
+       - link: /dir1/../dir1/d1f1.md
        - anchor: existing-anchor-d1f1
 
      ⛀  File does not exist:
-        ././dir2/../d1f1.md
+        dir1/dir1/../dir1/d1f1.md
 
 
   ➥  In file dir1/dir2/d2f1.md
-     bad reference (absolute) at src:46:1-16:
-       - text: "A"
-       - link: /../../a.md
-       - anchor: -
+     bad reference (absolute) at src:30:1-73:
+       - text: "anchor-abs-2"
+       - link: /dir1/dir2/../../dir1/./dir2/d2f2.md
+       - anchor: existing-anchor-d2f2
 
-     ⛀  Link targets a local file outside repository:
-        ./../../a.md
+     ⛀  File does not exist:
+        dir1/dir1/dir2/../../dir1/./dir2/d2f2.md
 
 
   ➥  In file dir1/dir2/d2f1.md
-     bad reference (absolute) at src:47:1-18:
-       - text: "B"
-       - link: /b/../../b.md
+     bad reference (relative) at src:40:1-42:
+       - text: "path-through-top-dir"
+       - link: ../../dir1/d1f1.md
        - anchor: -
 
      ⛀  Link targets a local file outside repository:
-        ./b/../../b.md
+        dir1/dir2/../../dir1/d1f1.md
 
 
-Invalid references dumped, 10 in total.
+  ➥  In file dir1/dir2/d2f1.md
+     bad reference (relative) at src:41:1-75:
+       - text: "path-through-top-dir-with-anchor"
+       - link: ../../dir1/d1f1.md
+       - anchor: existing-anchor-d1f1
+
+     ⛀  Link targets a local file outside repository:
+        dir1/dir2/../../dir1/d1f1.md
+
+
+Invalid references dumped, 9 in total.

@@ -20,6 +20,12 @@ Unreleased
 * [#188](https://github.com/serokell/xrefcheck/pull/188)
   + Added CLI option `--no-colors` that disables ANSI colors in output.
   + Automatically disable coloring if it is not supported
+* [#152](https://github.com/serokell/xrefcheck/pull/152)
+  + Now we report links that target a file outside repository (e.g. `/../a.md`)
+    as broken (with message `Link targets a local file outside repository`).
+    Same for links that are using directories outside repository (e.g. `/../repo/a.md`),
+    since such things are not supported by GitHub markdown renderer.
+
 0.2.1
 ==========
 

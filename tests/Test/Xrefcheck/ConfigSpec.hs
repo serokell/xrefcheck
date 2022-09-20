@@ -12,63 +12,63 @@ import Control.Exception qualified as E
 
 import Data.ByteString qualified as BS
 import Network.HTTP.Types (Status (..))
-import Test.Hspec (Spec, before, describe, it, shouldBe)
-import Test.Hspec.Expectations (expectationFailure)
-import Test.QuickCheck (ioProperty, once)
+import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.QuickCheck (ioProperty, testProperty)
 
 import Xrefcheck.Config (Config, Config' (..), VerifyConfig' (..), defConfig, defConfigText)
 import Xrefcheck.Core (Flavor (GitHub), allFlavors)
 import Xrefcheck.Verify (VerifyError (..), VerifyResult (..), checkExternalResource)
 
 import Test.Xrefcheck.Util (mockServer)
+import Test.Tasty.HUnit (testCase, assertFailure, (@?=))
 
-spec :: Spec
-spec = do
-  describe "Default config is valid" $
-    forM_ allFlavors $ \flavor ->
-      it (show flavor) $
-        once . ioProperty $ evaluateWHNF_ @_ @Config (defConfig flavor)
+test_config :: [TestTree]
+test_config =
+  [ testGroup "Default config is valid" [
+      testProperty (show flavor) $
+        ioProperty $ evaluateWHNF_ @_ @Config (defConfig flavor)
+        | flavor <- allFlavors]
 
-  describe "Filled default config matches the expected format" $
-    before (BS.readFile "tests/configs/github-config.yaml") $
-      -- The config we match against can be regenerated with
-      -- stack exec xrefcheck -- dump-config -t GitHub -o tests/configs/github-config.yaml
-      it "Config matches" $
-        \config ->
-          when (config /= defConfigText GitHub) $
-            expectationFailure $ toString $ unwords
-              [ "Config does not match the expected format."
-              , "Run"
-              , "`stack exec xrefcheck -- dump-config -t GitHub -o tests/configs/github-config.yaml`"
-              , "and verify changes"
+  , testGroup "Filled default config matches the expected format" [
+    -- The config we match against can be regenerated with
+    -- stack exec xrefcheck -- dump-config -t GitHub -o tests/configs/github-config.yaml
+      testCase "Config matches" $ do
+        config <- BS.readFile "tests/configs/github-config.yaml"
+        when (config /= defConfigText GitHub) $
+          assertFailure $ toString $ unwords
+            [ "Config does not match the expected format."
+            , "Run"
+            , "`stack exec xrefcheck -- dump-config -t GitHub -o tests/configs/github-config.yaml`"
+            , "and verify changes"
+            ]
+        ]
+  , testGroup "`ignoreAuthFailures` working as expected" $
+    let config = (cVerification $ defConfig GitHub) { vcIgnoreRefs = [] }
+    in [ testCase "when True - assume 401 status is valid" $
+          checkLinkWithServer (config { vcIgnoreAuthFailures = True })
+            "http://127.0.0.1:3000/401" $ VerifyResult []
+
+       , testCase "when False - assume 401 status is invalid" $
+          checkLinkWithServer (config { vcIgnoreAuthFailures = False })
+            "http://127.0.0.1:3000/401" $ VerifyResult
+              [ ExternalHttpResourceUnavailable $
+                  Status { statusCode = 401, statusMessage = "Unauthorized" }
               ]
 
-  describe "`ignoreAuthFailures` working as expected" $ do
-    let config = (cVerification $ defConfig GitHub) { vcIgnoreRefs = [] }
+       , testCase "when True - assume 403 status is valid" $
+          checkLinkWithServer (config { vcIgnoreAuthFailures = True })
+            "http://127.0.0.1:3000/403" $ VerifyResult []
 
-    it "when True - assume 401 status is valid" $
-      checkLinkWithServer (config { vcIgnoreAuthFailures = True })
-        "http://127.0.0.1:3000/401" $ VerifyResult []
-
-    it "when False - assume 401 status is invalid" $
-      checkLinkWithServer (config { vcIgnoreAuthFailures = False })
-        "http://127.0.0.1:3000/401" $ VerifyResult
-          [ ExternalHttpResourceUnavailable $
-              Status { statusCode = 401, statusMessage = "Unauthorized" }
-          ]
-
-    it "when True - assume 403 status is valid" $
-      checkLinkWithServer (config { vcIgnoreAuthFailures = True })
-        "http://127.0.0.1:3000/403" $ VerifyResult []
-
-    it "when False - assume 403 status is invalid" $
-      checkLinkWithServer (config { vcIgnoreAuthFailures = False })
-        "http://127.0.0.1:3000/403" $ VerifyResult
-          [ ExternalHttpResourceUnavailable $
-              Status { statusCode = 403, statusMessage = "Forbidden" }
-          ]
+       , testCase "when False - assume 403 status is invalid" $
+          checkLinkWithServer (config { vcIgnoreAuthFailures = False })
+            "http://127.0.0.1:3000/403" $ VerifyResult
+              [ ExternalHttpResourceUnavailable $
+                  Status { statusCode = 403, statusMessage = "Forbidden" }
+              ]
+       ]
+  ]
   where
     checkLinkWithServer config link expectation =
       E.bracket (forkIO mockServer) killThread $ \_ -> do
         result <- checkExternalResource config link
-        result `shouldBe` expectation
+        result @?= expectation

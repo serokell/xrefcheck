@@ -16,8 +16,8 @@ import Data.Time.Clock.POSIX (getPOSIXTime)
 import Fmt (indentF, pretty, unlinesF)
 import Network.HTTP.Types (Status (..), ok200, serviceUnavailable503, tooManyRequests429)
 import Network.HTTP.Types.Header (hRetryAfter)
-import Test.Hspec (Spec, describe, it, shouldBe)
-import Test.HUnit (assertBool)
+import Test.Tasty (testGroup, TestTree)
+import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import Time (sec, (-:-))
 import Web.Firefly (ToResponse (toResponse), route, run, getMethod)
 
@@ -27,19 +27,18 @@ import Xrefcheck.Progress
 import Xrefcheck.Util
 import Xrefcheck.Verify
 
-spec :: Spec
-spec = do
-  describe "429 response tests" $ do
-    it "Returns 200 eventually" $ do
+test_tooManyRequests :: TestTree
+test_tooManyRequests = testGroup "429 response tests"
+  [ testCase "Returns 200 eventually" $ do
       let prog = Progress{ pTotal = 1
-                         , pCurrent = 1
-                         , pErrorsUnfixable = 0
-                         , pErrorsFixable = 0
-                         , pTaskTimestamp = Nothing
-                         }
+                          , pCurrent = 1
+                          , pErrorsUnfixable = 0
+                          , pErrorsFixable = 0
+                          , pTaskTimestamp = Nothing
+                          }
       checkLinkAndProgressWithServer (mock429 "1" ok200)
         "http://127.0.0.1:5000/429" prog $ VerifyResult []
-    it "Returns 503 eventually" $ do
+  , testCase "Returns 503 eventually" $ do
       let prog = Progress{ pTotal = 1
                          , pCurrent = 1
                          , pErrorsUnfixable = 1
@@ -51,7 +50,7 @@ spec = do
           [ ExternalHttpResourceUnavailable $
               Status { statusCode = 503, statusMessage = "Service Unavailable"}
           ]
-    it "Successfully updates the new retry-after value (as seconds)" $ do
+  , testCase "Successfully updates the new retry-after value (as seconds)" $ do
       E.bracket (forkIO $ mock429 "2" ok200) killThread $ \_ -> do
         now <- getPOSIXTime <&> posixTimeToTimeSecond
         progressRef <- newIORef VerifyProgress
@@ -72,7 +71,7 @@ spec = do
         flip assertBool (ttc == Just (sec 2)) $
           "Expected time to completion be equal to " ++ show (Just $ sec 2) ++
           ", but instead it's " ++ show ttc
-    it "Successfully updates the new retry-after value (as date)" $ do
+  , testCase "Successfully updates the new retry-after value (as date)" $ do
       utctime <- getCurrentTime
       let
         -- Set the @Retry-After@ response header value as (current datetime + 4 seconds)
@@ -97,7 +96,8 @@ spec = do
         flip assertBool (sec 3 <= ttc && ttc <= sec 4) $
           "Expected time to completion be within range (seconds): 3 <= x <= 4" ++
           ", but instead it's " ++ show ttc
-    it "Sets the new retry-after to 0 seconds if its value is a date && has already passed" $ do
+  , testCase "Sets the new retry-after to 0 seconds if\
+                    \ its value is a date && has already passed" $ do
       utctime <- getCurrentTime
       let
         -- Set the @Retry-After@ response header value as (current datetime - 4 seconds)
@@ -122,7 +122,7 @@ spec = do
         flip assertBool (ttc == Just (sec 0)) $
           "Expected time to completion be 0 seconds" ++
           ", but instead it's " ++ show ttc
-    it "The GET request should not be attempted after catching a 429" $ do
+    , testCase "The GET request should not be attempted after catching a 429" $ do
       let
         mock429WithGlobalIORef :: IORef [(Text, Status)] -> IO ()
         mock429WithGlobalIORef infoReverseAccumulatorRef = do
@@ -151,11 +151,12 @@ spec = do
       E.bracket (forkIO $ mock429WithGlobalIORef infoReverseAccumulatorRef) killThread $ \_ -> do
         _ <- verifyLink "http://127.0.0.1:5000/429grandfinale"
         infoReverseAccumulator <- readIORef infoReverseAccumulatorRef
-        reverse infoReverseAccumulator `shouldBe`
+        reverse infoReverseAccumulator @?=
           [ ("HEAD", tooManyRequests429)
           , ("HEAD", serviceUnavailable503)
           , ("GET", ok200)
           ]
+  ]
   where
     checkLinkAndProgressWithServer mock link progress vrExpectation =
       E.bracket (forkIO mock) killThread $ \_ -> do

@@ -133,6 +133,7 @@ tests:
   xrefcheck-tests:
     main: Main.hs
     source-dirs: tests
+    build-tools: tasty-discover:tasty-discover
     generated-other-modules:
       - Paths_xrefcheck
     dependencies:
@@ -140,28 +141,25 @@ tests:
       - containers
       - cmark-gfm
       - firefly
-      - hspec
-      - hspec-expectations
-      - QuickCheck
       - xrefcheck
       - bytestring
       - directory
       - fmt
       - http-types
-      - HUnit
       - o-clock
       - regex-tdfa
+      - tasty
+      - tasty-hunit
+      - tasty-quickcheck
       - time
       - universum
       - modern-uri
       - uri-bytestring
       - yaml
-    build-tools:
-      - hspec-discover
 
-  links-tests:
+  ftp-tests:
     main: Main.hs
-    source-dirs: links-tests
+    source-dirs: ftp-tests
     build-tools: tasty-discover:tasty-discover
     generated-other-modules:
       - Paths_xrefcheck

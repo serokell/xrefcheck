@@ -8,7 +8,8 @@
 -- | Markdown documents markdownScanner.
 
 module Xrefcheck.Scanners.Markdown
-  ( MarkdownConfig (..)
+  ( MarkdownConfig' (..)
+  , MarkdownConfig
   , IgnoreMode (..)
   , defGithubMdConfig
   , markdownScanner
@@ -21,7 +22,7 @@ import Universum
 
 import CMarkGFM (Node (..), NodeType (..), PosInfo (..), commonmarkToNode)
 import Control.Monad.Trans.Writer.CPS (Writer, runWriter, tell)
-import Data.Aeson.TH (deriveFromJSON)
+import Data.Aeson (FromJSON (..), genericParseJSON)
 import Data.ByteString.Lazy qualified as BSL
 import Data.DList qualified as DList
 import Data.Default (def)
@@ -34,11 +35,18 @@ import Xrefcheck.Core
 import Xrefcheck.Scan
 import Xrefcheck.Util
 
-data MarkdownConfig = MarkdownConfig
-  { mcFlavor :: Flavor
-  }
+-- | Type alias for MarkdownConfig' with all required fields.
+type MarkdownConfig = MarkdownConfig' Identity
 
-deriveFromJSON aesonConfigOption ''MarkdownConfig
+data MarkdownConfig' f = MarkdownConfig
+  { mcFlavor :: Field f Flavor
+  } deriving stock (Generic)
+
+instance FromJSON (MarkdownConfig' Maybe) where
+  parseJSON = genericParseJSON aesonConfigOption
+
+instance FromJSON (MarkdownConfig) where
+  parseJSON = genericParseJSON aesonConfigOption
 
 defGithubMdConfig :: MarkdownConfig
 defGithubMdConfig = MarkdownConfig

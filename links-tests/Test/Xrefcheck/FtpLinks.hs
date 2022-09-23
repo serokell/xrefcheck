@@ -15,7 +15,7 @@ import Test.Tasty (TestTree, askOption, testGroup)
 import Test.Tasty.HUnit (assertBool, assertFailure, testCase, (@?=))
 import Test.Tasty.Options as Tasty (IsOption (..), OptionDescription (Option), safeRead)
 
-import Xrefcheck.Config (Config (cVerification), VerifyConfig (vcIgnoreRefs), defConfig)
+import Xrefcheck.Config (Config' (cVerification), VerifyConfig, VerifyConfig' (vcIgnoreRefs), defConfig)
 import Xrefcheck.Core (Flavor (GitHub))
 import Xrefcheck.Verify
   (VerifyError (..), VerifyResult (VerifyResult), checkExternalResource, verifyErrors)

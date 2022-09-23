@@ -16,7 +16,7 @@ import Test.Hspec (Spec, before, describe, it, shouldBe)
 import Test.Hspec.Expectations (expectationFailure)
 import Test.QuickCheck (ioProperty, once)
 
-import Xrefcheck.Config (Config (..), VerifyConfig (..), defConfig, defConfigText)
+import Xrefcheck.Config (Config, Config' (..), VerifyConfig' (..), defConfig, defConfigText)
 import Xrefcheck.Core (Flavor (GitHub), allFlavors)
 import Xrefcheck.Verify (VerifyError (..), VerifyResult (..), checkExternalResource)
 

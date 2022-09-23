@@ -6,7 +6,8 @@
 -- | Generalised repo scanner and analyser.
 
 module Xrefcheck.Scan
-  ( TraversalConfig (..)
+  ( TraversalConfig
+  , TraversalConfig' (..)
   , Extension
   , ScanAction
   , FormatsSupport
@@ -21,7 +22,7 @@ module Xrefcheck.Scan
 
 import Universum
 
-import Data.Aeson.TH (deriveFromJSON)
+import Data.Aeson(FromJSON (..), genericParseJSON)
 import Data.Foldable qualified as F
 import Data.Map qualified as M
 import Fmt (Buildable (..), (+|), (|+), nameF)
@@ -33,18 +34,25 @@ import System.FilePath (dropTrailingPathSeparator, takeDirectory, takeExtension,
 import Xrefcheck.Core
 import Xrefcheck.Progress
 import Xrefcheck.System (readingSystem, RelGlobPattern, normaliseGlobPattern, matchesGlobPatterns)
-import Xrefcheck.Util (aesonConfigOption, normaliseWithNoTrailing)
+import Xrefcheck.Util (aesonConfigOption, normaliseWithNoTrailing, Field)
+
+-- | Type alias for TraversalConfig' with all required fields.
+type TraversalConfig = TraversalConfig' Identity
 
 -- | Config of repositry traversal.
-data TraversalConfig = TraversalConfig
-  { tcIgnored   :: [RelGlobPattern]
+data TraversalConfig' f = TraversalConfig
+  { tcIgnored :: Field f [RelGlobPattern]
     -- ^ Files and folders, files in which we completely ignore.
-  }
+  } deriving stock (Generic)
+
+instance FromJSON (TraversalConfig' Maybe) where
+  parseJSON = genericParseJSON aesonConfigOption
+
+instance FromJSON (TraversalConfig) where
+  parseJSON = genericParseJSON aesonConfigOption
 
 normaliseTraversalConfigFilePaths :: TraversalConfig -> TraversalConfig
 normaliseTraversalConfigFilePaths = TraversalConfig . map normaliseGlobPattern . tcIgnored
-
-deriveFromJSON aesonConfigOption ''TraversalConfig
 
 -- | File extension, dot included.
 type Extension = String

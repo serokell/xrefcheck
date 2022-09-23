@@ -13,7 +13,7 @@ import Universum
 
 import Control.Exception (assert)
 import Control.Lens (makeLensesWith)
-import Data.Aeson.TH (deriveFromJSON)
+import Data.Aeson (genericParseJSON)
 import Data.ByteString qualified as BS
 import Data.Map qualified as Map
 import Data.Yaml (FromJSON (..), decodeEither', prettyPrintParseException, withText)
@@ -28,16 +28,22 @@ import Xrefcheck.Core
 import Xrefcheck.Scan
 import Xrefcheck.Scanners.Markdown
 import Xrefcheck.System (RelGlobPattern, normaliseGlobPattern)
-import Xrefcheck.Util (aesonConfigOption, postfixFields, (-:))
+import Xrefcheck.Util (aesonConfigOption, postfixFields, (-:), Field)
 import Xrefcheck.Config.Default
 import Text.Regex.TDFA.Common
 
+-- | Type alias for Config' with all required fields.
+type Config = Config' Identity
+
+-- | Type alias for Config' with optional fields.
+type ConfigOptional = Config' Maybe
+
 -- | Overall config.
-data Config = Config
-  { cTraversal    :: TraversalConfig
-  , cVerification :: VerifyConfig
-  , cScanners     :: ScannersConfig
-  }
+data Config' f = Config
+  { cTraversal    :: Field f (TraversalConfig' f)
+  , cVerification :: Field f (VerifyConfig' f)
+  , cScanners     :: Field f (ScannersConfig' f)
+  } deriving stock (Generic)
 
 normaliseConfigFilePaths :: Config -> Config
 normaliseConfigFilePaths Config{..}
@@ -47,24 +53,27 @@ normaliseConfigFilePaths Config{..}
     , cScanners
     }
 
+-- | Type alias for VerifyConfig' with all required fields.
+type VerifyConfig = VerifyConfig' Identity
+
 -- | Config of verification.
-data VerifyConfig = VerifyConfig
-  { vcAnchorSimilarityThreshold :: Double
-  , vcExternalRefCheckTimeout   :: Time Second
-  , vcVirtualFiles              :: [RelGlobPattern]
+data VerifyConfig' f = VerifyConfig
+  { vcAnchorSimilarityThreshold :: Field f Double
+  , vcExternalRefCheckTimeout   :: Field f (Time Second)
+  , vcVirtualFiles              :: Field f [RelGlobPattern]
     -- ^ Files which we pretend do exist.
-  , vcNotScanned                :: [RelGlobPattern]
+  , vcNotScanned                :: Field f [RelGlobPattern]
     -- ^ Files, references in which we should not analyze.
-  , vcIgnoreRefs                :: [Regex]
+  , vcIgnoreRefs                :: Field f [Regex]
     -- ^ Regular expressions that match external references we should not verify.
-  , vcIgnoreAuthFailures        :: Bool
+  , vcIgnoreAuthFailures        :: Field f Bool
     -- ^ If True - links which return 403 or 401 code will be skipped,
     -- otherwise – will be marked as broken, because we can't check it.
-  , vcDefaultRetryAfter         :: Time Second
+  , vcDefaultRetryAfter         :: Field f (Time Second)
     -- ^ Default Retry-After delay, applicable when we receive a 429 response
     -- and it does not contain a @Retry-After@ header.
-  , vcMaxRetries                :: Int
-  }
+  , vcMaxRetries                :: Field f Int
+  } deriving stock (Generic)
 
 normaliseVerifyConfigFilePaths :: VerifyConfig -> VerifyConfig
 normaliseVerifyConfigFilePaths vc@VerifyConfig{ vcVirtualFiles, vcNotScanned}
@@ -73,13 +82,16 @@ normaliseVerifyConfigFilePaths vc@VerifyConfig{ vcVirtualFiles, vcNotScanned}
     , vcNotScanned = map normaliseGlobPattern vcNotScanned
     }
 
--- | Configs for all the supported scanners.
-data ScannersConfig = ScannersConfig
-  { scMarkdown :: MarkdownConfig
-  }
+-- | Type alias for ScannersConfig' with all required fields.
+type ScannersConfig = ScannersConfig' Identity
 
-makeLensesWith postfixFields ''Config
-makeLensesWith postfixFields ''VerifyConfig
+-- | Configs for all the supported scanners.
+data ScannersConfig' f = ScannersConfig
+  { scMarkdown :: Field f (MarkdownConfig' f)
+  } deriving stock (Generic)
+
+makeLensesWith postfixFields ''Config'
+makeLensesWith postfixFields ''VerifyConfig'
 
 -- | Picks raw config with @:PLACEHOLDER:<key>:@ and fills the specified fields
 -- in it, picking a replacement suitable for the given key. Only strings and lists
@@ -188,16 +200,48 @@ defConfigText flavor =
           ]
     ]
 
-foldMap (deriveFromJSON aesonConfigOption)
-  [ ''VerifyConfig
-  , ''Config
-  , ''ScannersConfig
-  ]
-
 defConfig :: HasCallStack => Flavor -> Config
 defConfig flavor = normaliseConfigFilePaths $
   either (error . toText . prettyPrintParseException) id $
   decodeEither' (defConfigText flavor)
+
+-- | Override missed fields with default values.
+overrideConfig :: ConfigOptional -> Config
+overrideConfig config
+  = Config
+    { cTraversal = TraversalConfig ignored
+    , cVerification = maybe defVerification overrideVerify $ cVerification config
+    , cScanners = ScannersConfig (MarkdownConfig flavor)
+    }
+  where
+    flavor = fromMaybe GitHub
+      $ mcFlavor =<< scMarkdown =<< cScanners config
+
+    defTraversal = cTraversal $ defConfig flavor
+
+    ignored = fromMaybe (tcIgnored defTraversal) $ tcIgnored =<< cTraversal config
+
+    defVerification = cVerification $ defConfig flavor
+
+    overrideVerify verifyConfig
+      = VerifyConfig
+        { vcAnchorSimilarityThreshold = fromMaybe (vcAnchorSimilarityThreshold defVerification)
+            $ vcAnchorSimilarityThreshold verifyConfig
+        , vcExternalRefCheckTimeout   = fromMaybe (vcExternalRefCheckTimeout defVerification)
+            $ vcExternalRefCheckTimeout verifyConfig
+        , vcVirtualFiles              = fromMaybe (vcVirtualFiles defVerification)
+            $ vcVirtualFiles verifyConfig
+        , vcNotScanned                = fromMaybe (vcNotScanned defVerification)
+            $ vcNotScanned verifyConfig
+        , vcIgnoreRefs                = fromMaybe (vcIgnoreRefs defVerification)
+            $ vcIgnoreRefs verifyConfig
+        , vcIgnoreAuthFailures        = fromMaybe (vcIgnoreAuthFailures defVerification)
+            $ vcIgnoreAuthFailures verifyConfig
+        , vcDefaultRetryAfter         = fromMaybe (vcDefaultRetryAfter defVerification)
+            $ vcDefaultRetryAfter verifyConfig
+        , vcMaxRetries                = fromMaybe (vcMaxRetries defVerification)
+            $ vcMaxRetries verifyConfig
+        }
 
 -----------------------------------------------------------
 -- Yaml instances
@@ -226,3 +270,21 @@ defaultCompOption = CompOption
 -- ExecOption value to improve speed
 defaultExecOption :: ExecOption
 defaultExecOption = ExecOption {captureGroups = False}
+
+instance FromJSON (ConfigOptional) where
+  parseJSON = genericParseJSON aesonConfigOption
+
+instance FromJSON (Config) where
+  parseJSON = genericParseJSON aesonConfigOption
+
+instance FromJSON (VerifyConfig' Maybe) where
+  parseJSON = genericParseJSON aesonConfigOption
+
+instance FromJSON (VerifyConfig) where
+  parseJSON = genericParseJSON aesonConfigOption
+
+instance FromJSON (ScannersConfig' Maybe) where
+  parseJSON = genericParseJSON aesonConfigOption
+
+instance FromJSON (ScannersConfig) where
+  parseJSON = genericParseJSON aesonConfigOption

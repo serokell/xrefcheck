@@ -6,6 +6,10 @@
 
 Unreleased
 ==========
+
+0.2.1
+==========
+
 * [#127](https://github.com/serokell/xrefcheck/pull/127)
   + Support `Retry-After` headers with dates.
 * [#117](https://github.com/serokell/xrefcheck/pull/117)
@@ -54,6 +58,7 @@ Unreleased
 
 0.2
 ==========
+
 * [#57](https://github.com/serokell/xrefcheck/pull/57)
   + Added `flavor` field to config.
     Also see [config sample](tests/configs/github-config.yaml).

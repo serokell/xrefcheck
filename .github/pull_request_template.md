@@ -57,3 +57,4 @@ checkmark indicating that you are sure it is dealt with (be that by irrelevance)
 - [ ] (After merging) I created a new entry in the [releases](https://github.com/serokell/xrefcheck/releases) page,
       with a summary of all user-facing changes.
     *  I made sure a tag was created using the format `vX.Y.Z`
+- [ ] (After merging) I updated [`xrefcheck-action`](https://github.com/serokell/xrefcheck-action#updating-supported-versions).

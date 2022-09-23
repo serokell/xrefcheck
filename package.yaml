@@ -107,6 +107,7 @@ library:
     - text-metrics
     - th-lift-instances
     - time
+    - transformers
     - universum
     - uri-bytestring
     - yaml
@@ -137,6 +138,7 @@ tests:
     dependencies:
       - case-insensitive
       - containers
+      - cmark-gfm
       - firefly
       - hspec
       - hspec-expectations

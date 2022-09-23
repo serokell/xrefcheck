@@ -46,6 +46,9 @@ Unreleased
   + Add a regex matching localhost links to the `ignoreRefs` field of the default config.
 * [#68](https://github.com/serokell/xrefcheck/pull/68)
   + Recognise manual HTML-anchors inside headers.
+* [#141](https://github.com/serokell/xrefcheck/pull/141)
+  + Dump all the errors from different files.
+  + Fix bug where no errors were reported about broken link annotation and unrecognised annotation.
 
 0.2
 ==========

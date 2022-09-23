@@ -7,21 +7,18 @@ module Test.Xrefcheck.Util where
 
 import Universum
 
-import Data.ByteString.Lazy qualified as BSL
 import Network.HTTP.Types (forbidden403, unauthorized401)
 import Web.Firefly (ToResponse (..), route, run)
 
 import Xrefcheck.Core (FileInfo, Flavor)
-import Xrefcheck.Scanners.Markdown (MarkdownConfig (MarkdownConfig, mcFlavor), parseFileInfo)
+import Xrefcheck.Scan (ScanError)
+import Xrefcheck.Scanners.Markdown (MarkdownConfig (MarkdownConfig, mcFlavor), markdownScanner)
 
-parse :: Flavor -> FilePath -> IO (Either Text FileInfo)
-parse fl path =
-  parseFileInfo MarkdownConfig { mcFlavor = fl } . decodeUtf8 <$> BSL.readFile path
+parse :: Flavor -> FilePath -> IO (FileInfo, [ScanError])
+parse fl path = markdownScanner MarkdownConfig { mcFlavor = fl } path
 
-getFI :: HasCallStack => Flavor -> FilePath -> IO FileInfo
-getFI fl path =
-  let errOrFI = parse fl path
-  in either error id <$> errOrFI
+getFI :: Flavor -> FilePath -> IO FileInfo
+getFI fl path = fst <$> parse fl path
 
 mockServer :: IO ()
 mockServer = run 3000 $ do

@@ -15,7 +15,7 @@ import Text.Regex.TDFA (Regex)
 import Xrefcheck.Config
 import Xrefcheck.Core
 import Xrefcheck.Progress (allowRewrite)
-import Xrefcheck.Scan (gatherRepoInfo, specificFormatsSupport)
+import Xrefcheck.Scan (scanRepo, specificFormatsSupport, ScanResult (..))
 import Xrefcheck.Scanners.Markdown
 import Xrefcheck.Verify (VerifyError, VerifyResult, WithReferenceLoc (..), verifyErrors, verifyRepo)
 
@@ -35,11 +35,11 @@ spec = do
     let config = setIgnoreRefs regexs (defConfig GitHub)
 
     it "Check that only not matched links are verified" $ do
-      repoInfo <- allowRewrite showProgressBar $ \rw ->
-        gatherRepoInfo rw formats (config ^. cTraversalL) root
+      scanResult <- allowRewrite showProgressBar $ \rw ->
+        scanRepo rw formats (config ^. cTraversalL) root
 
       verifyRes <- allowRewrite showProgressBar $ \rw ->
-        verifyRepo rw (config ^. cVerificationL) verifyMode root repoInfo
+        verifyRepo rw (config ^. cVerificationL) verifyMode root $ srRepoInfo scanResult
 
       let brokenLinks = pickBrokenLinks verifyRes
 

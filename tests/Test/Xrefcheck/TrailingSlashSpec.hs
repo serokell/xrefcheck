@@ -26,8 +26,8 @@ spec = do
       it ("All the files within the root \"" <>
           root <>
           "\" should exist") $ do
-        RepoInfo repoInfo <- allowRewrite False $ \rw ->
-          gatherRepoInfo rw format TraversalConfig{ tcIgnored = [] } root
+        (ScanResult _ (RepoInfo repoInfo)) <- allowRewrite False $ \rw ->
+          scanRepo rw format TraversalConfig{ tcIgnored = [] } root
         nonExistentFiles <- lefts <$> forM (keys repoInfo) (\filePath -> do
           predicate <- doesFileExist filePath
           return $ if predicate

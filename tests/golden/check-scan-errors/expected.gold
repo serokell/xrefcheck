@@ -1,0 +1,80 @@
+=== Scan errors found ===
+
+  ➥  In file ./check-scan-errors.md
+     scan error at src:9:1-30:
+
+     ⛀  Annotation "ignore file" must be at the top of markdown or right after comments at the top
+
+
+  ➥  In file ./check-scan-errors.md
+     scan error at src:13:1-36:
+
+     ⛀  Expected a PARAGRAPH after "ignore paragraph" annotation, but found HEADING
+
+
+  ➥  In file ./check-scan-errors.md
+     scan error at src:17:1-31:
+
+     ⛀  Expected a LINK after "ignore link" annotation
+
+
+  ➥  In file ./check-scan-errors.md
+     scan error at src:21:1-50:
+
+     ⛀  Unrecognised option "unrecognised-annotation" perhaps you meant <"ignore link"|"ignore paragraph"|"ignore file">
+
+
+  ➥  In file ./check-second-file.md
+     scan error at src:9:1-30:
+
+     ⛀  Annotation "ignore file" must be at the top of markdown or right after comments at the top
+
+
+  ➥  In file ./no_link_eof.md
+     scan error at src:9:1-31:
+
+     ⛀  Expected a LINK after "ignore link" annotation
+
+
+  ➥  In file ./no_paragraph_eof.md
+     scan error at src:9:1-36:
+
+     ⛀  Expected a PARAGRAPH after "ignore paragraph" annotation, but found EOF
+
+
+Scan errors dumped, 7 in total.
+
+
+=== Invalid references found ===
+
+  ➥  In file check-scan-errors.md
+     bad reference (absolute) at src:11:1-28:
+       - text: "Bad reference"
+       - link: /no-file.md
+       - anchor: -
+
+     ⛀  File does not exist:
+        ./no-file.md
+
+
+  ➥  In file check-scan-errors.md
+     bad reference (relative) at src:23:1-24:
+       - text: "Bad link"
+       - link: bad.link.com
+       - anchor: -
+
+     ⛀  File does not exist:
+        bad.link.com
+
+
+  ➥  In file check-second-file.md
+     bad reference (absolute) at src:11:1-30:
+       - text: "Another bad reference"
+       - link: /a.md
+       - anchor: -
+
+     ⛀  File does not exist:
+        ./a.md
+
+
+Invalid references dumped, 3 in total.

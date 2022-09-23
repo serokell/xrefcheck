@@ -1,0 +1,13 @@
+=== Invalid references found ===
+
+  ➥  In file broken-link-in-footnote/file-with-footnote-with-broken-link.md
+     bad reference (relative) at src:8:9-43:
+       - text: "bad link in footnote"
+       - link: ./notExists
+       - anchor: -
+
+     ⛀  File does not exist:
+        broken-link-in-footnote/notExists
+
+
+Invalid references dumped, 1 in total.

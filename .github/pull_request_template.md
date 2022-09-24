@@ -54,7 +54,8 @@ checkmark indicating that you are sure it is dealt with (be that by irrelevance)
 - [ ] I updated the version number in `package.yaml`.
 - [ ] I updated the [changelog](https://github.com/serokell/xrefcheck/tree/master/CHANGES.md) and moved everything
       under the "Unreleased" section to a new section for this release version.
-- [ ] (After merging) I created a new entry in the [releases](https://github.com/serokell/xrefcheck/releases) page,
-      with a summary of all user-facing changes.
-    *  I made sure a tag was created using the format `vX.Y.Z`
+- [ ] (After merging) I edited the [auto-release](https://github.com/serokell/xrefcheck/releases/tag/auto-release).
+    * Change the tag and title using the format `vX.Y.Z`.
+    * Write a summary of all user-facing changes.
+    * Deselect the "This is a pre-release" checkbox at the bottom.
 - [ ] (After merging) I updated [`xrefcheck-action`](https://github.com/serokell/xrefcheck-action#updating-supported-versions).

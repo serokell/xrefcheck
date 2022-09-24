@@ -8,9 +8,10 @@ Unreleased
 ==========
 * [#145](https://github.com/serokell/xrefcheck/pull/145)
   + Add check that there is no unknown fields in config.
-
 * [#158](https://github.com/serokell/xrefcheck/pull/158)
   + Fixed bug when we reported footnotes as broken links
+* [#163](https://github.com/serokell/xrefcheck/pull/163)
+  + Fixed an issue where the progress bar thread might be unexpectedly cancelled and jumble up the output.
 
 0.2.1
 ==========

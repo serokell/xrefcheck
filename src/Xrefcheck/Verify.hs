@@ -33,8 +33,9 @@ module Xrefcheck.Verify
 
 import Universum
 
-import Control.Concurrent.Async (wait, withAsync)
+import Control.Concurrent.Async (async, wait, withAsync)
 import Control.Exception (throwIO)
+import Control.Monad.Catch (handleJust)
 import Control.Monad.Except (MonadError (..))
 import Data.ByteString qualified as BS
 import Data.List qualified as L
@@ -43,7 +44,7 @@ import Data.Text.Metrics (damerauLevenshteinNorm)
 import Data.Time (UTCTime, defaultTimeLocale, formatTime, readPTime, rfc822DateFormat)
 import Data.Time.Clock.POSIX (getPOSIXTime)
 import Data.Traversable (for)
-import Fmt (Buildable (..), blockListF', listF, maybeF, nameF, (+|), (|+), unlinesF, indentF)
+import Fmt (Buildable (..), blockListF', indentF, listF, maybeF, nameF, unlinesF, (+|), (|+))
 import GHC.Exts qualified as Exts
 import GHC.Read (Read (readPrec))
 import Network.FTP.Client
@@ -57,13 +58,12 @@ import Network.HTTP.Types.Header (hRetryAfter)
 import Network.HTTP.Types.Status (Status, statusCode, statusMessage)
 import System.Console.Pretty (Style (..), style)
 import System.Directory (doesDirectoryExist, doesFileExist)
-import System.FilePath (takeDirectory, (</>), normalise)
+import System.FilePath (normalise, takeDirectory, (</>))
 import Text.ParserCombinators.ReadPrec qualified as ReadPrec (lift)
 import Text.Regex.TDFA.Text (Regex, regexec)
-import Text.URI (Authority (..), URI (..), mkURIBs, ParseExceptionBs)
+import Text.URI (Authority (..), ParseExceptionBs, URI (..), mkURIBs)
 import Time (RatioNat, Second, Time (..), ms, sec, threadDelay, timeout, (+:+), (-:-))
 import URI.ByteString qualified as URIBS
-import Control.Monad.Catch (handleJust)
 
 import Data.Bits (toIntegralSized)
 import Xrefcheck.Config
@@ -265,12 +265,13 @@ verifyRepo
 
   progressRef <- newIORef $ initVerifyProgress (map snd toScan)
 
-  accumulated <- withAsync (printer progressRef) $ \_ ->
+  accumulated <- loopAsyncUntil (printer progressRef) do
     forConcurrentlyCaching toScan ifExternalThenCache $ \(file, ref) ->
       verifyReference config mode progressRef repoInfo' root file ref
   return $ fold accumulated
   where
-    printer progressRef = forever $ do
+    printer :: IORef VerifyProgress -> IO ()
+    printer progressRef = do
       posixTime <- getPOSIXTime <&> posixTimeToTimeSecond
       progress <- atomicModifyIORef' progressRef $ \VerifyProgress{..} ->
         let prog = VerifyProgress{ vrExternal =
@@ -279,8 +280,10 @@ verifyRepo
                                  }
         in (prog, prog)
       reprintAnalyseProgress rw mode posixTime progress
+      -- Slight pause so we're not refreshing the progress bar more often than needed.
       threadDelay (ms 100)
 
+    ifExternalThenCache :: (a, Reference) -> NeedsCaching Text
     ifExternalThenCache (_, Reference{..}) = case locationType rLink of
       ExternalLoc -> CacheUnderKey rLink
       _           -> NoCaching
@@ -621,3 +624,28 @@ checkExternalResource VerifyConfig{..} link
           pure ()
       where
         handler = if secure then withFTPS else withFTP
+
+----------------------------------------------------------------------------
+-- Helpers
+----------------------------------------------------------------------------
+
+-- | @loopAsyncUntil ma mb@ will continually run @ma@ until @mb@ throws an exception or returns.
+-- Once it does, it'll wait for @ma@ to finish running one last time and then return.
+--
+-- See #163 to read more on why it's important to let @ma@ finish cleanly.
+-- * https://github.com/serokell/xrefcheck/issues/162
+-- * https://github.com/serokell/xrefcheck/pull/163
+loopAsyncUntil :: forall a b. IO a -> IO b -> IO b
+loopAsyncUntil loopingAction action =
+  mask $ \restore -> do
+    shouldLoop <- newIORef True
+    loopingActionAsync <- async $ restore $ loopingAction' shouldLoop
+    restore action `finally` do
+      writeIORef shouldLoop False
+      wait loopingActionAsync
+  where
+    loopingAction' :: IORef Bool -> IO ()
+    loopingAction' shouldLoop = do
+      whenM (readIORef shouldLoop) do
+        void loopingAction
+        loopingAction' shouldLoop

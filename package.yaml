@@ -5,7 +5,7 @@
 spec-version: 0.31.0
 
 name:                xrefcheck
-version:             0.2
+version:             0.2.1
 github:              serokell/xrefcheck
 license:             MPL-2.0
 license-file:        LICENSE

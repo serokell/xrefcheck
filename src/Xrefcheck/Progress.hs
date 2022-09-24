@@ -31,7 +31,7 @@ import Universum
 
 import Data.Ratio ((%))
 import System.Console.Pretty (Color (..), Style (..), color, style)
-import Time (Second, Time, ms, sec, threadDelay, unTime, (-:-))
+import Time (Second, Time, sec, unTime, (-:-))
 
 -----------------------------------------------------------
 -- Task timestamp
@@ -225,8 +225,6 @@ allowRewrite enabled = bracket prepare erase
     erase (Rewrite RewriteCtx{..}) = liftIO $ do
       maxPrintedSize <- readIORef rMaxPrintedSize
       hPutStr stderr $ '\r' : replicate maxPrintedSize ' ' ++ "\r"
-      -- prevent our output to interleave with further outputs
-      threadDelay (ms 100)
     erase RewriteDisabled = pass
 
 -- | Return caret and print the given text.

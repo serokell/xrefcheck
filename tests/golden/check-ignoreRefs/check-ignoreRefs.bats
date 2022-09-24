@@ -6,6 +6,7 @@
 
 load '../helpers/bats-support/load'
 load '../helpers/bats-assert/load'
+load '../helpers/bats-file/load'
 load '../helpers'
 
 @test "Ignore localhost" {
@@ -17,17 +18,11 @@ load '../helpers'
 }
 
 @test "Ignore localhost, check errors" {
-  xrefcheck \
+  to_temp xrefcheck \
     -c config-check-enabled.yaml \
-    -r . \
-    | prepare > /tmp/check-localhost.test || true
+    -r .
 
-  diff /tmp/check-localhost.test expected.gold \
-    --ignore-space-change \
-    --ignore-blank-lines \
-    --new-file # treat absent files as empty
-
-  rm /tmp/check-localhost.test
+  assert_diff expected.gold
 }
 
 @test "Ignore localhost, no config specified" {

@@ -6,6 +6,7 @@
 
 load '../helpers/bats-support/load'
 load '../helpers/bats-assert/load'
+load '../helpers/bats-file/load'
 load '../helpers'
 
 
@@ -16,12 +17,7 @@ load '../helpers'
 }
 
 @test "Virtual files: check failure" {
-  xrefcheck | prepare > /tmp/check-virtualFiles.test || true
+  to_temp xrefcheck
 
-  diff /tmp/check-virtualFiles.test expected.gold \
-    --ignore-space-change \
-    --ignore-blank-lines \
-    --new-file # treat absent files as empty
-
-  rm /tmp/check-virtualFiles.test
+  assert_diff expected.gold
 }

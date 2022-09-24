@@ -6,6 +6,7 @@
 
 load '../helpers/bats-support/load'
 load '../helpers/bats-assert/load'
+load '../helpers/bats-file/load'
 load '../helpers'
 
 
@@ -28,13 +29,21 @@ load '../helpers'
 }
 
 @test "Not scanned: directory, check failure" {
-  xrefcheck -c config-directory.yaml \
-  | prepare > /tmp/check-notScanned.test || true
+  to_temp xrefcheck -c config-directory.yaml
 
-  diff /tmp/check-notScanned.test expected.gold \
-    --ignore-space-change \
-    --ignore-blank-lines \
-    --new-file # treat absent files as empty
+  assert_diff - <<EOF
+=== Invalid references found ===
 
-  rm /tmp/check-notScanned.test
+  ➥  In file notScanned/inner-directory/bad-reference.md
+     bad reference (absolute) at src:7:1-28:
+       - text: "Bad reference"
+       - link: /no-file.md
+       - anchor: -
+
+     ⛀  File does not exist:
+        ./no-file.md
+
+
+Invalid references dumped, 1 in total.
+EOF
 }

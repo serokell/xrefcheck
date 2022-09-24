@@ -6,6 +6,7 @@
 
 load '../helpers/bats-support/load'
 load '../helpers/bats-assert/load'
+load '../helpers/bats-file/load'
 load '../helpers'
 
 
@@ -33,14 +34,8 @@ load '../helpers'
   assert_output --partial "All repository links are valid."
 }
 
-@test "Ignore file with broken xrefcheck annotation: directory, check filure" {
-  xrefcheck --ignored ./to-ignore/inner-directory/ \
-  | prepare > /tmp/check-ignored.test || true
+@test "Ignore file with broken xrefcheck annotation: directory, check failure" {
+  to_temp xrefcheck --ignored ./to-ignore/inner-directory/
 
-  diff /tmp/check-ignored.test expected.gold \
-    --ignore-space-change \
-    --ignore-blank-lines \
-    --new-file # treat absent files as empty
-
-  rm /tmp/check-ignored.test
+  assert_diff expected.gold
 }

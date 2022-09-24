@@ -8,3 +8,6 @@
 [submodule "tests/golden/helpers/bats-support"]
 	path = tests/golden/helpers/bats-support
 	url = git@github.com:bats-core/bats-support.git
+[submodule "tests/golden/helpers/bats-file"]
+	path = tests/golden/helpers/bats-file
+	url = https://github.com/bats-core/bats-file.git

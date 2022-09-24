@@ -6,16 +6,12 @@
 
 load '../helpers/bats-support/load'
 load '../helpers/bats-assert/load'
+load '../helpers/bats-file/load'
 load '../helpers'
 
 
 @test "Dump all errors along with broken links" {
-  xrefcheck | prepare > /tmp/check-scan-errors.test || true
+  to_temp xrefcheck
 
-  diff /tmp/check-scan-errors.test expected.gold \
-    --ignore-space-change \
-    --ignore-blank-lines \
-    --new-file # treat absent files as empty
-
-  rm /tmp/check-scan-errors.test
+  assert_diff expected.gold
 }

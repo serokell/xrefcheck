@@ -6,6 +6,7 @@
 
 load '../helpers/bats-support/load'
 load '../helpers/bats-assert/load'
+load '../helpers/bats-file/load'
 load '../helpers'
 
 @test "No redundant slashes" {
@@ -41,41 +42,63 @@ load '../helpers'
 }
 
 @test "Basic root, check errors report" {
-  xrefcheck \
-    --root . \
-    | prepare > /tmp/check-cli.test || true
+  to_temp xrefcheck --root .
 
-  diff /tmp/check-cli.test expected.gold \
-    --ignore-space-change \
-    --ignore-blank-lines \
-    --new-file # treat absent files as empty
+  assert_diff - <<EOF
+=== Invalid references found ===
 
-  rm /tmp/check-cli.test
+  ➥  In file to-ignore/broken-link.md
+     bad reference (absolute) at src:7:1-25:
+       - text: "my link"
+       - link: /one/two/three
+       - anchor: -
+
+     ⛀  File does not exist:
+        ./one/two/three
+
+
+Invalid references dumped, 1 in total.
+EOF
 }
 
 @test "Root with redundant slashes, check errors report" {
-  xrefcheck \
-    --root ././///././././//./ \
-    | prepare > /tmp/check-cli.test || true
+  to_temp xrefcheck --root ././///././././//./
 
-  diff /tmp/check-cli.test expected.gold \
-    --ignore-space-change \
-    --ignore-blank-lines \
-    --new-file # treat absent files as empty
+  assert_diff - <<EOF
+=== Invalid references found ===
 
-  rm /tmp/check-cli.test
+  ➥  In file to-ignore/broken-link.md
+     bad reference (absolute) at src:7:1-25:
+       - text: "my link"
+       - link: /one/two/three
+       - anchor: -
+
+     ⛀  File does not exist:
+        ./one/two/three
+
+
+Invalid references dumped, 1 in total.
+EOF
 }
 
 @test "No root, check errors report" {
-  xrefcheck \
-    | prepare > /tmp/check-cli.test || true
+  to_temp xrefcheck
 
-  diff /tmp/check-cli.test expected.gold \
-    --ignore-space-change \
-    --ignore-blank-lines \
-    --new-file # treat absent files as empty
+  assert_diff - <<EOF
+=== Invalid references found ===
 
-  rm /tmp/check-cli.test
+  ➥  In file to-ignore/broken-link.md
+     bad reference (absolute) at src:7:1-25:
+       - text: "my link"
+       - link: /one/two/three
+       - anchor: -
+
+     ⛀  File does not exist:
+        ./one/two/three
+
+
+Invalid references dumped, 1 in total.
+EOF
 }
 
 @test "Single file as root" {

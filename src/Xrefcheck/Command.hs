@@ -14,7 +14,9 @@ import Fmt (blockListF', build, fmt, fmtLn, indentF)
 import System.Directory (doesFileExist)
 
 import Xrefcheck.CLI (Options (..), addTraversalOptions, addVerifyOptions, defaultConfigPaths)
-import Xrefcheck.Config (Config (..), ScannersConfig (..), defConfig, normaliseConfigFilePaths)
+import Xrefcheck.Config
+  (Config, Config' (..), ScannersConfig, ScannersConfig' (..), defConfig, normaliseConfigFilePaths,
+  overrideConfig)
 import Xrefcheck.Core (Flavor (..))
 import Xrefcheck.Progress (allowRewrite)
 import Xrefcheck.Scan (FormatsSupport, scanRepo, specificFormatsSupport, ScanResult (..), ScanError (..))
@@ -23,7 +25,7 @@ import Xrefcheck.System (askWithinCI)
 import Xrefcheck.Verify (verifyErrors, verifyRepo)
 
 readConfig :: FilePath -> IO Config
-readConfig path = fmap normaliseConfigFilePaths do
+readConfig path = fmap (normaliseConfigFilePaths . overrideConfig) do
   decodeFileEither path
     >>= either (error . toText . prettyPrintParseException) pure
 

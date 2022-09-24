@@ -49,6 +49,8 @@ Unreleased
 * [#141](https://github.com/serokell/xrefcheck/pull/141)
   + Dump all the errors from different files.
   + Fix bug where no errors were reported about broken link annotation and unrecognised annotation.
+* [#159](https://github.com/serokell/xrefcheck/pull/159)
+  + Make all config options optional.
 
 0.2
 ==========

@@ -6,7 +6,8 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Xrefcheck.Util
-  ( nameF'
+  ( Field
+  , nameF'
   , paren
   , postfixFields
   , (-:)
@@ -53,6 +54,11 @@ infixr 0 -:
 -- | Options that we use to derive JSON instances for config types.
 aesonConfigOption :: Aeson.Options
 aesonConfigOption = aesonPrefix camelCase
+
+-- | Config fields that may be abscent.
+type family Field f a where
+  Field Identity a = a
+  Field Maybe a = Maybe a
 
 normaliseWithNoTrailing :: FilePath -> FilePath
 normaliseWithNoTrailing =  dropTrailingPathSeparator . normalise

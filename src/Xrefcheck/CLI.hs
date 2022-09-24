@@ -33,7 +33,7 @@ import Options.Applicative.Help.Pretty (Doc, displayS, fill, fillSep, indent, re
 import Options.Applicative.Help.Pretty qualified as Pretty
 
 import Paths_xrefcheck (version)
-import Xrefcheck.Config (VerifyConfig (..))
+import Xrefcheck.Config (VerifyConfig, VerifyConfig' (..))
 import Xrefcheck.Core
 import Xrefcheck.Scan
 import Xrefcheck.Util (normaliseWithNoTrailing)

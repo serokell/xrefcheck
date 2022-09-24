@@ -12,7 +12,7 @@ import Web.Firefly (ToResponse (..), route, run)
 
 import Xrefcheck.Core (FileInfo, Flavor)
 import Xrefcheck.Scan (ScanError)
-import Xrefcheck.Scanners.Markdown (MarkdownConfig (MarkdownConfig, mcFlavor), markdownScanner)
+import Xrefcheck.Scanners.Markdown (MarkdownConfig' (MarkdownConfig, mcFlavor), markdownScanner)
 
 parse :: Flavor -> FilePath -> IO (FileInfo, [ScanError])
 parse fl path = markdownScanner MarkdownConfig { mcFlavor = fl } path

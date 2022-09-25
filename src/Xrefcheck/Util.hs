@@ -53,7 +53,7 @@ infixr 0 -:
 
 -- | Options that we use to derive JSON instances for config types.
 aesonConfigOption :: Aeson.Options
-aesonConfigOption = aesonPrefix camelCase
+aesonConfigOption = (aesonPrefix camelCase){Aeson.rejectUnknownFields = True}
 
 -- | Config fields that may be abscent.
 type family Field f a where

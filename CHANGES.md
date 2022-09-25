@@ -6,6 +6,8 @@
 
 Unreleased
 ==========
+* [#145](https://github.com/serokell/xrefcheck/pull/145)
+  + Add check that there is no unknown fields in config.
 
 0.2.1
 ==========

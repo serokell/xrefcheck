@@ -11,16 +11,19 @@ import Control.Concurrent (forkIO, killThread)
 import Control.Exception qualified as E
 
 import Data.ByteString qualified as BS
+import Data.List (isInfixOf)
+import Data.Yaml (decodeEither', ParseException (..))
 import Network.HTTP.Types (Status (..))
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.QuickCheck (ioProperty, testProperty)
+import Test.Tasty.HUnit (testCase, assertFailure, (@?=))
+
 
 import Xrefcheck.Config (Config, Config' (..), VerifyConfig' (..), defConfig, defConfigText)
 import Xrefcheck.Core (Flavor (GitHub), allFlavors)
 import Xrefcheck.Verify (VerifyError (..), VerifyResult (..), checkExternalResource)
 
 import Test.Xrefcheck.Util (mockServer)
-import Test.Tasty.HUnit (testCase, assertFailure, (@?=))
 
 test_config :: [TestTree]
 test_config =
@@ -29,10 +32,10 @@ test_config =
         ioProperty $ evaluateWHNF_ @_ @Config (defConfig flavor)
         | flavor <- allFlavors]
 
-  , testGroup "Filled default config matches the expected format" [
+  , testGroup "Filled default config matches the expected format"
     -- The config we match against can be regenerated with
     -- stack exec xrefcheck -- dump-config -t GitHub -o tests/configs/github-config.yaml
-      testCase "Config matches" $ do
+      [ testCase "Config matches" $ do
         config <- BS.readFile "tests/configs/github-config.yaml"
         when (config /= defConfigText GitHub) $
           assertFailure $ toString $ unwords
@@ -41,7 +44,7 @@ test_config =
             , "`stack exec xrefcheck -- dump-config -t GitHub -o tests/configs/github-config.yaml`"
             , "and verify changes"
             ]
-        ]
+      ]
   , testGroup "`ignoreAuthFailures` working as expected" $
     let config = (cVerification $ defConfig GitHub) { vcIgnoreRefs = [] }
     in [ testCase "when True - assume 401 status is valid" $
@@ -66,7 +69,20 @@ test_config =
                   Status { statusCode = 403, statusMessage = "Forbidden" }
               ]
        ]
+  , testGroup "Config parser reject input with unknown fields"
+      [ testCase "throws error with useful messages" $ do
+          case decodeEither' @Config (defConfigText GitHub <> "strangeField: []") of
+            Left (AesonException str) ->
+              if "unknown fields: [\"strangeField\"]" `isInfixOf` str
+              then pure ()
+              else assertFailure $ "Bad error message: " <> str
+            _ -> assertFailure "Config parser accepted config with unknown field"
+      ]
   ]
+
+
+
+
   where
     checkLinkWithServer config link expectation =
       E.bracket (forkIO mockServer) killThread $ \_ -> do

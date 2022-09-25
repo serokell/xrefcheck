@@ -14,7 +14,6 @@ verification:
     - ./two/*
     - ./three/**/*
   ignoreRefs: []
-  checkLocalhost: true
   ignoreAuthFailures: true
   defaultRetryAfter: 30s
   maxRetries: 3

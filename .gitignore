@@ -24,3 +24,4 @@ cabal.sandbox.config
 .ghc.environment.*
 result
 result-*
+hie.yaml

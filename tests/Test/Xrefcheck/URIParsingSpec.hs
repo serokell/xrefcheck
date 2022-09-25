@@ -9,45 +9,49 @@ module Test.Xrefcheck.URIParsingSpec where
 
 import Universum
 
-import Test.Hspec (Spec, describe, it, shouldReturn)
+import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.HUnit (testCase, (@?=))
 import Text.URI (URI)
 import Text.URI.QQ (uri)
-import URI.ByteString (URIParseError (..), SchemaError (..))
+import URI.ByteString (SchemaError (..), URIParseError (..))
 
-import Xrefcheck.Verify (parseUri, VerifyError (..))
+import Xrefcheck.Verify (VerifyError (..), parseUri)
 
-spec :: Spec
-spec = do
-  describe "URI parsing should be successful" $ do
-    it "Without the special characters in the query strings" do
-      parseUri' "https://example.com/?q=a&p=b#fragment" `shouldReturn`
-        Right [uri|https://example.com/?q=a&p=b#fragment|]
+test_uri :: [TestTree]
+test_uri =
+  [ testGroup "URI parsing should be successful"
+      [ testCase "Without the special characters in the query strings" do
+          parseUri' "https://example.com/?q=a&p=b#fragment" >>=
+            (@?= Right [uri|https://example.com/?q=a&p=b#fragment|])
+          parseUri' "https://example.com/path/to/smth?q=a&p=b" >>=
+            (@?= Right [uri|https://example.com/path/to/smth?q=a&p=b|])
 
-      parseUri' "https://example.com/path/to/smth?q=a&p=b" `shouldReturn`
-        Right [uri|https://example.com/path/to/smth?q=a&p=b|]
+      , testCase "With the special characters in the query strings" do
+          parseUri' "https://example.com/?q=[a]&<p>={b}#fragment" >>=
+            (@?= Right
+              [uri|https://example.com/?q=%5Ba%5D&%3Cp%3E=%7Bb%7D#fragment|])
 
-    it "With the special characters in the query strings" do
-      parseUri' "https://example.com/?q=[a]&<p>={b}#fragment" `shouldReturn`
-        Right [uri|https://example.com/?q=%5Ba%5D&%3Cp%3E=%7Bb%7D#fragment|]
+          parseUri' "https://example.com/path/to/smth?q=[a]&<p>={b}" >>=
+            (@?= Right
+              [uri|https://example.com/path/to/smth?q=%5Ba%5D&%3Cp%3E=%7Bb%7D|])
+      ]
+  , testGroup "URI parsing should be unsuccessful"
+      [ testCase "With the special characters anywhere else" do
+          parseUri' "https://exa<mple.co>m/?q=a&p=b#fra{g}ment" >>=
+            (@?= Left (ExternalResourceInvalidUri MalformedPath))
 
-      parseUri' "https://example.com/path/to/smth?q=[a]&<p>={b}" `shouldReturn`
-        Right [uri|https://example.com/path/to/smth?q=%5Ba%5D&%3Cp%3E=%7Bb%7D|]
+          parseUri' "https://example.com/pa[t]h/to[/]smth?q=a&p=b" >>=
+            (@?= Left (ExternalResourceInvalidUri MalformedPath))
 
-  describe "URI parsing should be unsuccessful" $ do
-    it "With the special characters anywhere else" do
-      parseUri' "https://exa<mple.co>m/?q=a&p=b#fra{g}ment" `shouldReturn`
-        Left (ExternalResourceInvalidUri MalformedPath)
+      , testCase "With malformed scheme" do
+          parseUri' "https//example.com/" >>=
+            (@?= Left (ExternalResourceInvalidUri $ MalformedScheme MissingColon))
 
-      parseUri' "https://example.com/pa[t]h/to[/]smth?q=a&p=b" `shouldReturn`
-        Left (ExternalResourceInvalidUri MalformedPath)
-
-    it "With malformed scheme" do
-      parseUri' "https//example.com/" `shouldReturn`
-        Left (ExternalResourceInvalidUri $ MalformedScheme MissingColon)
-
-    it "With malformed fragment" do
-      parseUri' "https://example.com/?q=a&p=b#fra{g}ment" `shouldReturn`
-        Left (ExternalResourceInvalidUri MalformedFragment)
+      , testCase "With malformed fragment" do
+          parseUri' "https://example.com/?q=a&p=b#fra{g}ment" >>=
+            (@?= Left (ExternalResourceInvalidUri MalformedFragment))
+      ]
+  ]
   where
     parseUri' :: Text -> IO $ Either VerifyError URI
     parseUri' = runExceptT . parseUri

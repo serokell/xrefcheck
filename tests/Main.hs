@@ -1,12 +1,15 @@
-{- SPDX-FileCopyrightText: 2019 Serokell <https://serokell.io>
- -
- - SPDX-License-Identifier: MPL-2.0
- -}
+-- SPDX-FileCopyrightText: 2022 Serokell <https://serokell.io>
+--
+-- SPDX-License-Identifier: MPL-2.0
+
+module Main
+  ( main
+  ) where
 
 import Universum
 
-import Spec (spec)
-import Test.Hspec (hspec)
+import Test.Tasty
+import Tree (tests)
 
 main :: IO ()
-main = hspec spec
+main = tests >>= defaultMain

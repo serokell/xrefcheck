@@ -15,7 +15,7 @@ let
           [ "-Werror" ];
 
         components.tests = {
-          links-tests = {
+          ftp-tests = {
             build-tools = [ pkgs.vsftpd ];
             preCheck = ''
               echo "Starting vsftpd..."
@@ -25,7 +25,7 @@ let
               -olisten_port=2221 \
               -olisten=yes \
               -oftp_username=$(whoami) \
-              -oanon_root=${./links-tests/ftp_root} \
+              -oanon_root=${./ftp-tests/ftp_root} \
               -opasv_min_port=2222 \
               -ohide_file='{.*}' \
               -odeny_file='{.*}' \

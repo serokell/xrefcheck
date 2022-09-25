@@ -7,19 +7,19 @@ module Test.Xrefcheck.LocalSpec where
 
 import Universum
 
-import Test.Hspec (Spec, describe, it)
-import Test.QuickCheck ((===))
+import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.HUnit (testCase, (@?=))
 
 import Xrefcheck.Core (canonizeLocalRef)
 
-spec :: Spec
-spec = do
-  describe "Local refs canonizing" $ do
-    it "Strips ./" $
-      canonizeLocalRef "./AnchorsSpec.hs" === "AnchorsSpec.hs"
+test_local_refs_canonizing :: TestTree
+test_local_refs_canonizing = testGroup "Local refs canonizing" $
+    [ testCase "Strips ./" $
+        canonizeLocalRef "./AnchorsSpec.hs" @?= "AnchorsSpec.hs"
 
-    it "Strips ././" $
-      canonizeLocalRef "././AnchorsSpec.hs" === "AnchorsSpec.hs"
+    , testCase "Strips ././" $
+        canonizeLocalRef "././AnchorsSpec.hs" @?= "AnchorsSpec.hs"
 
-    it "Leaves plain other intact" $
-      canonizeLocalRef "../AnchorsSpec.hs" === "../AnchorsSpec.hs"
+    , testCase "Leaves plain other intact" $
+        canonizeLocalRef "../AnchorsSpec.hs" @?= "../AnchorsSpec.hs"
+    ]

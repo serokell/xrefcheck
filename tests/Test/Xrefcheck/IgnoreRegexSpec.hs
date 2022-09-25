@@ -8,8 +8,8 @@ module Test.Xrefcheck.IgnoreRegexSpec where
 import Universum
 
 import Data.Yaml (decodeEither')
-import Test.HUnit (assertFailure)
-import Test.Hspec (Spec, describe, it)
+import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.HUnit (testCase, assertFailure)
 import Text.Regex.TDFA (Regex)
 
 import Xrefcheck.Config
@@ -19,22 +19,23 @@ import Xrefcheck.Scan (scanRepo, specificFormatsSupport, ScanResult (..))
 import Xrefcheck.Scanners.Markdown
 import Xrefcheck.Verify (VerifyError, VerifyResult, WithReferenceLoc (..), verifyErrors, verifyRepo)
 
-spec :: Spec
-spec = do
-  describe "Regular expressions performance" $ do
-    let root = "tests/markdowns/without-annotations"
-    let showProgressBar = False
-    let formats = specificFormatsSupport [markdownSupport defGithubMdConfig]
-    let verifyMode = ExternalOnlyMode
+test_ignoreRegex :: TestTree
+test_ignoreRegex =
+  let root = "tests/markdowns/without-annotations"
+      showProgressBar = False
+      formats = specificFormatsSupport [markdownSupport defGithubMdConfig]
+      verifyMode = ExternalOnlyMode
 
-    let linksTxt =
-          [ "https://bad.((external.)?)reference(/?)"
-          , "https://bad.reference.(org|com)"
-          ]
-    let regexs = linksToRegexs linksTxt
-    let config = setIgnoreRefs regexs (defConfig GitHub)
+      linksTxt =
+        [ "https://bad.((external.)?)reference(/?)"
+        , "https://bad.reference.(org|com)"
+        ]
+      regexs = linksToRegexs linksTxt
+      config = setIgnoreRefs regexs (defConfig GitHub)
 
-    it "Check that only not matched links are verified" $ do
+
+  in testGroup "Regular expressions performance"
+    [ testCase "Check that only not matched links are verified" $ do
       scanResult <- allowRewrite showProgressBar $ \rw ->
         scanRepo rw formats (config ^. cTraversalL) root
 
@@ -69,6 +70,7 @@ spec = do
           assertFailure $
             "Link \"" <> show link <>
             "\" is not considered as broken but it is (and shouldn't be ignored)"
+    ]
 
     where
       pickBrokenLinks :: VerifyResult (WithReferenceLoc VerifyError) -> [Text]

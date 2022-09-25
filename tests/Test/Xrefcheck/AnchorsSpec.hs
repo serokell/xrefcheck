@@ -3,37 +3,36 @@
  - SPDX-License-Identifier: MPL-2.0
  -}
 
-module Test.Xrefcheck.AnchorsSpec (spec) where
+module Test.Xrefcheck.AnchorsSpec (test_anchors) where
 
 import Universum
 
-import Test.Hspec (Spec, describe, it, shouldBe)
-import Test.QuickCheck ((===))
+import Test.Tasty (testGroup, TestTree)
+import Test.Tasty.HUnit ((@?=), testCase)
 
 import Test.Xrefcheck.Util
 import Xrefcheck.Core
 
-checkHeaderConversions
-  :: HasCallStack
-  => Flavor -> [(Text, Text)] -> Spec
+checkHeaderConversions :: Flavor -> [(Text, Text)] -> TestTree
 checkHeaderConversions fl suites =
-  describe (show fl) $ do
-    forM_ suites $ \(a, b) ->
-      it (show a <> " == " <> show b) $ headerToAnchor fl a === b
-    it "Non-stripped header name should be stripped" $ do
-      fi <- getFI fl "tests/markdowns/without-annotations/non_stripped_spaces.md"
-      getAnchors fi `shouldBe` [ case fl of GitHub -> "header--with-leading-spaces"
-                                            GitLab -> "header-with-leading-spaces"
-                               , "edge-case"
-                               ]
+  testGroup (show fl) $
+    [testCase (show a <> " == " <> show b) $ headerToAnchor fl a @?= b | (a,b) <- suites]
+    ++
+    [ testCase "Non-stripped header name should be stripped" $ do
+        fi <- getFI fl "tests/markdowns/without-annotations/non_stripped_spaces.md"
+        getAnchors fi @?= [ case fl of GitHub -> "header--with-leading-spaces"
+                                       GitLab -> "header-with-leading-spaces"
+                          , "edge-case"
+                          ]
+    ]
   where
     getAnchors :: FileInfo -> [Text]
     getAnchors fi = map aName $ fi ^. fiAnchors
 
-spec :: Spec
-spec = do
-  describe "Header-to-anchor conversion" $ do
-    checkHeaderConversions GitHub
+test_anchors :: TestTree
+test_anchors = do
+  testGroup "Header-to-anchor conversion"
+    [ checkHeaderConversions GitHub
       [ ( "Some header"
         , "some-header"
         )
@@ -92,8 +91,7 @@ spec = do
         , "white_check_mark-checklist-for-your-pull-request"
         )
       ]
-
-    checkHeaderConversions GitLab
+    , checkHeaderConversions GitLab
       [ ( "a # b"
         , "a-b"
         )
@@ -134,3 +132,4 @@ spec = do
         , "white_check_mark-checklist-for-your-pull-request"
         )
       ]
+    ]

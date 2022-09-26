@@ -59,3 +59,4 @@ checkmark indicating that you are sure it is dealt with (be that by irrelevance)
     * Write a summary of all user-facing changes.
     * Deselect the "This is a pre-release" checkbox at the bottom.
 - [ ] (After merging) I updated [`xrefcheck-action`](https://github.com/serokell/xrefcheck-action#updating-supported-versions).
+- [ ] (After merging) I uploaded the package to [hackage](https://hackage.haskell.org/package/xrefcheck).

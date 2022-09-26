@@ -24,13 +24,14 @@ module Xrefcheck.Scan
 import Universum
 
 import Data.Aeson (FromJSON (..), genericParseJSON)
-import Data.Foldable qualified as F
+import Data.List qualified as L
 import Data.Map qualified as M
 import Data.Reflection (Given)
 import Fmt (Buildable (..), nameF, (+|), (|+))
 import System.Directory (doesDirectoryExist)
-import System.Directory.Tree qualified as Tree
-import System.FilePath (dropTrailingPathSeparator, equalFilePath, takeDirectory, takeExtension)
+import System.FilePath
+  (dropTrailingPathSeparator, equalFilePath, splitDirectories, takeDirectory, takeExtension, (</>))
+import System.Process (cwd, readCreateProcess, shell)
 
 import Xrefcheck.Core
 import Xrefcheck.Progress
@@ -107,6 +108,31 @@ specificFormatsSupport formats = \ext -> M.lookup ext formatsMap
         , extension <- extensions
         ]
 
+-- | Process files that are tracked by git and not ignored by the config.
+readDirectoryWith
+  :: forall a. TraversalConfig
+  -> (FilePath -> IO a)
+  -> FilePath
+  -> IO [(FilePath, a)]
+readDirectoryWith config scanner root =
+  traverse scanFile
+  . filter (not . isIgnored)
+  . fmap (location </>)
+  . L.lines =<< readCreateProcess (shell "git ls-files"){cwd = Just root} ""
+  where
+    scanFile :: FilePath -> IO (FilePath, a)
+    scanFile = sequence . (normaliseWithNoTrailing &&& scanner)
+
+    isIgnored :: FilePath -> Bool
+    isIgnored = matchesGlobPatterns root $ tcIgnored config
+
+    -- Strip leading "." and trailing "/"
+    location :: FilePath
+    location =
+      if root `equalFilePath` "."
+        then ""
+        else dropTrailingPathSeparator root
+
 scanRepo
   :: MonadIO m
   => Rewrite -> FormatsSupport -> TraversalConfig -> FilePath -> m ScanResult
@@ -116,36 +142,33 @@ scanRepo rw formatsSupport config root = do
   when (not $ isDirectory root) $
     die $ "Repository's root does not seem to be a directory: " <> root
 
-  _ Tree.:/ repoTree <- liftIO $ Tree.readDirectoryWithL processFile root
-  let (errs, fileInfos) = gatherScanErrs &&& gatherFileInfos
-        $ dropSndMaybes . F.toList
-        $ Tree.zipPaths $ location Tree.:/ repoTree
-  return . ScanResult errs $ RepoInfo (M.fromList fileInfos)
-  where
-    isDirectory = readingSystem . doesDirectoryExist
-    gatherScanErrs = foldMap (snd . snd)
-    gatherFileInfos = map (bimap normaliseWithNoTrailing fst)
+  (errs, fileInfos) <- liftIO
+    $ (gatherScanErrs &&& gatherFileInfos)
+    <$> readDirectoryWith config processFile root
 
+  let dirs = fromList $ foldMap (getDirs . fst) fileInfos
+
+  return . ScanResult errs $ RepoInfo (M.fromList fileInfos) dirs
+  where
+    isDirectory :: FilePath -> Bool
+    isDirectory = readingSystem . doesDirectoryExist
+
+    -- Get all directories from filepath.
+    getDirs :: FilePath -> [FilePath]
+    getDirs = scanl (</>) "" . splitDirectories . takeDirectory
+
+    gatherScanErrs
+      :: [(FilePath, Maybe (FileInfo, [ScanError]))]
+      -> [ScanError]
+    gatherScanErrs = fold . mapMaybe (fmap snd . snd)
+
+    gatherFileInfos
+      :: [(FilePath, Maybe (FileInfo, [ScanError]))]
+      -> [(FilePath, Maybe FileInfo)]
+    gatherFileInfos = map (second (fmap fst))
+
+    processFile :: FilePath -> IO $ Maybe (FileInfo, [ScanError])
     processFile file = do
       let ext = takeExtension file
       let mscanner = formatsSupport ext
-      if isIgnored file
-        then pure Nothing
-        else forM mscanner ($ file)
-    dropSndMaybes l = [(a, b) | (a, Just b) <- l]
-
-    isIgnored = matchesGlobPatterns root $ tcIgnored config
-
-    -- The context location of the root.
-    -- This is done by removing the last component from the path.
-    -- > root = "./folder/file.md"       ==> location = "./folder"
-    -- > root = "./folder/subfolder"     ==> location = "./folder"
-    -- > root = "./folder/subfolder/"    ==> location = "./folder"
-    -- > root = "./folder/subfolder/./"  ==> location = "./folder/subfolder"
-    -- > root = "."                      ==> location = ""
-    -- > root = "/absolute/path"         ==> location = "/absolute"
-    -- > root = "/"                      ==> location = "/"
-    location =
-      if root `equalFilePath` "."
-        then ""
-        else takeDirectory $ dropTrailingPathSeparator root
+      forM mscanner ($ file)

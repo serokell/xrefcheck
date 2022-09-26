@@ -47,6 +47,10 @@ Both relative and absolute local links are supported out of the box.
 
 At the moment of writing, the listed solutions don't support ftp/ftps links.
 
+## Dependencies [↑](#xrefcheck)
+
+Xrefcheck requires you to have `git` version 2.18.0 or later in your PATH.
+
 ## Usage [↑](#xrefcheck)
 
 We provide the following ways for you to use xrefcheck:

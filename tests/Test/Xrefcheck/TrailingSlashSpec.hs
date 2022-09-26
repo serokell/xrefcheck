@@ -26,7 +26,7 @@ test_slash = testGroup "Trailing forward slash detection" $
     testCase ("All the files within the root \"" <>
       root <>
       "\" should exist") $ do
-        (ScanResult _ (RepoInfo repoInfo)) <- allowRewrite False $ \rw ->
+        (ScanResult _ (RepoInfo repoInfo _)) <- allowRewrite False $ \rw ->
           scanRepo rw format TraversalConfig{ tcIgnored = [] } root
         nonExistentFiles <- lefts <$> forM (keys repoInfo) (\filePath -> do
           predicate <- doesFileExist filePath

@@ -122,8 +122,13 @@ makeLenses ''FileInfo
 instance Default FileInfo where
   def = diffToFileInfo mempty
 
-newtype RepoInfo = RepoInfo (Map FilePath FileInfo)
-  deriving stock (Show)
+-- | All tracked files and directories.
+data RepoInfo = RepoInfo
+ { riFiles       :: Map FilePath (Maybe FileInfo)
+   -- ^ Files from the repo with `FileInfo` attached to files that we can scan.
+ , riDirectories :: Set FilePath
+   -- ^ Tracked directories.
+ } deriving stock (Show)
 
 -----------------------------------------------------------
 -- Instances
@@ -171,7 +176,8 @@ instance Given ColorMode => Buildable FileInfo where
     ]
 
 instance Given ColorMode => Buildable RepoInfo where
-  build (RepoInfo m) = blockListF' "⮚" buildFileReport (M.toList m)
+  build (RepoInfo m _) =
+    blockListF' "⮚" buildFileReport (mapMaybe sequence $ M.toList m)
     where
       buildFileReport (name, info) = mconcat
         [ colorIfNeeded Cyan $ fromString name <> ":\n"

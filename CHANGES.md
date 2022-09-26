@@ -25,6 +25,10 @@ Unreleased
     as broken (with message `Link targets a local file outside repository`).
     Same for links that are using directories outside repository (e.g. `/../repo/a.md`),
     since such things are not supported by GitHub markdown renderer.
+* [#174](https://github.com/serokell/xrefcheck/pull/174)
+  + Make xrefcheck only scan files that are tracked by git.
+  + Fixed bug where links to ignored files were valid.
+  + Fixed bug where links with trailing slashes were invalid.
 
 0.2.1
 ==========

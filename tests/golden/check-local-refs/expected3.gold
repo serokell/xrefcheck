@@ -10,17 +10,7 @@
 
 
   ➥  In file dir1/dir2/d2f1.md
-     bad reference (relative) at src:18:1-26:
-       - text: "slash-file-rel"
-       - link: d2f2.md/
-       - anchor: -
-
-     ⛀  File does not exist:
-        dir1/dir2/d2f2.md/
-
-
-  ➥  In file dir1/dir2/d2f1.md
-     bad reference (relative) at src:30:1-43:
+     bad reference (relative) at src:27:1-43:
        - text: "bad-file-rel"
        - link: ../a/b/c/unexisting-file.md
        - anchor: -
@@ -30,7 +20,7 @@
 
 
   ➥  In file dir1/dir2/d2f1.md
-     bad reference (relative) at src:31:1-31:
+     bad reference (relative) at src:28:1-31:
        - text: "bad-casing-file-rel"
        - link: D2F2.md/
        - anchor: -
@@ -40,7 +30,7 @@
 
 
   ➥  In file dir1/dir2/d2f1.md
-     bad reference (relative) at src:34:1-38:
+     bad reference (relative) at src:31:1-38:
        - text: "bad-anchor-rel-1"
        - link: d2f2.md
        - anchor: bad-anchor
@@ -49,7 +39,7 @@
 
 
   ➥  In file dir1/dir2/d2f1.md
-     bad reference (relative) at src:35:1-49:
+     bad reference (relative) at src:32:1-49:
        - text: "bad-anchor-rel-2"
        - link: unexisting-file.md
        - anchor: bad-anchor
@@ -59,7 +49,7 @@
 
 
   ➥  In file dir1/dir2/d2f1.md
-     bad reference (absolute) at src:39:1-29:
+     bad reference (absolute) at src:36:1-29:
        - text: "file-abs-1"
        - link: /dir1/./d1f1.md
        - anchor: -
@@ -69,7 +59,7 @@
 
 
   ➥  In file dir1/dir2/d2f1.md
-     bad reference (absolute) at src:40:1-21:
+     bad reference (absolute) at src:37:1-21:
        - text: "folder-abs-1"
        - link: /dir1
        - anchor: -
@@ -79,7 +69,7 @@
 
 
   ➥  In file dir1/dir2/d2f1.md
-     bad reference (absolute) at src:41:1-30:
+     bad reference (absolute) at src:38:1-30:
        - text: "folder-abs-2"
        - link: /dir1/dir2/../
        - anchor: -
@@ -89,7 +79,7 @@
 
 
   ➥  In file dir1/dir2/d2f1.md
-     bad reference (absolute) at src:42:1-58:
+     bad reference (absolute) at src:39:1-58:
        - text: "anchor-abs-1"
        - link: /dir1/../dir1/d1f1.md
        - anchor: existing-anchor-d1f1
@@ -99,7 +89,7 @@
 
 
   ➥  In file dir1/dir2/d2f1.md
-     bad reference (absolute) at src:43:1-73:
+     bad reference (absolute) at src:40:1-73:
        - text: "anchor-abs-2"
        - link: /dir1/dir2/../../dir1/./dir2/d2f2.md
        - anchor: existing-anchor-d2f2
@@ -109,17 +99,7 @@
 
 
   ➥  In file dir1/dir2/d2f1.md
-     bad reference (absolute) at src:48:1-37:
-       - text: "file-abs-slash"
-       - link: /./dir2/../d1f1.md/
-       - anchor: -
-
-     ⛀  File does not exist:
-        dir1/./dir2/../d1f1.md/
-
-
-  ➥  In file dir1/dir2/d2f1.md
-     bad reference (relative) at src:54:1-42:
+     bad reference (relative) at src:51:1-42:
        - text: "path-through-top-dir"
        - link: ../../dir1/d1f1.md
        - anchor: -
@@ -129,7 +109,7 @@
 
 
   ➥  In file dir1/dir2/d2f1.md
-     bad reference (relative) at src:55:1-75:
+     bad reference (relative) at src:52:1-75:
        - text: "path-through-top-dir-with-anchor"
        - link: ../../dir1/d1f1.md
        - anchor: existing-anchor-d1f1
@@ -138,4 +118,4 @@
         dir1/dir2/../../dir1/d1f1.md
 
 
-Invalid references dumped, 14 in total.
+Invalid references dumped, 12 in total.

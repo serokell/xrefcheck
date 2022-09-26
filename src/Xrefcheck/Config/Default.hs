@@ -17,12 +17,7 @@ defConfigUnfilled =
 traversal:
   # Glob patterns describing files which we pretend do not exist
   # (so they are neither analyzed nor can be referenced).
-  ignored:
-    # Git files
-    - .git/**/*
-
-    # Stack files
-    - .stack-work/**/*
+  ignored: []
 
 # Verification parameters.
 verification:

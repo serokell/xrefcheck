@@ -57,8 +57,8 @@ import Network.HTTP.Req
   HttpMethod, NoReqBody (..), defaultHttpConfig, ignoreResponse, req, runReq, useURI)
 import Network.HTTP.Types.Header (hRetryAfter)
 import Network.HTTP.Types.Status (Status, statusCode, statusMessage)
-import System.Directory (doesDirectoryExist, doesFileExist)
-import System.FilePath (makeRelative, normalise, splitDirectories, takeDirectory, (</>))
+import System.FilePath
+  (equalFilePath, joinPath, makeRelative, normalise, splitDirectories, takeDirectory, (</>))
 import Text.ParserCombinators.ReadPrec qualified as ReadPrec (lift)
 import Text.Regex.TDFA.Text (Regex, regexec)
 import Text.URI (Authority (..), ParseExceptionBs, URI (..), mkURIBs)
@@ -260,13 +260,16 @@ verifyRepo
   config@VerifyConfig{..}
   mode
   root
-  repoInfo'@(RepoInfo repoInfo)
+  repoInfo'@(RepoInfo files _)
     = do
   let toScan = do
-        (file, fileInfo) <- M.toList repoInfo
+        (file, fileInfo) <- M.toList files
         guard . not $ matchesGlobPatterns root vcNotScanned file
-        ref <- _fiReferences fileInfo
-        return (file, ref)
+        case fileInfo of
+          Just fi -> do
+            ref <- _fiReferences fi
+            return (file, ref)
+          Nothing -> empty -- no support for such file, can do nothing
 
   progressRef <- newIORef $ initVerifyProgress (map snd toScan)
 
@@ -312,7 +315,7 @@ verifyReference
   config@VerifyConfig{..}
   mode
   progressRef
-  (RepoInfo repoInfo)
+  (RepoInfo files dirs)
   root
   fileWithReference
   ref@Reference{..}
@@ -417,10 +420,29 @@ verifyReference
       unless (isVirtual referredFile) do
         checkReferredFileIsInsideRepo referredFile
         checkReferredFileExists referredFile
-        case M.lookup referredFile repoInfo of
+        case lookupFilePath referredFile $ M.toList files of
           Nothing -> pass  -- no support for such file, can do nothing
           Just referredFileInfo -> whenJust mAnchor $
             checkAnchor referredFile (_fiAnchors referredFileInfo)
+
+    lookupFilePath :: FilePath -> [(FilePath, Maybe FileInfo)] -> Maybe FileInfo
+    lookupFilePath fp = snd <=< find (equalFilePath (expandIndirections fp) . fst)
+
+    -- expands ".." and "."
+    -- expandIndirections "a/b/../c"      = "a/c"
+    -- expandIndirections "a/b/c/../../d" = "a/d"
+    -- expandIndirections "../../a"       = "../../a"
+    -- expandIndirections "a/./b"         = "a/b"
+    -- expandIndirections "a/b/./../c"    = "a/c"
+    expandIndirections :: FilePath -> FilePath
+    expandIndirections = joinPath . reverse . expand 0 . reverse . splitDirectories
+      where
+        expand :: Int -> [FilePath] -> [FilePath]
+        expand acc ("..":xs) = expand (acc+1) xs
+        expand acc (".":xs)  = expand acc xs
+        expand 0 (x:xs)      = x : expand 0 xs
+        expand acc (_:xs)    = expand (acc-1) xs
+        expand acc []        = replicate acc ".."
 
     checkReferredFileIsInsideRepo file = unless
       (noNegativeNesting $ makeRelative root file) $
@@ -439,11 +461,17 @@ verifyReference
         nestingChange _ = 1
 
     checkReferredFileExists file = do
-      let fileExists = readingSystem $ doesFileExist file
-      let dirExists = readingSystem $ doesDirectoryExist file
-
       unless (fileExists || dirExists) $
         throwError (LocalFileDoesNotExist file)
+      where
+        matchesFilePath :: FilePath -> Bool
+        matchesFilePath = equalFilePath $ expandIndirections file
+
+        fileExists :: Bool
+        fileExists = any matchesFilePath $ M.keys files
+
+        dirExists :: Bool
+        dirExists = any matchesFilePath dirs
 
     checkAnchor file fileAnchors anchor = do
       checkAnchorReferenceAmbiguity file fileAnchors anchor

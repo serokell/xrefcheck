@@ -5,43 +5,54 @@
 
 packages:
 - completed:
-    pantry-tree:
-      sha256: fecec01e618890c284e57cb873b8f9531f479562b7cf08497aef097da3ef90ec
-      size: 385
     hackage: pretty-terminal-0.1.0.0@sha256:e9135d86ebb2a8e3aaf5a79088de4628dbd49988388e0fbfc26c5ecb3c399ad9,1638
+    pantry-tree:
+      size: 385
+      sha256: fecec01e618890c284e57cb873b8f9531f479562b7cf08497aef097da3ef90ec
   original:
     hackage: pretty-terminal-0.1.0.0
 - completed:
-    pantry-tree:
-      sha256: 2154c0f4a11842593586dc1932e233cd8c802994763f7d3ce3e5916be8bc7ee5
-      size: 220
     hackage: roman-numerals-0.5.1.5@sha256:819d04d9d442b24629dd058f6f0b02bd78e9f9ae99538bc44ca448f1cb2b7b01,1208
+    pantry-tree:
+      size: 220
+      sha256: 2154c0f4a11842593586dc1932e233cd8c802994763f7d3ce3e5916be8bc7ee5
   original:
     hackage: roman-numerals-0.5.1.5
 - completed:
-    pantry-tree:
-      sha256: 3be938e2612faaab078f77bd8e0def999b6f60fc2adda8d89382b0681b4ba420
-      size: 1051
     hackage: with-utf8-1.0.2.3@sha256:3de710e4aa70856ab0845373bfde4746920fd45b8641bfaa3bd5cd2c200c4704,3051
+    pantry-tree:
+      size: 1051
+      sha256: 3be938e2612faaab078f77bd8e0def999b6f60fc2adda8d89382b0681b4ba420
   original:
     hackage: with-utf8-1.0.2.3
 - completed:
-    pantry-tree:
-      sha256: 8c577d112a8398a5542aa4205b2e8a470a66d57590e6606d752d71e75d7425ea
-      size: 882
     hackage: th-utilities-0.2.4.0@sha256:ba19cd8441aa43dbaed40e9055bb5a7cbd7cf9e154f5253c6bf9293af8b1f96b,1869
+    pantry-tree:
+      size: 882
+      sha256: 8c577d112a8398a5542aa4205b2e8a470a66d57590e6606d752d71e75d7425ea
   original:
     hackage: th-utilities-0.2.4.0@sha256:ba19cd8441aa43dbaed40e9055bb5a7cbd7cf9e154f5253c6bf9293af8b1f96b,1869
 - completed:
-    pantry-tree:
-      sha256: 51d4bf283e1d9ae37e43cd387b112919e45f2fc088f57cbd33c8bad9b0c179f1
-      size: 600
     hackage: firefly-0.2.1.0@sha256:e9d73486464c3e223ec457e02b30ddd5b550fdbf6292b268c64581e2b07d888b,1519
+    pantry-tree:
+      size: 600
+      sha256: 51d4bf283e1d9ae37e43cd387b112919e45f2fc088f57cbd33c8bad9b0c179f1
   original:
     hackage: firefly-0.2.1.0@sha256:e9d73486464c3e223ec457e02b30ddd5b550fdbf6292b268c64581e2b07d888b,1519
+- completed:
+    name: cmark-gfm
+    version: 0.2.4
+    git: https://github.com/kivikakk/cmark-gfm-hs
+    pantry-tree:
+      size: 4769
+      sha256: 1ee2141bab4f2e6d6a9dc39db629dd95557df91a09bef8084ab63633814c9d81
+    commit: 205f820fd3ca0aefde1d4fdbea30a5e593295c3b
+  original:
+    git: https://github.com/kivikakk/cmark-gfm-hs
+    commit: 205f820fd3ca0aefde1d4fdbea30a5e593295c3b
 snapshots:
 - completed:
-    sha256: ef98d70e4018bf01feb00ccdcd33ab26d056dbb71b38057c78fdd0d1ec671c85
     size: 618740
     url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/19/13.yaml
+    sha256: ef98d70e4018bf01feb00ccdcd33ab26d056dbb71b38057c78fdd0d1ec671c85
   original: lts-19.13

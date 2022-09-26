@@ -20,7 +20,7 @@ module Xrefcheck.Scanners.Markdown
 
 import Universum
 
-import CMarkGFM (Node (..), NodeType (..), PosInfo (..), commonmarkToNode)
+import CMarkGFM (Node (..), NodeType (..), PosInfo (..), commonmarkToNode, optFootnotes)
 import Control.Monad.Trans.Writer.CPS (Writer, runWriter, tell)
 import Data.Aeson (FromJSON (..), genericParseJSON)
 import Data.ByteString.Lazy qualified as BSL
@@ -356,7 +356,7 @@ parseFileInfo config fp input
   = runWriter
   $ flip runReaderT config
   $ nodeExtractInfo fp
-  $ commonmarkToNode [] []
+  $ commonmarkToNode [optFootnotes] []
   $ toStrict input
 
 markdownScanner :: MarkdownConfig -> ScanAction

@@ -26,9 +26,9 @@ import Data.List qualified as L
 import Data.Text qualified as T
 import Data.Version (showVersion)
 import Options.Applicative
-  (Mod, OptionFields, Parser, ReadM, auto, command, eitherReader, execParser, flag',
-  footerDoc, fullDesc, help, helpDoc, helper, hsubparser, info, infoOption, long, metavar, option,
-  progDesc, short, strOption, switch, value)
+  (Mod, OptionFields, Parser, ReadM, auto, command, eitherReader, execParser, flag', footerDoc,
+  fullDesc, help, helpDoc, helper, hsubparser, info, infoOption, long, metavar, option, progDesc,
+  short, strOption, switch, value)
 import Options.Applicative.Help.Pretty (Doc, displayS, fill, fillSep, indent, renderPretty, text)
 import Options.Applicative.Help.Pretty qualified as Pretty
 
@@ -36,8 +36,8 @@ import Paths_xrefcheck (version)
 import Xrefcheck.Config (VerifyConfig, VerifyConfig' (..))
 import Xrefcheck.Core
 import Xrefcheck.Scan
-import Xrefcheck.Util (normaliseWithNoTrailing)
 import Xrefcheck.System (RelGlobPattern (..))
+import Xrefcheck.Util (normaliseWithNoTrailing)
 
 modeReadM :: ReadM VerifyMode
 modeReadM = eitherReader $ \s ->

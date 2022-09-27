@@ -7,7 +7,7 @@
 
 module Xrefcheck.Config where
 
-import qualified Universum.Unsafe as Unsafe
+import Universum.Unsafe qualified as Unsafe
 
 import Universum
 
@@ -20,17 +20,17 @@ import Data.Yaml (FromJSON (..), decodeEither', prettyPrintParseException, withT
 import Instances.TH.Lift ()
 import Text.Regex.TDFA qualified as R
 import Text.Regex.TDFA.ByteString ()
+import Text.Regex.TDFA.Common
 import Text.Regex.TDFA.Text qualified as R
 
-import Time (KnownRatName, Second, Time(..), unitsP)
+import Time (KnownRatName, Second, Time (..), unitsP)
 
+import Xrefcheck.Config.Default
 import Xrefcheck.Core
 import Xrefcheck.Scan
 import Xrefcheck.Scanners.Markdown
 import Xrefcheck.System (RelGlobPattern, normaliseGlobPattern)
-import Xrefcheck.Util (aesonConfigOption, postfixFields, (-:), Field)
-import Xrefcheck.Config.Default
-import Text.Regex.TDFA.Common
+import Xrefcheck.Util (Field, aesonConfigOption, postfixFields, (-:))
 
 -- | Type alias for Config' with all required fields.
 type Config = Config' Identity

@@ -19,7 +19,8 @@ import Xrefcheck.Config
   overrideConfig)
 import Xrefcheck.Core (Flavor (..))
 import Xrefcheck.Progress (allowRewrite)
-import Xrefcheck.Scan (FormatsSupport, scanRepo, specificFormatsSupport, ScanResult (..), ScanError (..))
+import Xrefcheck.Scan
+  (FormatsSupport, ScanError (..), ScanResult (..), scanRepo, specificFormatsSupport)
 import Xrefcheck.Scanners.Markdown (markdownSupport)
 import Xrefcheck.System (askWithinCI)
 import Xrefcheck.Verify (verifyErrors, verifyRepo)

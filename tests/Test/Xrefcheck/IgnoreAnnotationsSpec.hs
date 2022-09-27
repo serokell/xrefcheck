@@ -7,7 +7,7 @@ module Test.Xrefcheck.IgnoreAnnotationsSpec where
 
 import Universum
 
-import CMarkGFM (PosInfo(..))
+import CMarkGFM (PosInfo (..))
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 

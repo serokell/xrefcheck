@@ -6,6 +6,12 @@ steps:
   - command: nix-build ci.nix -A trailing-whitespace-check
     label: Check trailing whitespaces
 
+  - label: shellcheck
+    command: nix run -f ci.nix pkgs.shellcheck -c find . -name '*.sh' -exec shellcheck {} +
+
+  - label: stylish
+    command: nix run -f ci.nix pkgs.gnumake pkgs-stylish.stylish-haskell -c ./scripts/validate-stylish.sh
+
   - command: nix-build ci.nix -A xrefcheck-lib-and-tests
     label: Library and tests
 

@@ -11,15 +11,15 @@ import Control.Concurrent (forkIO, killThread)
 import Control.Exception qualified as E
 import Data.CaseInsensitive qualified as CI
 import Data.Map qualified as M
-import Data.Time (addUTCTime, formatTime, getCurrentTime, defaultTimeLocale, rfc822DateFormat)
+import Data.Time (addUTCTime, defaultTimeLocale, formatTime, getCurrentTime, rfc822DateFormat)
 import Data.Time.Clock.POSIX (getPOSIXTime)
 import Fmt (indentF, pretty, unlinesF)
 import Network.HTTP.Types (Status (..), ok200, serviceUnavailable503, tooManyRequests429)
 import Network.HTTP.Types.Header (hRetryAfter)
-import Test.Tasty (testGroup, TestTree)
-import Test.Tasty.HUnit (testCase, (@?=), assertBool)
+import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.HUnit (assertBool, testCase, (@?=))
 import Time (sec, (-:-))
-import Web.Firefly (ToResponse (toResponse), route, run, getMethod)
+import Web.Firefly (ToResponse (toResponse), getMethod, route, run)
 
 import Xrefcheck.Config
 import Xrefcheck.Core
@@ -133,9 +133,9 @@ test_tooManyRequests = testGroup "429 response tests"
               callCount <- atomicModifyIORef' callCountRef $ \cc -> (cc + 1, cc)
               atomicModifyIORef' infoReverseAccumulatorRef $ \lst ->
                 ( ( m
-                  , if | m == "GET" -> ok200
+                  , if | m == "GET"     -> ok200
                        | callCount == 0 -> tooManyRequests429
-                       | otherwise -> serviceUnavailable503
+                       | otherwise      -> serviceUnavailable503
                   ) : lst
                 , ()
                 )

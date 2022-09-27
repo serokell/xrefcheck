@@ -11,13 +11,13 @@ module Xrefcheck.Orphans () where
 
 import Universum
 
-import qualified Data.ByteString.Char8 as C
+import Data.ByteString.Char8 qualified as C
 
 import Fmt (Buildable (..), unlinesF, (+|), (|+))
 import Network.FTP.Client
   (FTPException (..), FTPMessage (..), FTPResponse (..), ResponseStatus (..))
 import Text.URI (RText, unRText)
-import URI.ByteString (URIParseError (..), SchemaError (..))
+import URI.ByteString (SchemaError (..), URIParseError (..))
 
 instance ToString (RText t) where
   toString = toString . unRText

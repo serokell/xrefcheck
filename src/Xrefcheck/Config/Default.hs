@@ -13,21 +13,11 @@ import Text.RawString.QQ
 
 defConfigUnfilled :: ByteString
 defConfigUnfilled =
-  [r|# Parameters of repository traversal.
-traversal:
+  [r|# Exclusion parameters.
+exclusions:
   # Glob patterns describing files which we pretend do not exist
   # (so they are neither analyzed nor can be referenced).
   ignored: []
-
-# Verification parameters.
-verification:
-  # On 'anchor not found' error, how much similar anchors should be displayed as
-  # hint. Number should be between 0 and 1, larger value means stricter filter.
-  anchorSimilarityThreshold: 0.5
-
-  # When checking external references, how long to wait on request before
-  # declaring "Response timeout".
-  externalRefCheckTimeout: 10s
 
   # Glob patterns describing the files, references in which should not be analyzed.
   notScanned:
@@ -44,6 +34,12 @@ verification:
     # Ignore localhost links by default
     - ^(https?|ftps?)://(localhost|127\.0\.0\.1).*
 
+# Networking parameters.
+networking:
+  # When checking external references, how long to wait on request before
+  # declaring "Response timeout".
+  externalRefCheckTimeout: 10s
+
   # Skip links which return 403 or 401 code.
   ignoreAuthFailures: true
 
@@ -58,6 +54,10 @@ verification:
 
 # Parameters of scanners for various file types.
 scanners:
+  # On 'anchor not found' error, how much similar anchors should be displayed as
+  # hint. Number should be between 0 and 1, larger value means stricter filter.
+  anchorSimilarityThreshold: 0.5
+
   markdown:
     # Flavor of markdown, e.g. GitHub-flavor.
     #

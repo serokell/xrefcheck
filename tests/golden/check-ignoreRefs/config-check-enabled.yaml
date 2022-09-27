@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: Unlicense
 
-verification:
+exclusions:
   ignoreRefs: []
 
 scanners:

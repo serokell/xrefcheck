@@ -70,6 +70,7 @@ import Xrefcheck.Config
 import Xrefcheck.Core
 import Xrefcheck.Orphans ()
 import Xrefcheck.Progress
+import Xrefcheck.Scan
 import Xrefcheck.System
 import Xrefcheck.Util
 
@@ -250,21 +251,21 @@ forConcurrentlyCaching list needsCaching action = go [] M.empty list
 verifyRepo
   :: Given ColorMode
   => Rewrite
-  -> VerifyConfig
+  -> Config
   -> VerifyMode
   -> FilePath
   -> RepoInfo
   -> IO (VerifyResult $ WithReferenceLoc VerifyError)
 verifyRepo
   rw
-  config@VerifyConfig{..}
+  config@Config{..}
   mode
   root
   repoInfo'@(RepoInfo files _)
     = do
   let toScan = do
         (file, fileInfo) <- M.toList files
-        guard . not $ matchesGlobPatterns root vcNotScanned file
+        guard . not $ matchesGlobPatterns root (ecNotScanned cExclusions) file
         case fileInfo of
           Just fi -> do
             ref <- _fiReferences fi
@@ -303,7 +304,7 @@ shouldCheckLocType mode locType
   | otherwise = False
 
 verifyReference
-  :: VerifyConfig
+  :: Config
   -> VerifyMode
   -> IORef VerifyProgress
   -> RepoInfo
@@ -312,7 +313,7 @@ verifyReference
   -> Reference
   -> IO (VerifyResult $ WithReferenceLoc VerifyError)
 verifyReference
-  config@VerifyConfig{..}
+  config@Config{..}
   mode
   progressRef
   (RepoInfo files dirs)
@@ -348,8 +349,8 @@ verifyReference
             Date date | utcTimeToTimeSecond date >= now -> utcTimeToTimeSecond date -:- now
             _ -> sec 0
 
-      let toRetry = any isFixable ves && numberOfRetries < vcMaxRetries
-          currentRetryAfter = fromMaybe vcDefaultRetryAfter $
+      let toRetry = any isFixable ves && numberOfRetries < ncMaxRetries cNetworking
+          currentRetryAfter = fromMaybe (ncDefaultRetryAfter cNetworking) $
             extractRetryAfterInfo res <&> toSeconds
 
       let moveProgress = alterOverallProgress numberOfRetries
@@ -390,17 +391,17 @@ verifyReference
       -> Progress a
       -> Progress a
     alterProgressErrors res@(VerifyResult ves) retryNumber
-      | vcMaxRetries == 0 =
+      | (ncMaxRetries cNetworking) == 0 =
           if ok then id
           else incProgressUnfixableErrors
       | retryNumber == 0 =
           if ok then id
           else if fixable then incProgressFixableErrors
           else incProgressUnfixableErrors
-      | retryNumber == vcMaxRetries =
+      | retryNumber == (ncMaxRetries cNetworking) =
           if ok then decProgressFixableErrors
           else fixableToUnfixable
-      -- 0 < retryNumber < vcMaxRetries
+      -- 0 < retryNumber < ncMaxRetries
       | otherwise =
           if ok then decProgressFixableErrors
           else if fixable then id
@@ -414,7 +415,7 @@ verifyReference
       VerifyResult [ExternalHttpTooManyRequests retryAfter] -> retryAfter
       _ -> Nothing
 
-    isVirtual = matchesGlobPatterns root vcVirtualFiles
+    isVirtual = matchesGlobPatterns root (ecVirtualFiles cExclusions)
 
     checkRef mAnchor referredFile = verifying $
       unless (isVirtual referredFile) do
@@ -497,7 +498,7 @@ verifyReference
       case find ((== anchor) . aName) givenAnchors of
         Just _ -> pass
         Nothing ->
-          let isSimilar = (>= vcAnchorSimilarityThreshold)
+          let isSimilar = (>= scAnchorSimilarityThreshold cScanners)
               similarAnchors =
                 filter (isSimilar . realToFrac . damerauLevenshteinNorm anchor . aName)
                 givenAnchors
@@ -538,8 +539,8 @@ parseUri link = do
            & handleJust (fromException @ParseExceptionBs)
            (throwError . ExternalResourceUriConversionError)
 
-checkExternalResource :: VerifyConfig -> Text -> IO (VerifyResult VerifyError)
-checkExternalResource VerifyConfig{..} link
+checkExternalResource :: Config -> Text -> IO (VerifyResult VerifyError)
+checkExternalResource Config{..} link
   | isIgnored = return mempty
   | otherwise = fmap toVerifyRes $ runExceptT $ do
       uri <- parseUri link
@@ -550,7 +551,10 @@ checkExternalResource VerifyConfig{..} link
         Just "ftps" -> checkFtp uri True
         _ -> throwError ExternalResourceUnknownProtocol
   where
-    isIgnored = doesMatchAnyRegex link vcIgnoreRefs
+    ExclusionConfig{..} = cExclusions
+    NetworkingConfig{..} = cNetworking
+
+    isIgnored = doesMatchAnyRegex link ecIgnoreRefs
 
     doesMatchAnyRegex :: Text -> ([Regex] -> Bool)
     doesMatchAnyRegex src = any $ \regex ->
@@ -587,7 +591,7 @@ checkExternalResource VerifyConfig{..} link
               runReq defaultHttpConfig $
               req method url NoReqBody ignoreResponse option
 
-      let maxTime = Time @Second $ unTime vcExternalRefCheckTimeout * timeoutFrac
+      let maxTime = Time @Second $ unTime ncExternalRefCheckTimeout * timeoutFrac
 
       mres <- liftIO (timeout maxTime $ void reqLink) `catch`
         (either throwError (\() -> return (Just ())) . interpretErrors)
@@ -596,7 +600,7 @@ checkExternalResource VerifyConfig{..} link
     isAllowedErrorCode = or . sequence
       -- We have to stay conservative - if some URL can be accessed under
       -- some circumstances, we should do our best to report it as fine.
-      [ if vcIgnoreAuthFailures -- unauthorized access
+      [ if ncIgnoreAuthFailures -- unauthorized access
         then flip elem [403, 401]
         else const False
       , (405 ==)  -- method mismatch
@@ -656,7 +660,7 @@ checkExternalResource VerifyConfig{..} link
         loginResp <- login handle "anonymous" ""
         -- check login status
         when (frStatus loginResp /= Success) $
-          if vcIgnoreAuthFailures
+          if ncIgnoreAuthFailures
           then pure ()
           else throwError $ ExternalFtpException $ UnsuccessfulException loginResp
         -- If the response is non-null, the path is definitely a directory;

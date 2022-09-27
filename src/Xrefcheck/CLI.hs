@@ -7,14 +7,15 @@
 
 module Xrefcheck.CLI
   ( VerifyMode (..)
-  , shouldCheckLocal
-  , shouldCheckExternal
+  , ExclusionOptions (..)
   , Command (..)
   , Options (..)
-  , VerifyOptions (..)
-  , addVerifyOptions
-  , TraversalOptions (..)
-  , addTraversalOptions
+  , NetworkingOptions (..)
+
+  , addNetworkingOptions
+  , shouldCheckLocal
+  , shouldCheckExternal
+  , addExclusionOptions
   , defaultConfigPaths
   , getCommand
   ) where
@@ -33,7 +34,7 @@ import Options.Applicative.Help.Pretty (Doc, displayS, fill, fillSep, indent, re
 import Options.Applicative.Help.Pretty qualified as Pretty
 
 import Paths_xrefcheck (version)
-import Xrefcheck.Config (VerifyConfig, VerifyConfig' (..))
+import Xrefcheck.Config (NetworkingConfig, NetworkingConfig' (..))
 import Xrefcheck.Core
 import Xrefcheck.Scan
 import Xrefcheck.System (RelGlobPattern, mkGlobPattern)
@@ -69,35 +70,35 @@ data Command
   | DumpConfig Flavor FilePath
 
 data Options = Options
-  { oConfigPath       :: Maybe FilePath
-  , oRoot             :: FilePath
-  , oMode             :: VerifyMode
-  , oVerbose          :: Bool
-  , oShowProgressBar  :: Maybe Bool
-  , oColorMode        :: ColorMode
-  , oTraversalOptions :: TraversalOptions
-  , oVerifyOptions    :: VerifyOptions
+  { oConfigPath        :: Maybe FilePath
+  , oRoot              :: FilePath
+  , oMode              :: VerifyMode
+  , oVerbose           :: Bool
+  , oShowProgressBar   :: Maybe Bool
+  , oColorMode         :: ColorMode
+  , oExclusionOptions  :: ExclusionOptions
+  , oNetworkingOptions :: NetworkingOptions
   }
 
-data TraversalOptions = TraversalOptions
-  { toIgnored :: [RelGlobPattern]
+data ExclusionOptions = ExclusionOptions
+  { eoIgnored :: [RelGlobPattern]
   }
 
-addTraversalOptions :: TraversalConfig -> TraversalOptions -> TraversalConfig
-addTraversalOptions TraversalConfig{..} (TraversalOptions ignored) =
-  TraversalConfig
-  { tcIgnored = tcIgnored ++ ignored
+addExclusionOptions :: ExclusionConfig -> ExclusionOptions -> ExclusionConfig
+addExclusionOptions ExclusionConfig{..} (ExclusionOptions ignored) =
+  ExclusionConfig
+  { ecIgnored = ecIgnored ++ ignored
   , ..
   }
 
-data VerifyOptions = VerifyOptions
-  { voMaxRetries     :: Maybe Int
+data NetworkingOptions = NetworkingOptions
+  { noMaxRetries :: Maybe Int
   }
 
-addVerifyOptions :: VerifyConfig -> VerifyOptions -> VerifyConfig
-addVerifyOptions VerifyConfig{..} (VerifyOptions maxRetries) =
-  VerifyConfig
-  { vcMaxRetries = fromMaybe vcMaxRetries maxRetries
+addNetworkingOptions :: NetworkingConfig -> NetworkingOptions -> NetworkingConfig
+addNetworkingOptions NetworkingConfig{..} (NetworkingOptions maxRetries) =
+  NetworkingConfig
+  { ncMaxRetries = fromMaybe ncMaxRetries maxRetries
   , ..
   }
 
@@ -174,29 +175,29 @@ optionsParser = do
   oColorMode <- flag WithColors WithoutColors $
     long "no-color" <>
     help "Disable ANSI coloring of output"
-  oTraversalOptions <- traversalOptionsParser
-  oVerifyOptions <- verifyOptionsParser
+  oExclusionOptions <- exclusionOptionsParser
+  oNetworkingOptions <- networkingOptionsParser
   return Options{..}
 
-traversalOptionsParser :: Parser TraversalOptions
-traversalOptionsParser = do
-  toIgnored <- many . globOption $
+exclusionOptionsParser :: Parser ExclusionOptions
+exclusionOptionsParser = do
+  eoIgnored <- many . globOption $
     long "ignored" <>
     metavar "GLOB PATTERN" <>
     help "Files which we pretend do not exist.\
          \ Glob patterns that contain wildcards MUST be enclosed\
          \ in quotes to avoid being expanded by shell."
-  return TraversalOptions{..}
+  return ExclusionOptions{..}
 
-verifyOptionsParser :: Parser VerifyOptions
-verifyOptionsParser = do
-  voMaxRetries <- option (Just <$> auto) $
+networkingOptionsParser :: Parser NetworkingOptions
+networkingOptionsParser = do
+  noMaxRetries <- option (Just <$> auto) $
     long "retries" <>
     metavar "INT" <>
     value Nothing <>
     help "How many attempts to retry an external link after getting \
          \a \"429 Too Many Requests\" response."
-  return VerifyOptions{..}
+  return NetworkingOptions{..}
 
 dumpConfigOptions :: Parser Command
 dumpConfigOptions = hsubparser $

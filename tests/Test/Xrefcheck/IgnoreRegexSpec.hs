@@ -16,7 +16,7 @@ import Text.Regex.TDFA (Regex)
 import Xrefcheck.Config
 import Xrefcheck.Core
 import Xrefcheck.Progress (allowRewrite)
-import Xrefcheck.Scan (ScanResult (..), scanRepo, specificFormatsSupport)
+import Xrefcheck.Scan (ScanResult (..), ecIgnoreRefsL, scanRepo, specificFormatsSupport)
 import Xrefcheck.Scanners.Markdown
 import Xrefcheck.Util (ColorMode (WithoutColors))
 import Xrefcheck.Verify (VerifyError, VerifyResult, WithReferenceLoc (..), verifyErrors, verifyRepo)
@@ -39,10 +39,10 @@ test_ignoreRegex = give WithoutColors $
   in testGroup "Regular expressions performance"
     [ testCase "Check that only not matched links are verified" $ do
       scanResult <- allowRewrite showProgressBar $ \rw ->
-        scanRepo rw formats (config ^. cTraversalL) root
+        scanRepo rw formats (config ^. cExclusionsL) root
 
       verifyRes <- allowRewrite showProgressBar $ \rw ->
-        verifyRepo rw (config ^. cVerificationL) verifyMode root $ srRepoInfo scanResult
+        verifyRepo rw config verifyMode root $ srRepoInfo scanResult
 
       let brokenLinks = pickBrokenLinks verifyRes
 
@@ -87,4 +87,4 @@ test_ignoreRegex = give WithoutColors $
         in map (either (error . show) id) errOrRegexs
 
       setIgnoreRefs :: [Regex] -> Config -> Config
-      setIgnoreRefs regexs = (cVerificationL . vcIgnoreRefsL) .~ regexs
+      setIgnoreRefs regexs = (cExclusionsL . ecIgnoreRefsL) .~ regexs

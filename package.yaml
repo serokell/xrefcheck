@@ -101,7 +101,6 @@ library:
     - optparse-applicative
     - regex-tdfa
     - req
-    - roman-numerals
     - tagsoup
     - text
     - text-metrics

@@ -22,7 +22,6 @@ import Data.Text qualified as T
 import Fmt (Buildable (..), blockListF, blockListF', nameF, (+|), (|+))
 import System.Console.Pretty (Color (..), Style (..), color, style)
 import System.FilePath (isPathSeparator, pathSeparator)
-import Text.Numeral.Roman (toRoman)
 import Time (Second, Time)
 
 import Data.DList (DList)
@@ -149,9 +148,18 @@ instance Buildable Reference where
 
 instance Buildable AnchorType where
   build = style Faint . \case
-    HeaderAnchor l -> color Green ("header " <> toRoman l)
+    HeaderAnchor l -> color Green ("header " <> headerLevelToRoman l)
     HandAnchor -> color Yellow "hand made"
     BiblioAnchor -> color Cyan "biblio"
+    where
+      headerLevelToRoman = \case
+        1 -> "I"
+        2 -> "II"
+        3 -> "III"
+        4 -> "IV"
+        5 -> "V"
+        6 -> "VI"
+        n -> error "Bad header level: " <> show n
 
 instance Buildable Anchor where
   build (Anchor t a p) = a |+ " (" +| t |+ ") " +| p |+ ""

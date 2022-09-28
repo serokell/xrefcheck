@@ -180,25 +180,25 @@ pattern PathSep <- (isPathSeparator -> True)
 
 -- | Type of reference.
 data LocationType
-  = LocalLoc
-    -- ^ Reference on this file
+  = CurrentFileLoc
+    -- ^ Reference on this file, e.g. [a](#header)
   | RelativeLoc
-    -- ^ Reference to a file relative to given one
+    -- ^ Reference to a file relative to given one, e.g. [b](folder/file#header)
   | AbsoluteLoc
-    -- ^ Reference to a file relative to the root
+    -- ^ Reference to a file relative to the root, e.g. [c](/folder/file#header
   | ExternalLoc
-    -- ^ Reference to a file at outer site
+    -- ^ Reference to a file at outer site, e.g [d](http://www.google.com/doodles)
   | OtherLoc
-    -- ^ Entry not to be processed (e.g. "mailto:e-mail")
+    -- ^ Entry not to be processed, e.g. "mailto:e-mail"
   deriving stock (Eq, Show)
 
 instance Buildable LocationType where
   build = \case
-    LocalLoc -> color Green "local"
-    RelativeLoc -> color Yellow "relative"
-    AbsoluteLoc -> color Blue "absolute"
-    ExternalLoc -> color Red "external"
-    OtherLoc -> ""
+    CurrentFileLoc -> color Green "local"
+    RelativeLoc    -> color Yellow "relative"
+    AbsoluteLoc    -> color Blue "absolute"
+    ExternalLoc    -> color Red "external"
+    OtherLoc       -> ""
 
 -- | Whether this is a link to external resource.
 isExternal :: LocationType -> Bool
@@ -209,16 +209,16 @@ isExternal = \case
 -- | Whether this is a link to repo-local resource.
 isLocal :: LocationType -> Bool
 isLocal = \case
-  LocalLoc -> True
-  RelativeLoc -> True
-  AbsoluteLoc -> True
-  ExternalLoc -> False
-  OtherLoc -> False
+  CurrentFileLoc -> True
+  RelativeLoc    -> True
+  AbsoluteLoc    -> True
+  ExternalLoc    -> False
+  OtherLoc       -> False
 
 -- | Get type of reference.
 locationType :: Text -> LocationType
 locationType location = case toString location of
-  []                      -> LocalLoc
+  []                      -> CurrentFileLoc
   PathSep : _             -> AbsoluteLoc
   '.' : PathSep : _       -> RelativeLoc
   '.' : '.' : PathSep : _ -> RelativeLoc

@@ -7,6 +7,11 @@
 Unreleased
 ==========
 
+* [#176](https://github.com/serokell/xrefcheck/pull/176)
+  + Enabled `autolink` extension for `cmark-gfm`, so now we're finding strings
+  like `www.google.com` or `https://google.com`, threating them as links
+  and checking.
+
 0.2.2
 ==========
 

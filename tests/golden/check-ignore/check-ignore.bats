@@ -11,31 +11,31 @@ load '../helpers'
 
 
 @test "Ignore file with broken xrefcheck annotation: full path" {
-  run xrefcheck --ignored ./to-ignore/inner-directory/broken_annotation.md
+  run xrefcheck --ignore ./to-ignore/inner-directory/broken_annotation.md
 
   assert_output --partial "All repository links are valid."
 }
 
 @test "Ignore file with broken xrefcheck annotation: glob wildcard" {
-  run xrefcheck --ignored 'to-ignore/inner-directory/*'
+  run xrefcheck --ignore 'to-ignore/inner-directory/*'
 
   assert_output --partial "All repository links are valid."
 }
 
 @test "Ignore file with broken xrefcheck annotation: nested directories with glob wildcard" {
-  run xrefcheck --ignored './**/*'
+  run xrefcheck --ignore './**/*'
 
   assert_output --partial "All repository links are valid."
 }
 
 @test "Ignore file with broken xrefcheck annotation: config file" {
-  run xrefcheck --config ./config-ignored.yaml
+  run xrefcheck --config ./config-ignore.yaml
 
   assert_output --partial "All repository links are valid."
 }
 
 @test "Ignore file with broken xrefcheck annotation: directory, check failure" {
-  to_temp xrefcheck --ignored ./to-ignore/inner-directory/
+  to_temp xrefcheck --ignore ./to-ignore/inner-directory/
 
   assert_diff - <<EOF
 === Scan errors found ===
@@ -52,7 +52,7 @@ EOF
 }
 
 @test "Ignore referenced file, check error" {
-  to_temp xrefcheck --ignored referenced-file.md
+  to_temp xrefcheck --ignore referenced-file.md
 
   assert_diff - <<EOF
 === Scan errors found ===
@@ -68,7 +68,7 @@ Scan errors dumped, 1 in total.
 
 === Invalid references found ===
 
-  ➥  In file check-ignored.md
+  ➥  In file check-ignore.md
      bad reference (absolute) at src:7:1-37:
        - text: "Good reference"
        - link: /referenced-file.md
@@ -82,32 +82,32 @@ Invalid references dumped, 1 in total.
 EOF
 }
 
-@test "Config: Absolute fiepath in \"ignored\" error" {
-  run xrefcheck --config ./config-ignored-bad-path-absolute.yaml
+@test "Config: Absolute fiepath in \"ignore\" error" {
+  run xrefcheck --config ./config-ignore-bad-path-absolute.yaml
 
   assert_failure
   assert_output --partial "Expected a relative glob pattern, but got /to-ignore/inner-directory/broken_annotation.md"
 }
 
-@test "Config: Malformed glob in \"ignored\" error" {
-  run xrefcheck --config ./config-ignored-malformed-glob.yaml
+@test "Config: Malformed glob in \"ignore\" error" {
+  run xrefcheck --config ./config-ignore-malformed-glob.yaml
 
   assert_failure
   assert_output --partial "Glob pattern compilation failed."
 }
 
-@test "CLI: Absolute filepath in \"ignored\" yields to error" {
+@test "CLI: Absolute filepath in \"ignore\" yields to error" {
   run xrefcheck\
-    --ignored "/to-ignore/*"
+    --ignore "/to-ignore/*"
   assert_failure
-  assert_output --partial "option --ignored: Expected a relative glob pattern, but got /to-ignore/*"
+  assert_output --partial "option --ignore: Expected a relative glob pattern, but got /to-ignore/*"
 }
 
-@test "CLI: Malformed glob in arg \"ignored\" yields to error" {
+@test "CLI: Malformed glob in arg \"ignore\" yields to error" {
   run xrefcheck\
-    --ignored "<to-ignore>"
+    --ignore "<to-ignore>"
   assert_failure
-  assert_output --partial "option --ignored: Glob pattern compilation failed.
+  assert_output --partial "option --ignore: Glob pattern compilation failed.
 Error message is:
 compile :: bad <>, expected number followed by - in to-ignore
 "

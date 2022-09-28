@@ -4,6 +4,6 @@
  - SPDX-License-Identifier: MPL-2.0
  -->
 
-[check virtualFiles are relative to the root](./a.md)
+[check ignoreLocalRefsTo are relative to the root](./a.md)
 
 [one more](../two/b.md)

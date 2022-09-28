@@ -21,10 +21,10 @@ module Xrefcheck.Scan
   , normaliseExclusionConfigFilePaths
   , scanRepo
   , specificFormatsSupport
-  , ecIgnoredL
-  , ecVirtualFilesL
-  , ecNotScannedL
-  , ecIgnoreRefsL
+  , ecIgnoreL
+  , ecIgnoreLocalRefsToL
+  , ecIgnoreRefsFromL
+  , ecIgnoreExternalRefsToL
   ) where
 
 import Universum
@@ -52,13 +52,13 @@ type ExclusionConfig = ExclusionConfig' Identity
 
 -- | Config of repositry exclusions.
 data ExclusionConfig' f = ExclusionConfig
-  { ecIgnored      :: Field f [RelGlobPattern]
-    -- ^ Files and folders, files in which we completely ignore.
-  , ecVirtualFiles :: Field f [RelGlobPattern]
-    -- ^ Files which we pretend do exist.
-  , ecNotScanned   :: Field f [RelGlobPattern]
+  { ecIgnore               :: Field f [RelGlobPattern]
+    -- ^ Files which we completely ignore.
+  , ecIgnoreLocalRefsTo    :: Field f [RelGlobPattern]
+    -- ^ Files references to which we do not verify.
+  , ecIgnoreRefsFrom       :: Field f [RelGlobPattern]
     -- ^ Files, references in which we should not analyze.
-  , ecIgnoreRefs   :: Field f [Regex]
+  , ecIgnoreExternalRefsTo :: Field f [Regex]
     -- ^ Regular expressions that match external references we should not verify.
   } deriving stock (Generic)
 
@@ -67,9 +67,9 @@ makeLensesWith postfixFields ''ExclusionConfig'
 normaliseExclusionConfigFilePaths :: ExclusionConfig -> ExclusionConfig
 normaliseExclusionConfigFilePaths ec@ExclusionConfig{..}
   = ec
-    { ecIgnored = map normaliseGlobPattern ecIgnored
-    , ecVirtualFiles = map normaliseGlobPattern ecVirtualFiles
-    , ecNotScanned = map normaliseGlobPattern ecNotScanned
+    { ecIgnore            = map normaliseGlobPattern ecIgnore
+    , ecIgnoreLocalRefsTo = map normaliseGlobPattern ecIgnoreLocalRefsTo
+    , ecIgnoreRefsFrom    = map normaliseGlobPattern ecIgnoreRefsFrom
     }
 
 -- | File extension, dot included.
@@ -140,7 +140,7 @@ readDirectoryWith config scanner root =
     scanFile = sequence . (normaliseWithNoTrailing &&& scanner)
 
     isIgnored :: FilePath -> Bool
-    isIgnored = matchesGlobPatterns root $ ecIgnored config
+    isIgnored = matchesGlobPatterns root $ ecIgnore config
 
     -- Strip leading "." and trailing "/"
     location :: FilePath

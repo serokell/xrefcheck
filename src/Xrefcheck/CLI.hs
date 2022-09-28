@@ -81,13 +81,13 @@ data Options = Options
   }
 
 data ExclusionOptions = ExclusionOptions
-  { eoIgnored :: [RelGlobPattern]
+  { eoIgnore :: [RelGlobPattern]
   }
 
 addExclusionOptions :: ExclusionConfig -> ExclusionOptions -> ExclusionConfig
-addExclusionOptions ExclusionConfig{..} (ExclusionOptions ignored) =
+addExclusionOptions ExclusionConfig{..} (ExclusionOptions ignore) =
   ExclusionConfig
-  { ecIgnored = ecIgnored ++ ignored
+  { ecIgnore = ecIgnore ++ ignore
   , ..
   }
 
@@ -181,10 +181,11 @@ optionsParser = do
 
 exclusionOptionsParser :: Parser ExclusionOptions
 exclusionOptionsParser = do
-  eoIgnored <- many . globOption $
-    long "ignored" <>
+  eoIgnore <- many . globOption $
+    long "ignore" <>
     metavar "GLOB PATTERN" <>
-    help "Files which we pretend do not exist.\
+    help "Ignore these files. References to them will fail verification,\
+         \ and references from them will not be verified.\
          \ Glob patterns that contain wildcards MUST be enclosed\
          \ in quotes to avoid being expanded by shell."
   return ExclusionOptions{..}

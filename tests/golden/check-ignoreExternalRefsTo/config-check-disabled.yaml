@@ -3,7 +3,8 @@
 # SPDX-License-Identifier: Unlicense
 
 exclusions:
-  ignoreRefsFrom: [ "to-ignore/broken-link.md" ]
+  ignoreExternalRefsTo:
+    - ^(https?|ftps?)://(localhost|127\.0\.0\.1).*
 
 scanners:
   markdown:

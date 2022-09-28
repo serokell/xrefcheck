@@ -22,7 +22,7 @@ import Test.Tasty.QuickCheck (ioProperty, testProperty)
 import Xrefcheck.Config
   (Config, cExclusionsL, cNetworkingL, defConfig, defConfigText, ncIgnoreAuthFailuresL)
 import Xrefcheck.Core (Flavor (GitHub), allFlavors)
-import Xrefcheck.Scan (ecIgnoreRefsL)
+import Xrefcheck.Scan (ecIgnoreExternalRefsToL)
 import Xrefcheck.Verify (VerifyError (..), VerifyResult (..), checkExternalResource)
 
 import Test.Xrefcheck.Util (mockServer)
@@ -48,7 +48,7 @@ test_config =
             ]
       ]
   , testGroup "`ignoreAuthFailures` working as expected" $
-    let config = defConfig GitHub & cExclusionsL . ecIgnoreRefsL .~ []
+    let config = defConfig GitHub & cExclusionsL . ecIgnoreExternalRefsToL .~ []
 
         setIgnoreAuthFailures value =
           config & cNetworkingL . ncIgnoreAuthFailuresL .~ value

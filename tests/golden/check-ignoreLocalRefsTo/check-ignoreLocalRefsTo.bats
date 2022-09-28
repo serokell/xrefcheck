@@ -10,13 +10,13 @@ load '../helpers/bats-file/load'
 load '../helpers'
 
 
-@test "Virtual files: all references should be valid" {
-  run xrefcheck -c ./config-virtualFiles.yaml
+@test "IgnoreLocalRefsTo: all references should be valid" {
+  run xrefcheck -c ./config-ignoreLocalRefsTo.yaml
 
   assert_output --partial "All repository links are valid."
 }
 
-@test "Virtual files: check failure" {
+@test "IgnoreLocalRefsTo: check failure" {
   to_temp xrefcheck
 
   assert_diff expected.gold

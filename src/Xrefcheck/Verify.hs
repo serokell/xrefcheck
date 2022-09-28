@@ -265,7 +265,7 @@ verifyRepo
     = do
   let toScan = do
         (file, fileInfo) <- M.toList files
-        guard . not $ matchesGlobPatterns root (ecNotScanned cExclusions) file
+        guard . not $ matchesGlobPatterns root (ecIgnoreRefsFrom cExclusions) file
         case fileInfo of
           Just fi -> do
             ref <- _fiReferences fi
@@ -415,7 +415,7 @@ verifyReference
       VerifyResult [ExternalHttpTooManyRequests retryAfter] -> retryAfter
       _ -> Nothing
 
-    isVirtual = matchesGlobPatterns root (ecVirtualFiles cExclusions)
+    isVirtual = matchesGlobPatterns root (ecIgnoreLocalRefsTo cExclusions)
 
     checkRef mAnchor referredFile = verifying $
       unless (isVirtual referredFile) do
@@ -554,7 +554,7 @@ checkExternalResource Config{..} link
     ExclusionConfig{..} = cExclusions
     NetworkingConfig{..} = cNetworking
 
-    isIgnored = doesMatchAnyRegex link ecIgnoreRefs
+    isIgnored = doesMatchAnyRegex link ecIgnoreExternalRefsTo
 
     doesMatchAnyRegex :: Text -> ([Regex] -> Bool)
     doesMatchAnyRegex src = any $ \regex ->

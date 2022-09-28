@@ -3,8 +3,8 @@
 # SPDX-License-Identifier: Unlicense
 
 exclusions:
-  notScanned:
-    - notScanned/inner-directory
+  ignoreRefsFrom:
+    - ./ignoreRefsFrom/inner-directory/bad-reference.md
 
 scanners:
   markdown:

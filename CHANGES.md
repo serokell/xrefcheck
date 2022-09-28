@@ -13,6 +13,8 @@ Unreleased
   and checking.
 * [#175](https://github.com/serokell/xrefcheck/pull/175)
   + Reorganize top-level config keys.
+* [#178](https://github.com/serokell/xrefcheck/pull/178)
+  + Rename exclusion-related config options.
 
 0.2.2
 ==========

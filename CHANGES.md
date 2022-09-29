@@ -14,6 +14,9 @@ Unreleased
   + Fixed an issue where the progress bar thread might be unexpectedly cancelled and jumble up the output.
 * [#184](https://github.com/serokell/xrefcheck/pull/184)
   + Make `flavor` a required parameter.
+* [#182](https://github.com/serokell/xrefcheck/pull/182)
+  + Now we call references to anchors in current file (e.g. `[a](#b)`) as
+  `current file` references instead of calling them `local` (which was ambigious).
 
 0.2.1
 ==========

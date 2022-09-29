@@ -194,7 +194,7 @@ data LocationType
 
 instance Buildable LocationType where
   build = \case
-    CurrentFileLoc -> color Green "local"
+    CurrentFileLoc -> color Green "current file"
     RelativeLoc    -> color Yellow "relative"
     AbsoluteLoc    -> color Blue "absolute"
     ExternalLoc    -> color Red "external"

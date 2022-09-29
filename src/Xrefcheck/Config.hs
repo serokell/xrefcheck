@@ -42,7 +42,7 @@ type ConfigOptional = Config' Maybe
 data Config' f = Config
   { cTraversal    :: Field f (TraversalConfig' f)
   , cVerification :: Field f (VerifyConfig' f)
-  , cScanners     :: Field f (ScannersConfig' f)
+  , cScanners     :: ScannersConfig
   } deriving stock (Generic)
 
 normaliseConfigFilePaths :: Config -> Config
@@ -82,12 +82,9 @@ normaliseVerifyConfigFilePaths vc@VerifyConfig{ vcVirtualFiles, vcNotScanned}
     , vcNotScanned = map normaliseGlobPattern vcNotScanned
     }
 
--- | Type alias for ScannersConfig' with all required fields.
-type ScannersConfig = ScannersConfig' Identity
-
 -- | Configs for all the supported scanners.
-data ScannersConfig' f = ScannersConfig
-  { scMarkdown :: Field f (MarkdownConfig' f)
+data ScannersConfig = ScannersConfig
+  { scMarkdown :: MarkdownConfig
   } deriving stock (Generic)
 
 makeLensesWith postfixFields ''Config'
@@ -211,11 +208,10 @@ overrideConfig config
   = Config
     { cTraversal = TraversalConfig ignored
     , cVerification = maybe defVerification overrideVerify $ cVerification config
-    , cScanners = ScannersConfig (MarkdownConfig flavor)
+    , cScanners = cScanners config
     }
   where
-    flavor = fromMaybe GitHub
-      $ mcFlavor =<< scMarkdown =<< cScanners config
+    flavor = mcFlavor . scMarkdown $ cScanners config
 
     defTraversal = cTraversal $ defConfig flavor
 
@@ -276,9 +272,6 @@ instance FromJSON (VerifyConfig' Maybe) where
   parseJSON = genericParseJSON aesonConfigOption
 
 instance FromJSON (VerifyConfig) where
-  parseJSON = genericParseJSON aesonConfigOption
-
-instance FromJSON (ScannersConfig' Maybe) where
   parseJSON = genericParseJSON aesonConfigOption
 
 instance FromJSON (ScannersConfig) where

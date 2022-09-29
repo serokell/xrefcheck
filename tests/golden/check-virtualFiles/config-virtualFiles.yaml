@@ -7,3 +7,7 @@ verification:
     - ./one/a.md
     - ./two/*
     - ./three/**/*
+
+scanners:
+  markdown:
+    flavor: GitHub

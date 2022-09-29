@@ -5,3 +5,7 @@
 verification:
   notScanned:
     - ./notScanned/inner-directory/bad-reference.md
+
+scanners:
+  markdown:
+    flavor: GitHub

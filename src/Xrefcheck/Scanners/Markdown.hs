@@ -8,8 +8,7 @@
 -- | Markdown documents markdownScanner.
 
 module Xrefcheck.Scanners.Markdown
-  ( MarkdownConfig' (..)
-  , MarkdownConfig
+  ( MarkdownConfig (..)
   , IgnoreMode (..)
   , defGithubMdConfig
   , markdownScanner
@@ -35,15 +34,9 @@ import Xrefcheck.Core
 import Xrefcheck.Scan
 import Xrefcheck.Util
 
--- | Type alias for MarkdownConfig' with all required fields.
-type MarkdownConfig = MarkdownConfig' Identity
-
-data MarkdownConfig' f = MarkdownConfig
-  { mcFlavor :: Field f Flavor
+data MarkdownConfig = MarkdownConfig
+  { mcFlavor :: Flavor
   } deriving stock (Generic)
-
-instance FromJSON (MarkdownConfig' Maybe) where
-  parseJSON = genericParseJSON aesonConfigOption
 
 instance FromJSON (MarkdownConfig) where
   parseJSON = genericParseJSON aesonConfigOption

@@ -12,6 +12,8 @@ Unreleased
   + Fixed bug when we reported footnotes as broken links
 * [#163](https://github.com/serokell/xrefcheck/pull/163)
   + Fixed an issue where the progress bar thread might be unexpectedly cancelled and jumble up the output.
+* [#184](https://github.com/serokell/xrefcheck/pull/184)
+  + Make `flavor` a required parameter.
 
 0.2.1
 ==========

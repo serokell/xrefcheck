@@ -5,3 +5,7 @@
 verification:
   ignoreRefs:
     - ^(https?|ftps?)://(localhost|127\.0\.0\.1).*
+
+scanners:
+  markdown:
+    flavor: GitHub

@@ -19,7 +19,7 @@ Unreleased
   `current file` references instead of calling them `local` (which was ambigious).
 * [#188](https://github.com/serokell/xrefcheck/pull/188)
   + Added CLI option `--no-colors` that disables ANSI colors in output.
-
+  + Automatically disable coloring if it is not supported
 0.2.1
 ==========
 

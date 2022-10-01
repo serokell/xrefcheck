@@ -27,7 +27,6 @@ import Data.Foldable qualified as F
 import Data.Map qualified as M
 import Data.Reflection (Given)
 import Fmt (Buildable (..), nameF, (+|), (|+))
-import System.Console.Pretty (Style (..))
 import System.Directory (doesDirectoryExist)
 import System.Directory.Tree qualified as Tree
 import System.FilePath (dropTrailingPathSeparator, equalFilePath, takeDirectory, takeExtension)
@@ -35,7 +34,7 @@ import System.FilePath (dropTrailingPathSeparator, equalFilePath, takeDirectory,
 import Xrefcheck.Core
 import Xrefcheck.Progress
 import Xrefcheck.System (RelGlobPattern, matchesGlobPatterns, normaliseGlobPattern, readingSystem)
-import Xrefcheck.Util (ColorMode, Field, aesonConfigOption, normaliseWithNoTrailing, styleIfNeeded)
+import Xrefcheck.Util
 
 -- | Type alias for TraversalConfig' with all required fields.
 type TraversalConfig = TraversalConfig' Identity

@@ -12,6 +12,7 @@ import Universum
 import Data.Reflection (give)
 import Data.Yaml (decodeFileEither, prettyPrintParseException)
 import Fmt (blockListF', build, fmt, fmtLn, indentF)
+import System.Console.Pretty (supportsPretty)
 import System.Directory (doesFileExist)
 
 import Xrefcheck.CLI (Options (..), addTraversalOptions, addVerifyOptions, defaultConfigPaths)
@@ -23,6 +24,7 @@ import Xrefcheck.Scan
   (FormatsSupport, ScanError (..), ScanResult (..), scanRepo, specificFormatsSupport)
 import Xrefcheck.Scanners.Markdown (markdownSupport)
 import Xrefcheck.System (askWithinCI)
+import Xrefcheck.Util
 import Xrefcheck.Verify (verifyErrors, verifyRepo)
 
 readConfig :: FilePath -> IO Config
@@ -43,7 +45,9 @@ findFirstExistingFile = \case
     if exists then pure (Just file) else findFirstExistingFile files
 
 defaultAction :: Options -> IO ()
-defaultAction Options{..} = give oColorMode $ do
+defaultAction Options{..} = do
+  coloringSupported <- supportsPretty
+  give (if coloringSupported then oColorMode else WithoutColors) $ do
     config <- case oConfigPath of
       Just configPath -> readConfig configPath
       Nothing -> do

@@ -98,3 +98,15 @@
     lhs: '(Fmt.||++|)'
     rhs: '(Fmt.|++|)'
     note: "The use of '(||++|)' may result in outputting raw Haskell into user-facing code"
+- warn:
+    name: "Avoid colorize function that ignore ColorMode"
+    lhs: 'System.Console.Pretty.colorize'
+    rhs: 'Xrefcheck.Util.Colorize.colorizeIfNeeded'
+- warn:
+    name: "Avoid color function that ignore ColorMode"
+    lhs: 'System.Console.Pretty.color'
+    rhs: 'Xrefcheck.Util.Colorize.colorIfNeeded'
+- warn:
+    name: "Avoid style function that ignore ColorMode"
+    lhs: 'System.Console.Pretty.style'
+    rhs: 'Xrefcheck.Util.Colorize.styleIfNeeded'

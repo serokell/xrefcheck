@@ -3,8 +3,6 @@
  - SPDX-License-Identifier: MPL-2.0
  -}
 
-{-# OPTIONS_GHC -fno-warn-orphans #-}
-
 module Xrefcheck.Util
   ( Field
   , paren
@@ -14,9 +12,7 @@ module Xrefcheck.Util
   , normaliseWithNoTrailing
   , posixTimeToTimeSecond
   , utcTimeToTimeSecond
-  , ColorMode(..)
-  , colorIfNeeded
-  , styleIfNeeded
+  , module Xrefcheck.Util.Colorize
   ) where
 
 import Universum
@@ -26,18 +22,14 @@ import Data.Aeson qualified as Aeson
 import Data.Aeson.Casing (aesonPrefix, camelCase)
 import Data.Fixed (Fixed (MkFixed), HasResolution (resolution))
 import Data.Ratio ((%))
-import Data.Reflection (Given (..))
 import Data.Time (UTCTime)
 import Data.Time.Clock (nominalDiffTimeToSeconds)
 import Data.Time.Clock.POSIX (POSIXTime, utcTimeToPOSIXSeconds)
-import Fmt (Builder, build, fmt)
-import System.Console.Pretty (Color, Pretty (..), Style)
+import Fmt (Builder)
 import System.FilePath (dropTrailingPathSeparator, normalise)
 import Time (Second, Time (..), sec)
 
-instance Pretty Builder where
-    colorize s c = build @Text . colorize s c . fmt
-    style s = build @Text . style s . fmt
+import Xrefcheck.Util.Colorize
 
 paren :: Builder -> Builder
 paren a
@@ -70,15 +62,3 @@ posixTimeToTimeSecond posixTime =
 
 utcTimeToTimeSecond :: UTCTime -> Time Second
 utcTimeToTimeSecond = posixTimeToTimeSecond . utcTimeToPOSIXSeconds
-
-data ColorMode = WithColors | WithoutColors
-
-colorIfNeeded :: (Pretty a, Given ColorMode) => Color -> a -> a
-colorIfNeeded = case given of
-  WithColors -> color
-  WithoutColors -> const id
-
-styleIfNeeded :: (Pretty a, Given ColorMode) => Style -> a -> a
-styleIfNeeded = case given of
-  WithColors -> style
-  WithoutColors -> const id

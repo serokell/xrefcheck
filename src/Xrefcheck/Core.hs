@@ -21,7 +21,6 @@ import Data.Map qualified as M
 import Data.Reflection (Given)
 import Data.Text qualified as T
 import Fmt (Buildable (..), blockListF, blockListF', nameF, (+|), (|+))
-import System.Console.Pretty (Color (..), Style (..))
 import System.FilePath (isPathSeparator, pathSeparator)
 import Time (Second, Time)
 

@@ -31,10 +31,9 @@ import Universum
 
 import Data.Ratio ((%))
 import Data.Reflection (Given)
-import System.Console.Pretty (Color (..), Style (..))
 import Time (Second, Time, sec, unTime, (-:-))
 
-import Xrefcheck.Util (ColorMode, colorIfNeeded, styleIfNeeded)
+import Xrefcheck.Util
 
 -----------------------------------------------------------
 -- Task timestamp

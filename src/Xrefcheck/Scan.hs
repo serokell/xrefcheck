@@ -25,8 +25,9 @@ import Universum
 import Data.Aeson (FromJSON (..), genericParseJSON)
 import Data.Foldable qualified as F
 import Data.Map qualified as M
+import Data.Reflection (Given)
 import Fmt (Buildable (..), nameF, (+|), (|+))
-import System.Console.Pretty (Pretty (..), Style (..))
+import System.Console.Pretty (Style (..))
 import System.Directory (doesDirectoryExist)
 import System.Directory.Tree qualified as Tree
 import System.FilePath (dropTrailingPathSeparator, equalFilePath, takeDirectory, takeExtension)
@@ -34,7 +35,7 @@ import System.FilePath (dropTrailingPathSeparator, equalFilePath, takeDirectory,
 import Xrefcheck.Core
 import Xrefcheck.Progress
 import Xrefcheck.System (RelGlobPattern, matchesGlobPatterns, normaliseGlobPattern, readingSystem)
-import Xrefcheck.Util (Field, aesonConfigOption, normaliseWithNoTrailing)
+import Xrefcheck.Util (ColorMode, Field, aesonConfigOption, normaliseWithNoTrailing, styleIfNeeded)
 
 -- | Type alias for TraversalConfig' with all required fields.
 type TraversalConfig = TraversalConfig' Identity
@@ -74,9 +75,9 @@ data ScanError = ScanError
   , seDescription :: Text
   } deriving stock (Show, Eq)
 
-instance Buildable ScanError where
+instance Given ColorMode => Buildable ScanError where
   build ScanError{..} =
-    "In file " +| style Faint (style Bold seFile) |+ "\n"
+    "In file " +| styleIfNeeded Faint (styleIfNeeded Bold seFile) |+ "\n"
     +| nameF ("scan error " +| sePosition |+ "") mempty |+ "\n⛀  "
     +| seDescription |+ "\n\n\n"
 

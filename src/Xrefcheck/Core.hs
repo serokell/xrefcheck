@@ -18,9 +18,10 @@ import Data.Char qualified as C
 import Data.Default (Default (..))
 import Data.List qualified as L
 import Data.Map qualified as M
+import Data.Reflection (Given)
 import Data.Text qualified as T
 import Fmt (Buildable (..), blockListF, blockListF', nameF, (+|), (|+))
-import System.Console.Pretty (Color (..), Style (..), color, style)
+import System.Console.Pretty (Color (..), Style (..))
 import System.FilePath (isPathSeparator, pathSeparator)
 import Time (Second, Time)
 
@@ -63,10 +64,10 @@ instance FromJSON Flavor where
 newtype Position = Position (Maybe Text)
   deriving stock (Show, Eq, Generic)
 
-instance Buildable Position where
+instance Given ColorMode => Buildable Position where
   build (Position pos) = case pos of
     Nothing -> ""
-    Just p  -> style Faint $ "at src:" <> build p
+    Just p  -> styleIfNeeded Faint $ "at src:" <> build p
 
 -- | Full info about a reference.
 data Reference = Reference
@@ -135,22 +136,22 @@ instance NFData AnchorType
 instance NFData Anchor
 instance NFData FileInfo
 
-instance Buildable Reference where
+instance Given ColorMode => Buildable Reference where
   build Reference{..} =
     nameF ("reference " +| paren (build loc) |+ " " +| rPos |+ "") $
       blockListF
       [ "text: " <> show rName
       , "link: " <> build rLink
-      , "anchor: " <> build (rAnchor ?: style Faint "-")
+      , "anchor: " <> build (rAnchor ?: styleIfNeeded Faint "-")
       ]
     where
       loc = locationType rLink
 
-instance Buildable AnchorType where
-  build = style Faint . \case
-    HeaderAnchor l -> color Green ("header " <> headerLevelToRoman l)
-    HandAnchor -> color Yellow "hand made"
-    BiblioAnchor -> color Cyan "biblio"
+instance Given ColorMode => Buildable AnchorType where
+  build = styleIfNeeded Faint . \case
+    HeaderAnchor l -> colorIfNeeded Green ("header " <> headerLevelToRoman l)
+    HandAnchor -> colorIfNeeded Yellow "hand made"
+    BiblioAnchor -> colorIfNeeded Cyan "biblio"
     where
       headerLevelToRoman = \case
         1 -> "I"
@@ -161,20 +162,20 @@ instance Buildable AnchorType where
         6 -> "VI"
         n -> error "Bad header level: " <> show n
 
-instance Buildable Anchor where
+instance Given ColorMode => Buildable Anchor where
   build (Anchor t a p) = a |+ " (" +| t |+ ") " +| p |+ ""
 
-instance Buildable FileInfo where
+instance Given ColorMode => Buildable FileInfo where
   build FileInfo{..} = blockListF
     [ nameF "references" $ blockListF _fiReferences
     , nameF "anchors" $ blockListF _fiAnchors
     ]
 
-instance Buildable RepoInfo where
+instance Given ColorMode => Buildable RepoInfo where
   build (RepoInfo m) = blockListF' "⮚" buildFileReport (M.toList m)
     where
       buildFileReport (name, info) = mconcat
-        [ color Cyan $ fromString name <> ":\n"
+        [ colorIfNeeded Cyan $ fromString name <> ":\n"
         , build info
         , "\n"
         ]
@@ -200,12 +201,12 @@ data LocationType
     -- ^ Entry not to be processed, e.g. @mailto:e-mail@
   deriving stock (Eq, Show)
 
-instance Buildable LocationType where
+instance Given ColorMode => Buildable LocationType where
   build = \case
-    CurrentFileLoc -> color Green "current file"
-    RelativeLoc    -> color Yellow "relative"
-    AbsoluteLoc    -> color Blue "absolute"
-    ExternalLoc    -> color Red "external"
+    CurrentFileLoc -> colorIfNeeded Green "current file"
+    RelativeLoc    -> colorIfNeeded Yellow "relative"
+    AbsoluteLoc    -> colorIfNeeded Blue "absolute"
+    ExternalLoc    -> colorIfNeeded Red "external"
     OtherLoc       -> ""
 
 -- | Whether this is a link to external resource.
@@ -322,7 +323,7 @@ initVerifyProgress references = VerifyProgress
   where
     (extRefs, localRefs) = L.partition (isExternal . locationType . rLink) references
 
-showAnalyseProgress :: VerifyMode -> Time Second -> VerifyProgress -> Text
+showAnalyseProgress :: Given ColorMode => VerifyMode -> Time Second -> VerifyProgress -> Text
 showAnalyseProgress mode posixTime VerifyProgress{..} =
   mconcat . mconcat $
     [ [ "Verifying " ]
@@ -332,6 +333,7 @@ showAnalyseProgress mode posixTime VerifyProgress{..} =
       | shouldCheckExternal mode ]
     ]
 
-reprintAnalyseProgress :: Rewrite -> VerifyMode -> Time Second -> VerifyProgress -> IO ()
+reprintAnalyseProgress :: Given ColorMode =>
+  Rewrite -> VerifyMode -> Time Second -> VerifyProgress -> IO ()
 reprintAnalyseProgress rw mode posixTime p = putTextRewrite rw $
   showAnalyseProgress mode posixTime p

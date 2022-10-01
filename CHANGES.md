@@ -17,6 +17,8 @@ Unreleased
 * [#182](https://github.com/serokell/xrefcheck/pull/182)
   + Now we call references to anchors in current file (e.g. `[a](#b)`) as
   `current file` references instead of calling them `local` (which was ambigious).
+* [#188](https://github.com/serokell/xrefcheck/pull/188)
+  + Added CLI option `--no-colors` that disables ANSI colors in output.
 
 0.2.1
 ==========

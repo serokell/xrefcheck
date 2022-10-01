@@ -7,7 +7,6 @@
 
 module Xrefcheck.Util
   ( Field
-  , nameF'
   , paren
   , postfixFields
   , (-:)
@@ -15,6 +14,9 @@ module Xrefcheck.Util
   , normaliseWithNoTrailing
   , posixTimeToTimeSecond
   , utcTimeToTimeSecond
+  , ColorMode(..)
+  , colorIfNeeded
+  , styleIfNeeded
   ) where
 
 import Universum
@@ -24,20 +26,18 @@ import Data.Aeson qualified as Aeson
 import Data.Aeson.Casing (aesonPrefix, camelCase)
 import Data.Fixed (Fixed (MkFixed), HasResolution (resolution))
 import Data.Ratio ((%))
+import Data.Reflection (Given (..))
 import Data.Time (UTCTime)
 import Data.Time.Clock (nominalDiffTimeToSeconds)
 import Data.Time.Clock.POSIX (POSIXTime, utcTimeToPOSIXSeconds)
-import Fmt (Builder, build, fmt, nameF)
-import System.Console.Pretty (Pretty (..), Style (Faint))
+import Fmt (Builder, build, fmt)
+import System.Console.Pretty (Color, Pretty (..), Style)
 import System.FilePath (dropTrailingPathSeparator, normalise)
 import Time (Second, Time (..), sec)
 
 instance Pretty Builder where
     colorize s c = build @Text . colorize s c . fmt
     style s = build @Text . style s . fmt
-
-nameF' :: Builder -> Builder -> Builder
-nameF' a = nameF (style Faint a)
 
 paren :: Builder -> Builder
 paren a
@@ -70,3 +70,15 @@ posixTimeToTimeSecond posixTime =
 
 utcTimeToTimeSecond :: UTCTime -> Time Second
 utcTimeToTimeSecond = posixTimeToTimeSecond . utcTimeToPOSIXSeconds
+
+data ColorMode = WithColors | WithoutColors
+
+colorIfNeeded :: (Pretty a, Given ColorMode) => Color -> a -> a
+colorIfNeeded = case given of
+  WithColors -> color
+  WithoutColors -> const id
+
+styleIfNeeded :: (Pretty a, Given ColorMode) => Style -> a -> a
+styleIfNeeded = case given of
+  WithColors -> style
+  WithoutColors -> const id

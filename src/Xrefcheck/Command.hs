@@ -9,6 +9,7 @@ module Xrefcheck.Command
 
 import Universum
 
+import Data.Reflection (give)
 import Data.Yaml (decodeFileEither, prettyPrintParseException)
 import Fmt (blockListF', build, fmt, fmtLn, indentF)
 import System.Directory (doesFileExist)
@@ -42,7 +43,7 @@ findFirstExistingFile = \case
     if exists then pure (Just file) else findFirstExistingFile files
 
 defaultAction :: Options -> IO ()
-defaultAction Options{..} = do
+defaultAction Options{..} = give oColorMode $ do
     config <- case oConfigPath of
       Just configPath -> readConfig configPath
       Nothing -> do

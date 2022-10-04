@@ -225,23 +225,18 @@ overrideConfig config
 
     overrideVerify verifyConfig
       = VerifyConfig
-        { vcAnchorSimilarityThreshold = fromMaybe (vcAnchorSimilarityThreshold defVerification)
-            $ vcAnchorSimilarityThreshold verifyConfig
-        , vcExternalRefCheckTimeout   = fromMaybe (vcExternalRefCheckTimeout defVerification)
-            $ vcExternalRefCheckTimeout verifyConfig
-        , vcVirtualFiles              = fromMaybe (vcVirtualFiles defVerification)
-            $ vcVirtualFiles verifyConfig
-        , vcNotScanned                = fromMaybe (vcNotScanned defVerification)
-            $ vcNotScanned verifyConfig
-        , vcIgnoreRefs                = fromMaybe (vcIgnoreRefs defVerification)
-            $ vcIgnoreRefs verifyConfig
-        , vcIgnoreAuthFailures        = fromMaybe (vcIgnoreAuthFailures defVerification)
-            $ vcIgnoreAuthFailures verifyConfig
-        , vcDefaultRetryAfter         = fromMaybe (vcDefaultRetryAfter defVerification)
-            $ vcDefaultRetryAfter verifyConfig
-        , vcMaxRetries                = fromMaybe (vcMaxRetries defVerification)
-            $ vcMaxRetries verifyConfig
+        { vcAnchorSimilarityThreshold = overrideField vcAnchorSimilarityThreshold
+        , vcExternalRefCheckTimeout   = overrideField vcExternalRefCheckTimeout
+        , vcVirtualFiles              = overrideField vcVirtualFiles
+        , vcNotScanned                = overrideField vcNotScanned
+        , vcIgnoreRefs                = overrideField vcIgnoreRefs
+        , vcIgnoreAuthFailures        = overrideField vcIgnoreAuthFailures
+        , vcDefaultRetryAfter         = overrideField vcDefaultRetryAfter
+        , vcMaxRetries                = overrideField vcMaxRetries
         }
+      where
+        overrideField :: (forall f. VerifyConfig' f -> Field f a) -> a
+        overrideField field = fromMaybe (field defVerification) $ field verifyConfig
 
 -----------------------------------------------------------
 -- Yaml instances

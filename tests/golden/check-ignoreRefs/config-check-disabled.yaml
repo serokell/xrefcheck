@@ -2,20 +2,6 @@
 #
 # SPDX-License-Identifier: Unlicense
 
-traversal:
-  ignored: []
-
 verification:
-  anchorSimilarityThreshold: 0.5
-  externalRefCheckTimeout: 10s
-  notScanned: []
-  virtualFiles: []
   ignoreRefs:
     - ^(https?|ftps?)://(localhost|127\.0\.0\.1).*
-  ignoreAuthFailures: true
-  defaultRetryAfter: 30s
-  maxRetries: 3
-
-scanners:
-  markdown:
-    flavor: GitHub

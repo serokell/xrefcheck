@@ -5,17 +5,3 @@
 traversal:
   ignored:
     - ./to-ignore/inner-directory/broken_annotation.md
-
-verification:
-  anchorSimilarityThreshold: 0.5
-  externalRefCheckTimeout: 10s
-  notScanned: []
-  virtualFiles: []
-  ignoreRefs: []
-  ignoreAuthFailures: true
-  defaultRetryAfter: 30s
-  maxRetries: 3
-
-scanners:
-  markdown:
-    flavor: GitHub

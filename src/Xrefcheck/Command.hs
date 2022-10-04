@@ -15,8 +15,7 @@ import System.Directory (doesFileExist)
 
 import Xrefcheck.CLI (Options (..), addTraversalOptions, addVerifyOptions, defaultConfigPaths)
 import Xrefcheck.Config
-  (Config, Config' (..), ScannersConfig, ScannersConfig' (..), defConfig, normaliseConfigFilePaths,
-  overrideConfig)
+  (Config, Config' (..), ScannersConfig (..), defConfig, normaliseConfigFilePaths, overrideConfig)
 import Xrefcheck.Core (Flavor (..))
 import Xrefcheck.Progress (allowRewrite)
 import Xrefcheck.Scan

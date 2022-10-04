@@ -4,3 +4,7 @@
 
 verification:
   notScanned: [ "to-ignore/broken-link.md" ]
+
+scanners:
+  markdown:
+    flavor: GitHub

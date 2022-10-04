@@ -4,3 +4,7 @@
 
 verification:
   ignoreRefs: []
+
+scanners:
+  markdown:
+    flavor: GitHub

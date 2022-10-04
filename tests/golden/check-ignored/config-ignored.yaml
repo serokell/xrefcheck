@@ -5,3 +5,7 @@
 traversal:
   ignored:
     - ./to-ignore/inner-directory/broken_annotation.md
+
+scanners:
+  markdown:
+    flavor: GitHub

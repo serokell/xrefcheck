@@ -5,3 +5,7 @@
 verification:
   notScanned:
     - ./notScanned/inner-directory/*
+
+scanners:
+  markdown:
+    flavor: GitHub

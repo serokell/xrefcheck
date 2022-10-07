@@ -7,24 +7,20 @@ packages:
 - completed:
     hackage: firefly-0.2.1.0@sha256:e9d73486464c3e223ec457e02b30ddd5b550fdbf6292b268c64581e2b07d888b,1519
     pantry-tree:
-      size: 600
       sha256: 51d4bf283e1d9ae37e43cd387b112919e45f2fc088f57cbd33c8bad9b0c179f1
+      size: 600
   original:
     hackage: firefly-0.2.1.0@sha256:e9d73486464c3e223ec457e02b30ddd5b550fdbf6292b268c64581e2b07d888b,1519
 - completed:
-    name: cmark-gfm
-    version: 0.2.4
-    git: https://github.com/kivikakk/cmark-gfm-hs
+    hackage: cmark-gfm-0.2.5@sha256:a53b3c6ed20b5476ae18df5f28ababbb6ec8543f9a0758f0381a532d7a879fc0,5188
     pantry-tree:
-      size: 4769
-      sha256: 1ee2141bab4f2e6d6a9dc39db629dd95557df91a09bef8084ab63633814c9d81
-    commit: 205f820fd3ca0aefde1d4fdbea30a5e593295c3b
+      sha256: 8d137f125ee673d5c6b193c85657ea94124c90869edada72633df282e33058e0
+      size: 4556
   original:
-    git: https://github.com/kivikakk/cmark-gfm-hs
-    commit: 205f820fd3ca0aefde1d4fdbea30a5e593295c3b
+    hackage: cmark-gfm-0.2.5
 snapshots:
 - completed:
+    sha256: ef98d70e4018bf01feb00ccdcd33ab26d056dbb71b38057c78fdd0d1ec671c85
     size: 618740
     url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/19/13.yaml
-    sha256: ef98d70e4018bf01feb00ccdcd33ab26d056dbb71b38057c78fdd0d1ec671c85
   original: lts-19.13

@@ -315,13 +315,13 @@ verifyReference
         let locType = locationType rLink
         if shouldCheckLocType mode locType
         then case locType of
-          LocalLoc    -> checkRef rAnchor fileWithReference
-          RelativeLoc -> checkRef rAnchor
-                        (normalise $ takeDirectory fileWithReference
-                          </> toString (canonizeLocalRef rLink))
-          AbsoluteLoc -> checkRef rAnchor (root <> toString rLink)
-          ExternalLoc -> checkExternalResource config rLink
-          OtherLoc    -> verifying pass
+          CurrentFileLoc    -> checkRef rAnchor fileWithReference
+          RelativeLoc       -> checkRef rAnchor
+                                (normalise $ takeDirectory fileWithReference
+                                  </> toString (canonizeLocalRef rLink))
+          AbsoluteLoc       -> checkRef rAnchor (root <> toString rLink)
+          ExternalLoc       -> checkExternalResource config rLink
+          OtherLoc          -> verifying pass
         else return mempty
   where
     retryVerification

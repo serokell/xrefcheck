@@ -1,0 +1,81 @@
+=== Invalid references found ===
+
+  ➥  In file dir1/dir2/d2f1.md
+     bad reference (current file) at src:9:1-18:
+       - text: "bad-cf-ref"
+       - link:
+       - anchor: bad
+
+     ⛀  Anchor 'bad' is not present
+
+
+  ➥  In file dir1/dir2/d2f1.md
+     bad reference (relative) at src:21:1-43:
+       - text: "bad-file-rel"
+       - link: ../a/b/c/unexisting-file.md
+       - anchor: -
+
+     ⛀  File does not exist:
+        dir1/dir2/../a/b/c/unexisting-file.md
+
+
+  ➥  In file dir1/dir2/d2f1.md
+     bad reference (relative) at src:23:1-38:
+       - text: "bad-anchor-rel-1"
+       - link: d2f2.md
+       - anchor: bad-anchor
+
+     ⛀  Anchor 'bad-anchor' is not present
+
+
+  ➥  In file dir1/dir2/d2f1.md
+     bad reference (relative) at src:24:1-49:
+       - text: "bad-anchor-rel-2"
+       - link: unexisting-file.md
+       - anchor: bad-anchor
+
+     ⛀  File does not exist:
+        dir1/dir2/unexisting-file.md
+
+
+  ➥  In file dir1/dir2/d2f1.md
+     bad reference (absolute) at src:32:1-22:
+       - text: "file-abs-2"
+       - link: /d1f1.md
+       - anchor: -
+
+     ⛀  File does not exist:
+        ./d1f1.md
+
+
+  ➥  In file dir1/dir2/d2f1.md
+     bad reference (absolute) at src:33:1-27:
+       - text: "file-abs-3"
+       - link: /dir2/d2f2.md
+       - anchor: -
+
+     ⛀  File does not exist:
+        ./dir2/d2f2.md
+
+
+  ➥  In file dir1/dir2/d2f1.md
+     bad reference (absolute) at src:34:1-32:
+       - text: "file-abs-4"
+       - link: /./dir2/../d1f1.md
+       - anchor: -
+
+     ⛀  File does not exist:
+        ././dir2/../d1f1.md
+
+
+  ➥  In file dir1/dir2/d2f1.md
+     bad reference (absolute) at src:35:1-55:
+       - text: "anchor-abs-3"
+       - link: /./dir2/../d1f1.md
+       - anchor: existing-anchor-d1f1
+
+     ⛀  File does not exist:
+        ././dir2/../d1f1.md
+
+
+Invalid references dumped, 8 in total.

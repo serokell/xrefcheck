@@ -30,8 +30,10 @@ module Xrefcheck.Progress
 import Universum
 
 import Data.Ratio ((%))
-import System.Console.Pretty (Color (..), Style (..), color, style)
+import Data.Reflection (Given)
 import Time (Second, Time, sec, unTime, (-:-))
+
+import Xrefcheck.Util
 
 -----------------------------------------------------------
 -- Task timestamp
@@ -126,12 +128,12 @@ checkTaskTimestamp posixTime p@Progress{..} =
       else removeTaskTimestamp p
 
 -- | Visualise progress bar.
-showProgress :: Text -> Int -> Color -> Time Second -> Progress Int -> Text
+showProgress :: Given ColorMode => Text -> Int -> Color -> Time Second -> Progress Int -> Text
 showProgress name width col posixTime Progress{..} = mconcat
-  [ color col (name <> ": [")
+  [ colorIfNeeded col (name <> ": [")
   , toText bar
   , timer
-  , color col "]"
+  , colorIfNeeded col "]"
   , status
   ]
   where
@@ -170,25 +172,25 @@ showProgress name width col posixTime Progress{..} = mconcat
     bar
       | pTotal == 0 = replicate width '-'
       | otherwise = mconcat
-          [ color Blue $ replicate errsF '■'
-          , color Red $ replicate errsU '■'
-          , color col $ replicate successful '■'
-          , color col $ replicate remaining ' '
+          [ colorIfNeeded Blue $ replicate errsF '■'
+          , colorIfNeeded Red $ replicate errsU '■'
+          , colorIfNeeded col $ replicate successful '■'
+          , colorIfNeeded col $ replicate remaining ' '
           , " "
           ]
     timer = case pTaskTimestamp of
       Nothing -> ""
       Just TaskTimestamp{..} -> mconcat
-        [ color col "|"
-        , color Blue . show . timeSecondCeiling
+        [ colorIfNeeded col "|"
+        , colorIfNeeded Blue . show . timeSecondCeiling
         $ ttTimeToCompletion -:- (posixTime -:- ttStart)
         ]
     status = mconcat
       [ if pCurrent == pTotal && pErrorsFixable == 0 && pErrorsUnfixable == 0
-        then style Faint $ color White "✓"
+        then styleIfNeeded Faint $ colorIfNeeded White "✓"
         else ""
-      , if pErrorsFixable /= 0 then color Blue "!" else ""
-      , if pErrorsUnfixable /= 0 then color Red "!" else ""
+      , if pErrorsFixable /= 0 then colorIfNeeded Blue "!" else ""
+      , if pErrorsUnfixable /= 0 then colorIfNeeded Red "!" else ""
       ]
 
     timeSecondCeiling :: Time Second -> Time Second

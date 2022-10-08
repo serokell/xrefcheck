@@ -3,11 +3,8 @@
  - SPDX-License-Identifier: MPL-2.0
  -}
 
-{-# OPTIONS_GHC -fno-warn-orphans #-}
-
 module Xrefcheck.Util
   ( Field
-  , nameF'
   , paren
   , postfixFields
   , (-:)
@@ -15,6 +12,7 @@ module Xrefcheck.Util
   , normaliseWithNoTrailing
   , posixTimeToTimeSecond
   , utcTimeToTimeSecond
+  , module Xrefcheck.Util.Colorize
   ) where
 
 import Universum
@@ -27,17 +25,11 @@ import Data.Ratio ((%))
 import Data.Time (UTCTime)
 import Data.Time.Clock (nominalDiffTimeToSeconds)
 import Data.Time.Clock.POSIX (POSIXTime, utcTimeToPOSIXSeconds)
-import Fmt (Builder, build, fmt, nameF)
-import System.Console.Pretty (Pretty (..), Style (Faint))
+import Fmt (Builder)
 import System.FilePath (dropTrailingPathSeparator, normalise)
 import Time (Second, Time (..), sec)
 
-instance Pretty Builder where
-    colorize s c = build @Text . colorize s c . fmt
-    style s = build @Text . style s . fmt
-
-nameF' :: Builder -> Builder -> Builder
-nameF' a = nameF (style Faint a)
+import Xrefcheck.Util.Colorize
 
 paren :: Builder -> Builder
 paren a

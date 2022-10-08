@@ -110,6 +110,7 @@ library:
     - universum
     - uri-bytestring
     - yaml
+    - reflection
 
 executables:
   xrefcheck:
@@ -155,6 +156,7 @@ tests:
       - modern-uri
       - uri-bytestring
       - yaml
+      - reflection
 
   ftp-tests:
     main: Main.hs

@@ -7,6 +7,7 @@ module Test.Xrefcheck.IgnoreRegexSpec where
 
 import Universum
 
+import Data.Reflection (give)
 import Data.Yaml (decodeEither')
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertFailure, testCase)
@@ -17,10 +18,11 @@ import Xrefcheck.Core
 import Xrefcheck.Progress (allowRewrite)
 import Xrefcheck.Scan (ScanResult (..), scanRepo, specificFormatsSupport)
 import Xrefcheck.Scanners.Markdown
+import Xrefcheck.Util (ColorMode (WithoutColors))
 import Xrefcheck.Verify (VerifyError, VerifyResult, WithReferenceLoc (..), verifyErrors, verifyRepo)
 
 test_ignoreRegex :: TestTree
-test_ignoreRegex =
+test_ignoreRegex = give WithoutColors $
   let root = "tests/markdowns/without-annotations"
       showProgressBar = False
       formats = specificFormatsSupport [markdownSupport defGithubMdConfig]

@@ -40,6 +40,7 @@ import Control.Monad.Except (MonadError (..))
 import Data.ByteString qualified as BS
 import Data.List qualified as L
 import Data.Map qualified as M
+import Data.Reflection (Given)
 import Data.Text.Metrics (damerauLevenshteinNorm)
 import Data.Time (UTCTime, defaultTimeLocale, formatTime, readPTime, rfc822DateFormat)
 import Data.Time.Clock.POSIX (getPOSIXTime)
@@ -56,7 +57,6 @@ import Network.HTTP.Req
   HttpMethod, NoReqBody (..), defaultHttpConfig, ignoreResponse, req, runReq, useURI)
 import Network.HTTP.Types.Header (hRetryAfter)
 import Network.HTTP.Types.Status (Status, statusCode, statusMessage)
-import System.Console.Pretty (Style (..), style)
 import System.Directory (doesDirectoryExist, doesFileExist)
 import System.FilePath (normalise, takeDirectory, (</>))
 import Text.ParserCombinators.ReadPrec qualified as ReadPrec (lift)
@@ -111,9 +111,9 @@ data WithReferenceLoc a = WithReferenceLoc
   , wrlItem      :: a
   }
 
-instance Buildable a => Buildable (WithReferenceLoc a) where
+instance (Given ColorMode, Buildable a) => Buildable (WithReferenceLoc a) where
   build WithReferenceLoc{..} =
-    "In file " +| style Faint (style Bold wrlFile) |+ "\nbad "
+    "In file " +| styleIfNeeded Faint (styleIfNeeded Bold wrlFile) |+ "\nbad "
     +| wrlReference |+ "\n"
     +| wrlItem |+ "\n\n"
 
@@ -133,7 +133,7 @@ data VerifyError
   | ExternalResourceSomeError Text
   deriving stock (Show, Eq)
 
-instance Buildable VerifyError where
+instance Given ColorMode => Buildable VerifyError where
   build = \case
     LocalFileDoesNotExist file ->
       "⛀  File does not exist:\n   " +| file |+ "\n"
@@ -244,7 +244,8 @@ forConcurrentlyCaching list needsCaching action = go [] M.empty list
     go acc _ [] = for acc wait <&> reverse
 
 verifyRepo
-  :: Rewrite
+  :: Given ColorMode
+  => Rewrite
   -> VerifyConfig
   -> VerifyMode
   -> FilePath

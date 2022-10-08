@@ -26,9 +26,9 @@ import Data.List qualified as L
 import Data.Text qualified as T
 import Data.Version (showVersion)
 import Options.Applicative
-  (Mod, OptionFields, Parser, ReadM, auto, command, eitherReader, execParser, flag', footerDoc,
-  fullDesc, help, helpDoc, helper, hsubparser, info, infoOption, long, metavar, option, progDesc,
-  short, strOption, switch, value)
+  (Mod, OptionFields, Parser, ReadM, auto, command, eitherReader, execParser, flag, flag',
+  footerDoc, fullDesc, help, helpDoc, helper, hsubparser, info, infoOption, long, metavar, option,
+  progDesc, short, strOption, switch, value)
 import Options.Applicative.Help.Pretty (Doc, displayS, fill, fillSep, indent, renderPretty, text)
 import Options.Applicative.Help.Pretty qualified as Pretty
 
@@ -37,7 +37,7 @@ import Xrefcheck.Config (VerifyConfig, VerifyConfig' (..))
 import Xrefcheck.Core
 import Xrefcheck.Scan
 import Xrefcheck.System (RelGlobPattern (..))
-import Xrefcheck.Util (normaliseWithNoTrailing)
+import Xrefcheck.Util (ColorMode (WithColors, WithoutColors), normaliseWithNoTrailing)
 
 modeReadM :: ReadM VerifyMode
 modeReadM = eitherReader $ \s ->
@@ -74,6 +74,7 @@ data Options = Options
   , oMode             :: VerifyMode
   , oVerbose          :: Bool
   , oShowProgressBar  :: Maybe Bool
+  , oColorMode        :: ColorMode
   , oTraversalOptions :: TraversalOptions
   , oVerifyOptions    :: VerifyOptions
   }
@@ -170,6 +171,9 @@ optionsParser = do
         help "Do not display progress bar during verification."
     , pure Nothing
     ]
+  oColorMode <- flag WithColors WithoutColors $
+    long "no-color" <>
+    help "Disable ANSI coloring of output"
   oTraversalOptions <- traversalOptionsParser
   oVerifyOptions <- verifyOptionsParser
   return Options{..}

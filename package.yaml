@@ -80,7 +80,7 @@ library:
     - async
     - bytestring
     - containers
-    - cmark-gfm
+    - cmark-gfm >= 0.2.5
     - data-default
     - directory-tree
     - directory

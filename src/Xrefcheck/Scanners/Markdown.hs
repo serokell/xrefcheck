@@ -9,7 +9,7 @@
 
 module Xrefcheck.Scanners.Markdown
   ( MarkdownConfig (..)
-  , ModeErr (..)
+
   , defGithubMdConfig
   , markdownScanner
   , markdownSupport
@@ -27,7 +27,6 @@ import Data.DList qualified as DList
 import Data.Default (def)
 import Data.Text qualified as T
 import Data.Text.Lazy qualified as LT
-import Data.Text.Lazy.Builder (toLazyText)
 import Fmt (Buildable (..), blockListF, nameF, (+|), (|+))
 import Text.HTML.TagSoup
 
@@ -89,22 +88,6 @@ data GetIgnoreMode
   | InvalidMode Text
   deriving stock (Eq)
 
-data ModeErr
-  = LinkErr
-  | FileErr
-  | ParagraphErr Text
-  | UnrecognisedErr Text
-
-instance Buildable ModeErr where
-  build = \case
-    LinkErr -> "Expected a LINK after \"ignore link\" annotation"
-    FileErr -> "Annotation \"ignore file\" must be at the top of \
-      \markdown or right after comments at the top"
-    ParagraphErr txt -> "Expected a PARAGRAPH after \
-          \\"ignore paragraph\" annotation, but found " +| txt |+ ""
-    UnrecognisedErr txt ->  "Unrecognised option \"" +| txt |+ "\" perhaps you meant \
-          \<\"ignore link\"|\"ignore paragraph\"|\"ignore file\"> "
-
 type ScannerM a = StateT (Maybe Ignore) (Writer [ScanError]) a
 
 -- | A fold over a `Node`.
@@ -163,15 +146,15 @@ removeIgnored fp = withIgnoreMode . cataNode remove
       -> [ScannerM Node]
       -> GetIgnoreMode
       -> ScannerM Node
-    handleIgnoreMode pos mode subs = \case
-      ValidMode mode' ->
-        put (Just . Ignore mode' $ getPosition node) $> defNode
+    handleIgnoreMode pos nodeType subs = \case
+      ValidMode mode  ->
+        put (Just $ Ignore mode correctPos) $> defNode
       InvalidMode msg -> do
-        lift . tell $ makeError (getPosition node) fp $ UnrecognisedErr msg
+        lift . tell $ makeError correctPos fp $ UnrecognisedErr msg
         put Nothing $> defNode
-      NotAnAnnotation -> Node pos mode <$> sequence subs
+      NotAnAnnotation -> Node pos nodeType <$> sequence subs
       where
-        node = Node pos mode []
+        correctPos = getPosition $ Node pos nodeType []
 
     prettyType :: NodeType -> Text
     prettyType ty =
@@ -288,11 +271,9 @@ defNode = Node Nothing DOCUMENT [] -- hard-coded default Node
 makeError
   :: Maybe PosInfo
   -> FilePath
-  -> ModeErr
+  -> ScanErrorDescription
   -> [ScanError]
-makeError pos fp modeErr = one
-  . ScanError (toPosition pos) fp
-  . toStrict . toLazyText $ build modeErr
+makeError pos fp errDescription = one $ ScanError (toPosition pos) fp errDescription
 
 getCommentContent :: Node -> Maybe Text
 getCommentContent node = do

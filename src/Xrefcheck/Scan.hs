@@ -13,6 +13,7 @@ module Xrefcheck.Scan
   , FormatsSupport
   , RepoInfo (..)
   , ScanError (..)
+  , ScanErrorDescription (..)
   , ScanResult (..)
 
   , normaliseTraversalConfigFilePaths
@@ -71,7 +72,7 @@ data ScanResult = ScanResult
 data ScanError = ScanError
   { sePosition    :: Position
   , seFile        :: FilePath
-  , seDescription :: Text
+  , seDescription :: ScanErrorDescription
   } deriving stock (Show, Eq)
 
 instance Given ColorMode => Buildable ScanError where
@@ -79,6 +80,23 @@ instance Given ColorMode => Buildable ScanError where
     "In file " +| styleIfNeeded Faint (styleIfNeeded Bold seFile) |+ "\n"
     +| nameF ("scan error " +| sePosition |+ "") mempty |+ "\n⛀  "
     +| seDescription |+ "\n\n\n"
+
+data ScanErrorDescription
+  = LinkErr
+  | FileErr
+  | ParagraphErr Text
+  | UnrecognisedErr Text
+  deriving stock (Show, Eq)
+
+instance Buildable ScanErrorDescription where
+  build = \case
+    LinkErr -> "Expected a LINK after \"ignore link\" annotation"
+    FileErr -> "Annotation \"ignore file\" must be at the top of \
+      \markdown or right after comments at the top"
+    ParagraphErr txt -> "Expected a PARAGRAPH after \
+          \\"ignore paragraph\" annotation, but found " +| txt |+ ""
+    UnrecognisedErr txt ->  "Unrecognised option \"" +| txt |+ "\" perhaps you meant \
+          \<\"ignore link\"|\"ignore paragraph\"|\"ignore file\"> "
 
 specificFormatsSupport :: [([Extension], ScanAction)] -> FormatsSupport
 specificFormatsSupport formats = \ext -> M.lookup ext formatsMap

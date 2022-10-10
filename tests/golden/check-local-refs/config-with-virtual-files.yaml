@@ -1,0 +1,12 @@
+# SPDX-FileCopyrightText: 2022 Serokell <https://serokell.io>
+#
+# SPDX-License-Identifier: Unlicense
+verification:
+  virtualFiles:
+    - ../d0f1.md
+    - ../../a.md
+    - b/../../*
+
+scanners:
+  markdown:
+    flavor: GitHub

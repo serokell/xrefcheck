@@ -21,3 +21,9 @@ load '../helpers'
 
   assert_diff expected2.gold
 }
+
+@test "Checking behavior when there are virtual files, root = \"dir1\"" {
+  to_temp xrefcheck -r dir1 -c config-with-virtual-files.yaml
+
+  assert_diff expected3.gold
+}

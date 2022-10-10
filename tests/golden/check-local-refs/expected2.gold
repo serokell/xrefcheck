@@ -68,4 +68,54 @@
         dir1/dir1/dir2/../../dir1/./dir2/d2f2.md
 
 
-Invalid references dumped, 7 in total.
+  ➥  In file dir1/dir2/d2f1.md
+     bad reference (relative) at src:40:1-42:
+       - text: "path-through-top-dir"
+       - link: ../../dir1/d1f1.md
+       - anchor: -
+
+     ⛀  Link targets a local file outside repository:
+        dir1/dir2/../../dir1/d1f1.md
+
+
+  ➥  In file dir1/dir2/d2f1.md
+     bad reference (relative) at src:41:1-75:
+       - text: "path-through-top-dir-with-anchor"
+       - link: ../../dir1/d1f1.md
+       - anchor: existing-anchor-d1f1
+
+     ⛀  Link targets a local file outside repository:
+        dir1/dir2/../../dir1/d1f1.md
+
+
+  ➥  In file dir1/dir2/d2f1.md
+     bad reference (relative) at src:42:1-26:
+       - text: "ref-to-d0"
+       - link: ../../d0f1.md
+       - anchor: -
+
+     ⛀  Link targets a local file outside repository:
+        dir1/dir2/../../d0f1.md
+
+
+  ➥  In file dir1/dir2/d2f1.md
+     bad reference (absolute) at src:46:1-16:
+       - text: "A"
+       - link: /../../a.md
+       - anchor: -
+
+     ⛀  Link targets a local file outside repository:
+        dir1/../../a.md
+
+
+  ➥  In file dir1/dir2/d2f1.md
+     bad reference (absolute) at src:47:1-18:
+       - text: "B"
+       - link: /b/../../b.md
+       - anchor: -
+
+     ⛀  Link targets a local file outside repository:
+        dir1/b/../../b.md
+
+
+Invalid references dumped, 12 in total.

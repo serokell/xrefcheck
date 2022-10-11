@@ -15,6 +15,7 @@ import Fmt (build, fmt, fmtLn)
 import System.Console.Pretty (supportsPretty)
 import System.Directory (doesFileExist)
 import Text.Interpolation.Nyan
+import System.IO.CodePage (withCP65001)
 
 import Xrefcheck.CLI (Options (..), addExclusionOptions, addNetworkingOptions, defaultConfigPaths)
 import Xrefcheck.Config
@@ -48,7 +49,7 @@ findFirstExistingFile = \case
     if exists then pure (Just file) else findFirstExistingFile files
 
 defaultAction :: Options -> IO ()
-defaultAction Options{..} = do
+defaultAction Options{..} = withCP65001 $ do
   coloringSupported <- supportsPretty
   give (if coloringSupported then oColorMode else WithoutColors) $ do
     config <- case oConfigPath of

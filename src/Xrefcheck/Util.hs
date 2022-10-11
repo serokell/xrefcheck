@@ -27,7 +27,7 @@ import Data.Time (UTCTime)
 import Data.Time.Clock (nominalDiffTimeToSeconds)
 import Data.Time.Clock.POSIX (POSIXTime, utcTimeToPOSIXSeconds)
 import Fmt (Builder)
-import System.FilePath (dropTrailingPathSeparator, normalise)
+import System.FilePath.Posix (dropTrailingPathSeparator, normalise)
 import Time (Second, Time (..), sec)
 
 import Xrefcheck.Util.Colorize

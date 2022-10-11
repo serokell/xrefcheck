@@ -38,7 +38,7 @@ import Data.Map qualified as M
 import Data.Reflection (Given)
 import Fmt (Buildable (..), fmt)
 import System.Directory (doesDirectoryExist)
-import System.FilePath
+import System.FilePath.Posix
   (dropTrailingPathSeparator, equalFilePath, splitDirectories, takeDirectory, takeExtension, (</>))
 import System.Process (cwd, readCreateProcess, shell)
 import Text.Interpolation.Nyan

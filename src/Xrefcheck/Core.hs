@@ -22,7 +22,7 @@ import Data.List qualified as L
 import Data.Reflection (Given)
 import Data.Text qualified as T
 import Fmt (Buildable (..))
-import System.FilePath (isPathSeparator, pathSeparator)
+import System.FilePath.Posix (isPathSeparator)
 import Text.Interpolation.Nyan
 import Time (Second, Time)
 
@@ -339,7 +339,7 @@ canonizeLocalRef :: Text -> Text
 canonizeLocalRef ref =
   maybe ref canonizeLocalRef (T.stripPrefix localPrefix ref)
   where
-    localPrefix = toText ['.', pathSeparator]
+    localPrefix = "./"
 
 -----------------------------------------------------------
 -- Visualisation

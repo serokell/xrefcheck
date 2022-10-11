@@ -13,7 +13,7 @@ extra-deps:
 - firefly-0.2.1.0@sha256:e9d73486464c3e223ec457e02b30ddd5b550fdbf6292b268c64581e2b07d888b,1519
 - cmark-gfm-0.2.5
 - git: https://github.com/serokell/nyan-interpolation
-  commit: 5e158057b167275d2150454e2bb731cfe686ea7a
+  commit: 348355385466d6d0116251b463a2842ecce0360d
   subdirs:
   - full
   - core

@@ -56,7 +56,7 @@ import Network.HTTP.Req
   HttpMethod, NoReqBody (..), defaultHttpConfig, ignoreResponse, req, runReq, useURI)
 import Network.HTTP.Types.Header (hRetryAfter)
 import Network.HTTP.Types.Status (Status, statusCode, statusMessage)
-import System.FilePath
+import System.FilePath.Posix
   (equalFilePath, joinPath, makeRelative, normalise, splitDirectories, takeDirectory, (</>))
 import Text.Interpolation.Nyan
 import Text.ParserCombinators.ReadPrec qualified as ReadPrec (lift)

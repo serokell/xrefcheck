@@ -6,6 +6,7 @@ verification:
     - ../d0f1.md
     - ../../a.md
     - b/../../*
+    - DIR2/
 
 scanners:
   markdown:

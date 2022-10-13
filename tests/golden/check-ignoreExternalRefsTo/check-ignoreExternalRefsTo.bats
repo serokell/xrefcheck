@@ -22,7 +22,7 @@ load '../helpers'
     -c config-check-enabled.yaml \
     -r .
 
-  assert_diff expected.gold
+  assert_diff expected_linux.gold || assert_diff expected_windows.gold
 }
 
 @test "Ignore localhost, no config specified" {

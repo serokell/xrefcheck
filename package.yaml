@@ -111,7 +111,6 @@ library:
     - reflection
     - nyan-interpolation
     - safe-exceptions
-    - code-page
 
 executables:
   xrefcheck:
@@ -128,6 +127,7 @@ executables:
       - xrefcheck
       - universum
       - with-utf8
+      - code-page
 
 tests:
   xrefcheck-tests:

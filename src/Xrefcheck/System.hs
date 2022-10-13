@@ -22,8 +22,8 @@ import GHC.IO.Unsafe (unsafePerformIO)
 import System.Directory (canonicalizePath)
 import System.Environment (lookupEnv)
 import System.FilePath.Glob qualified as Glob
-import Text.Interpolation.Nyan
 import System.FilePath.Posix (isRelative, (</>))
+import Text.Interpolation.Nyan
 
 import Xrefcheck.Util (normaliseWithNoTrailing)
 

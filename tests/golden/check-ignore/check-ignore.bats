@@ -102,8 +102,6 @@ EOF
   run xrefcheck\
     --ignore "<to-ignore>"
   assert_failure
-  assert_output --partial "option --ignore: Glob pattern compilation failed.
-Error message is:
-compile :: bad <>, expected number followed by - in to-ignore
-"
+  assert_output --partial "option --ignore: Glob pattern compilation failed."
+  assert_output --partial "compile :: bad <>, expected number followed by - in to-ignore"
 }

@@ -26,6 +26,10 @@ Unreleased
   + Now we notify user when there are scannable files that were not added to Git
   yet. Also added CLI option `--include-untracked` to scan such files and treat
   as existing.
+* [#191](https://github.com/serokell/xrefcheck/pull/191)
+  + Now we consider slash `/` (and only it) as path separator in local links for all OS,
+    so xrefcheck's report is OS-independent
+  + Use utf-8 compatible codepage on Windows
 
 0.2.2
 ==========

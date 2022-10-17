@@ -17,9 +17,6 @@ import Xrefcheck.Scanners.Markdown (MarkdownConfig (MarkdownConfig, mcFlavor), m
 parse :: Flavor -> FilePath -> IO (FileInfo, [ScanError])
 parse fl path = markdownScanner MarkdownConfig { mcFlavor = fl } path
 
-getFI :: Flavor -> FilePath -> IO FileInfo
-getFI fl path = fst <$> parse fl path
-
 mockServer :: IO ()
 mockServer = run 3000 $ do
   route "/401" $ pure $ toResponse ("" :: Text, unauthorized401)

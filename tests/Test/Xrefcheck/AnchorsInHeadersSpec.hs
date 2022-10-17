@@ -16,11 +16,13 @@ import Xrefcheck.Core
 test_anchorsInHeaders :: TestTree
 test_anchorsInHeaders = testGroup "Anchors in headers"
   [ testCase "Check if anchors in headers are recognized" $ do
-      fi <- getFI  GitHub "tests/markdowns/without-annotations/anchors_in_headers.md"
+      (fi, errs) <- parse  GitHub "tests/markdowns/without-annotations/anchors_in_headers.md"
       getAnchors fi @?= ["some-stuff", "stuff-section"]
+      errs @?= []
   , testCase "Check if anchors with id attributes are recognized" $ do
-      fi <- getFI GitHub "tests/markdowns/without-annotations/anchors_in_headers_with_id_attribute.md"
+      (fi, errs) <- parse GitHub "tests/markdowns/without-annotations/anchors_in_headers_with_id_attribute.md"
       getAnchors fi @?= ["some-stuff-with-id-attribute", "stuff-section-with-id-attribute"]
+      errs @?= []
   ]
   where
     getAnchors :: FileInfo -> [Text]

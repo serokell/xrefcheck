@@ -19,11 +19,12 @@ checkHeaderConversions fl suites =
     [testCase (show a <> " == " <> show b) $ headerToAnchor fl a @?= b | (a,b) <- suites]
     ++
     [ testCase "Non-stripped header name should be stripped" $ do
-        fi <- getFI fl "tests/markdowns/without-annotations/non_stripped_spaces.md"
+        (fi, errs) <- parse fl "tests/markdowns/without-annotations/non_stripped_spaces.md"
         getAnchors fi @?= [ case fl of GitHub -> "header--with-leading-spaces"
                                        GitLab -> "header-with-leading-spaces"
                           , "edge-case"
                           ]
+        errs @?= []
     ]
   where
     getAnchors :: FileInfo -> [Text]

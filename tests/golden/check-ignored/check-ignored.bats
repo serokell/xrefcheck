@@ -81,3 +81,34 @@ Scan errors dumped, 1 in total.
 Invalid references dumped, 1 in total.
 EOF
 }
+
+@test "Config: Absolute fiepath in \"ignored\" error" {
+  run xrefcheck --config ./config-ignored-bad-path-absolute.yaml
+
+  assert_failure
+  assert_output --partial "Expected a relative glob pattern, but got /to-ignore/inner-directory/broken_annotation.md"
+}
+
+@test "Config: Malformed glob in \"ignored\" error" {
+  run xrefcheck --config ./config-ignored-malformed-glob.yaml
+
+  assert_failure
+  assert_output --partial "Glob pattern compilation failed."
+}
+
+@test "CLI: Absolute filepath in \"ignored\" yields to error" {
+  run xrefcheck\
+    --ignored "/to-ignore/*"
+  assert_failure
+  assert_output --partial "option --ignored: Expected a relative glob pattern, but got /to-ignore/*"
+}
+
+@test "CLI: Malformed glob in arg \"ignored\" yields to error" {
+  run xrefcheck\
+    --ignored "<to-ignore>"
+  assert_failure
+  assert_output --partial "option --ignored: Glob pattern compilation failed.
+Error message is:
+compile :: bad <>, expected number followed by - in to-ignore
+"
+}

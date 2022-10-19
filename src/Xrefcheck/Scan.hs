@@ -108,12 +108,12 @@ data ScanErrorDescription
 instance Buildable ScanErrorDescription where
   build = \case
     LinkErr -> "Expected a LINK after \"ignore link\" annotation"
-    FileErr -> "Annotation \"ignore file\" must be at the top of \
+    FileErr -> "Annotation \"ignore all\" must be at the top of \
       \markdown or right after comments at the top"
     ParagraphErr txt -> "Expected a PARAGRAPH after \
           \\"ignore paragraph\" annotation, but found " +| txt |+ ""
     UnrecognisedErr txt ->  "Unrecognised option \"" +| txt |+ "\" perhaps you meant \
-          \<\"ignore link\"|\"ignore paragraph\"|\"ignore file\"> "
+          \<\"ignore link\"|\"ignore paragraph\"|\"ignore all\"> "
 
 specificFormatsSupport :: [([Extension], ScanAction)] -> FormatsSupport
 specificFormatsSupport formats = \ext -> M.lookup ext formatsMap

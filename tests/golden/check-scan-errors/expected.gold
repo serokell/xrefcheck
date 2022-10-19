@@ -2,9 +2,9 @@
 
 
   ➥  In file check-scan-errors.md
-     scan error at src:9:1-30:
+     scan error at src:9:1-29:
 
-     ⛀  Annotation "ignore file" must be at the top of markdown or right after comments at the top
+     ⛀  Annotation "ignore all" must be at the top of markdown or right after comments at the top
 
 
   ➥  In file check-scan-errors.md
@@ -22,13 +22,13 @@
   ➥  In file check-scan-errors.md
      scan error at src:21:1-50:
 
-     ⛀  Unrecognised option "unrecognised-annotation" perhaps you meant <"ignore link"|"ignore paragraph"|"ignore file">
+     ⛀  Unrecognised option "unrecognised-annotation" perhaps you meant <"ignore link"|"ignore paragraph"|"ignore all">
 
 
   ➥  In file check-second-file.md
-     scan error at src:9:1-30:
+     scan error at src:9:1-29:
 
-     ⛀  Annotation "ignore file" must be at the top of markdown or right after comments at the top
+     ⛀  Annotation "ignore all" must be at the top of markdown or right after comments at the top
 
 
   ➥  In file no_link_eof.md

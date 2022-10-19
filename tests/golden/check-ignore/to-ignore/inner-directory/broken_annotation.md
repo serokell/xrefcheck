@@ -6,6 +6,6 @@
 
 One
 
-<!--xrefcheck: ignore file -->
+<!--xrefcheck: ignore all -->
 
 Two

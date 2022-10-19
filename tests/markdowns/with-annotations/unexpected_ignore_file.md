@@ -6,6 +6,6 @@
 
 the first paragraph
 
-<!--xrefcheck: ignore file -->
+<!--xrefcheck: ignore all -->
 
 the second paragraph

@@ -6,7 +6,7 @@
 
 one
 
-<!--xrefcheck: ignore file -->
+<!--xrefcheck: ignore all -->
 
 [Bad reference](/no-file.md)
 

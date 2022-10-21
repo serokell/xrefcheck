@@ -198,7 +198,7 @@ test_tooManyRequests = testGroup "429 response tests"
     verifyReferenceWithProgress reference progRef = do
       fmap wrlItem <$> verifyReference
         ((cVerification $ defConfig GitHub) { vcIgnoreRefs = [] }) FullMode
-        progRef (RepoInfo M.empty) "." "" reference
+        progRef (RepoInfo M.empty mempty) "." "" reference
 
     -- | When called for the first time, returns with a 429 and `Retry-After: @retryAfter@`.
     -- Subsequent calls will respond with @status@.

@@ -8,7 +8,7 @@ let
   src = (import ./ci.nix).project-src;
   pkgs = if linux-static then nixpkgs.pkgsCross.musl64 else if windows then nixpkgs.pkgsCross.mingwW64 else nixpkgs;
   project = pkgs.haskell-nix.stackProject {
-    src = pkgs.haskell-nix.haskellLib.cleanGit { src = ./.; };
+    src = pkgs.haskell-nix.haskellLib.cleanGit { src = ./.; keepGitDir = true; };
     modules = [{
       packages.xrefcheck = {
         ghcOptions =
@@ -38,6 +38,7 @@ let
             '';
             testFlags = [ "--ftp-host" "ftp://localhost:2221" ];
           };
+          xrefcheck-tests.build-tools = [ pkgs.git ];
         };
       };
     }];

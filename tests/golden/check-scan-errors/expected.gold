@@ -1,42 +1,43 @@
 === Scan errors found ===
 
-  ➥  In file ./check-scan-errors.md
+
+  ➥  In file check-scan-errors.md
      scan error at src:9:1-30:
 
      ⛀  Annotation "ignore file" must be at the top of markdown or right after comments at the top
 
 
-  ➥  In file ./check-scan-errors.md
+  ➥  In file check-scan-errors.md
      scan error at src:13:1-36:
 
      ⛀  Expected a PARAGRAPH after "ignore paragraph" annotation, but found HEADING
 
 
-  ➥  In file ./check-scan-errors.md
+  ➥  In file check-scan-errors.md
      scan error at src:17:1-31:
 
      ⛀  Expected a LINK after "ignore link" annotation
 
 
-  ➥  In file ./check-scan-errors.md
+  ➥  In file check-scan-errors.md
      scan error at src:21:1-50:
 
      ⛀  Unrecognised option "unrecognised-annotation" perhaps you meant <"ignore link"|"ignore paragraph"|"ignore file">
 
 
-  ➥  In file ./check-second-file.md
+  ➥  In file check-second-file.md
      scan error at src:9:1-30:
 
      ⛀  Annotation "ignore file" must be at the top of markdown or right after comments at the top
 
 
-  ➥  In file ./no_link_eof.md
+  ➥  In file no_link_eof.md
      scan error at src:9:1-31:
 
      ⛀  Expected a LINK after "ignore link" annotation
 
 
-  ➥  In file ./no_paragraph_eof.md
+  ➥  In file no_paragraph_eof.md
      scan error at src:9:1-36:
 
      ⛀  Expected a PARAGRAPH after "ignore paragraph" annotation, but found EOF

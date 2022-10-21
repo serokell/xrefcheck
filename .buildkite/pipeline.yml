@@ -28,7 +28,7 @@ steps:
     artifact_paths:
       - "result/bin/*"
 
-  - command: nix run -f ci.nix xrefcheck-static -c xrefcheck --ignored 'tests/**/*'
+  - command: nix run -f ci.nix xrefcheck-static -c xrefcheck --ignored 'tests/markdowns/**/*' --ignored 'tests/golden/**/*'
     label: Xrefcheck itself
 
   - label: lint

@@ -36,7 +36,7 @@ import Paths_xrefcheck (version)
 import Xrefcheck.Config (VerifyConfig, VerifyConfig' (..))
 import Xrefcheck.Core
 import Xrefcheck.Scan
-import Xrefcheck.System (RelGlobPattern (..))
+import Xrefcheck.System (RelGlobPattern, mkGlobPattern)
 import Xrefcheck.Util (ColorMode (WithColors, WithoutColors), normaliseWithNoTrailing)
 
 modeReadM :: ReadM VerifyMode
@@ -115,8 +115,8 @@ type RepoType = Flavor
 filepathOption :: Mod OptionFields FilePath -> Parser FilePath
 filepathOption = fmap normaliseWithNoTrailing <$> strOption
 
-globOption :: Mod OptionFields FilePath -> Parser RelGlobPattern
-globOption = fmap RelGlobPattern <$> filepathOption
+globOption :: Mod OptionFields RelGlobPattern -> Parser RelGlobPattern
+globOption = option $ eitherReader $ mkGlobPattern
 
 repoTypeReadM :: ReadM RepoType
 repoTypeReadM = eitherReader $ \name ->

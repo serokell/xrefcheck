@@ -29,6 +29,9 @@ Unreleased
   + Make xrefcheck only scan files that are tracked by git.
   + Fixed bug where links to ignored files were valid.
   + Fixed bug where links with trailing slashes were invalid.
+* [#198](https://github.com/serokell/xrefcheck/pull/198)
+  + Now we're checking globs in config fields and CLI args (e.g. `ignored`),
+    they must be valid globs relative to repository root (`foo/*` instead of `/foo/*`)
 
 0.2.1
 ==========

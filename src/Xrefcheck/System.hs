@@ -6,7 +6,8 @@
 module Xrefcheck.System
   ( readingSystem
   , askWithinCI
-  , RelGlobPattern (..)
+  , RelGlobPattern
+  , mkGlobPattern
   , normaliseGlobPattern
   , bindGlobPattern
   , matchesGlobPatterns
@@ -20,7 +21,8 @@ import Data.Coerce (coerce)
 import GHC.IO.Unsafe (unsafePerformIO)
 import System.Directory (canonicalizePath)
 import System.Environment (lookupEnv)
-import System.FilePath ((</>))
+import System.FilePath (isRelative, (</>))
+import System.FilePath.Glob (CompOptions (errorRecovery))
 import System.FilePath.Glob qualified as Glob
 import Xrefcheck.Util (normaliseWithNoTrailing)
 
@@ -37,8 +39,25 @@ askWithinCI = lookupEnv "CI" <&> \case
   Just (map C.toLower -> "true") -> True
   _                              -> False
 
--- | Glob pattern relative to repository root.
+-- | Glob pattern relative to repository root. Should be created via @mkGlobPattern@
 newtype RelGlobPattern = RelGlobPattern FilePath
+
+mkGlobPattern :: ToString s => s -> Either String RelGlobPattern
+mkGlobPattern path = do
+  let spath = toString path
+  unless (isRelative spath) $ Left $
+    "Expected a relative glob pattern, but got " <> spath
+  -- Checking correctness of glob, e.g. "a[b" is incorrect
+  case Glob.tryCompileWith globCompileOptions spath of
+    Right _ -> return (RelGlobPattern spath)
+    Left err -> Left
+      $ "Glob pattern compilation failed.\n"
+      <> "Error message is:\n"
+      <> err
+      <> "\nThe syntax for glob patterns is described here:\n"
+      <> "https://hackage.haskell.org/package/Glob/docs/System-FilePath-Glob.html#v:compile"
+      <> "\nSpecial characters in file names can be escaped using square brackets"
+      <> ", e.g. <a> -> [<]a[>]."
 
 normaliseGlobPattern :: RelGlobPattern -> RelGlobPattern
 normaliseGlobPattern = RelGlobPattern . normaliseWithNoTrailing . coerce
@@ -62,13 +81,9 @@ matchesGlobPatterns root globPatterns file = or
   ]
 
 instance FromJSON RelGlobPattern where
-  parseJSON = withText "Repo-relative glob pattern" $ \path -> do
-    let spath = toString path
-    -- Checking path is sane
-    _ <- Glob.tryCompileWith globCompileOptions spath
-      & either fail pure
-    return (RelGlobPattern spath)
+  parseJSON = withText "Repo-relative glob pattern" $
+    either fail pure . mkGlobPattern
 
 -- | Glob compilation options we use.
 globCompileOptions :: Glob.CompOptions
-globCompileOptions = Glob.compDefault
+globCompileOptions = Glob.compDefault{errorRecovery = False}

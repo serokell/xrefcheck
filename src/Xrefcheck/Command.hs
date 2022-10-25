@@ -14,6 +14,7 @@ import Data.Yaml (decodeFileEither, prettyPrintParseException)
 import Fmt (blockListF', build, fmt, fmtLn, indentF)
 import System.Console.Pretty (supportsPretty)
 import System.Directory (doesFileExist)
+import Text.Interpolation.Nyan
 
 import Xrefcheck.CLI (Options (..), addExclusionOptions, addNetworkingOptions, defaultConfigPaths)
 import Xrefcheck.Config
@@ -57,8 +58,10 @@ defaultAction Options{..} = do
           Just configPath -> readConfig configPath
           Nothing -> do
             hPutStrLn @Text stderr
-              "Configuration file not found, using default config \
-              \for GitHub repositories\n"
+              [int||
+              Configuration file not found, using default config \
+              for GitHub repositories
+              |]
             pure $ defConfig GitHub
 
     withinCI <- askWithinCI
@@ -69,7 +72,11 @@ defaultAction Options{..} = do
       scanRepo rw (formats $ cScanners config) fullConfig oRoot
 
     when oVerbose $
-      fmtLn $ "=== Repository data ===\n\n" <> indentF 2 (build repoInfo)
+      fmt [int||
+      === Repository data ===
+
+      #{indentF 2 (build repoInfo)}
+      |]
 
     unless (null scanErrs) . reportScanErrs $ sortBy (compare `on` seFile) scanErrs
 
@@ -86,12 +93,18 @@ defaultAction Options{..} = do
         reportVerifyErrs verifyErrs
         exitFailure
   where
-    reportScanErrs errs = do
-      void . fmt $ "=== Scan errors found ===\n\n" <>
-        indentF 2 (blockListF' "➥ " build errs)
-      fmtLn $ "Scan errors dumped, " <> build (length errs) <> " in total."
+    reportScanErrs errs = fmt
+      [int||
+      === Scan errors found ===
 
-    reportVerifyErrs errs = do
-      void . fmt $ "=== Invalid references found ===\n\n" <>
-              indentF 2 (blockListF' "➥ " build errs)
-      fmtLn $ "Invalid references dumped, " <> build (length errs) <> " in total."
+      #{indentF 2 (blockListF' "➥ " build errs)}\
+      Scan errors dumped, #{length errs} in total.
+      |]
+
+    reportVerifyErrs errs = fmt
+      [int||
+      === Invalid references found ===
+
+      #{indentF 2 (blockListF' "➥ " build errs)}\
+      Invalid references dumped, #{length errs} in total.
+      |]

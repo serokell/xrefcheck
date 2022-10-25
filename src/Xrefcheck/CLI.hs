@@ -32,6 +32,7 @@ import Options.Applicative
   progDesc, short, strOption, switch, value)
 import Options.Applicative.Help.Pretty (Doc, displayS, fill, fillSep, indent, renderPretty, text)
 import Options.Applicative.Help.Pretty qualified as Pretty
+import Text.Interpolation.Nyan
 
 import Paths_xrefcheck (version)
 import Xrefcheck.Config (NetworkingConfig, NetworkingConfig' (..))
@@ -44,10 +45,12 @@ modeReadM :: ReadM VerifyMode
 modeReadM = eitherReader $ \s ->
   case find (\mi -> miName mi == s) modes of
     Just mi -> Right $ miMode mi
-    Nothing -> Left . mconcat $ intersperse "\n"
-      [ "Unknown mode " <> show s <> "."
-      , "Allowed values: " <> mconcat (intersperse ", " $ map (show . miName) modes)
-      ]
+    Nothing -> Left
+      [int||
+      Unknown mode #s{s}.
+      Allowed values: #{intercalate ", " $ map (show . miName) modes}.
+      |]
+
 
 data ModeInfo = ModeInfo
   { miName :: String
@@ -126,8 +129,10 @@ repoTypeReadM = eitherReader $ \name ->
     allRepoTypesNamed =
       allRepoTypes <&> \ty -> (toString $ T.toLower (show ty), ty)
     failureText name =
-      "Unknown repository type: " <> show name <> "\n\
-      \Expected one of: " <> mconcat (intersperse ", " $ map show allRepoTypes)
+      [int||
+      Unknown repository type: #s{name}
+      Expected one of: #{intercalate ", " $ map show allRepoTypes}.
+      |]
     allRepoTypes = allFlavors
 
 optionsParser :: Parser Options
@@ -136,11 +141,13 @@ optionsParser = do
     short 'c' <>
     long "config" <>
     metavar "FILEPATH" <>
-    help ("Path to configuration file. \
-          \If not specified, tries to read config from one of " <>
-          (mconcat . intersperse ", " $ map show defaultConfigPaths) <> ". \
-          \If none of these files exist, default configuration is used."
-         )
+    help
+      [int||
+      Path to configuration file. \
+      If not specified, tries to read config from one of \
+      #{intercalate ", " $ map show defaultConfigPaths}. \
+      If none of these files exist, default configuration is used.
+      |]
   oRoot <- filepathOption $
     short 'r' <>
     long "root" <>
@@ -208,14 +215,16 @@ dumpConfigOptions = hsubparser $
   where
     parser = DumpConfig <$> repoTypeOption <*> outputOption
 
-    allRepoTypes = "(" <> intercalate " | " (map (show @String) allFlavors) <> ")"
-
     repoTypeOption =
       option repoTypeReadM $
       short 't' <>
       long "type" <>
       metavar "REPOSITORY TYPE" <>
-      help ("Git repository type. Can be " <> allRepoTypes <> ". Case insensitive.")
+      help [int||
+      Git repository type. \
+      Can be (#{intercalate " | " $ map show allFlavors}). \
+      Case insensitive.
+      |]
 
     outputOption =
       filepathOption $

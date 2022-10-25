@@ -39,6 +39,7 @@ default-extensions:
   - NamedFieldPuns
   - NoImplicitPrelude
   - OverloadedStrings
+  - QuasiQuotes
   - RankNTypes
   - RecordWildCards
   - ScopedTypeVariables
@@ -111,6 +112,7 @@ library:
     - uri-bytestring
     - yaml
     - reflection
+    - nyan-interpolation
 
 executables:
   xrefcheck:

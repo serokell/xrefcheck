@@ -20,6 +20,7 @@ import Data.Yaml (FromJSON (..), decodeEither', prettyPrintParseException, withT
 import Instances.TH.Lift ()
 import Text.Regex.TDFA qualified as R
 import Text.Regex.TDFA.ByteString ()
+import Text.Interpolation.Nyan
 
 import Time (KnownRatName, Second, Time (..), unitsP)
 
@@ -133,15 +134,19 @@ fillHoles allReplacements rawConfig =
             case getReplacement key of
               Left replacement -> [leadingSpaces, replacement]
               Right _ -> error $
-                "Key " <> showBs key <> " requires replacement with an item, \
-                \but list was given"
+                [int||
+                Key #{showBs key} requires replacement with an item, \
+                but list was given"
+                |]
 
       | Just [_wholeMatch, leadingChars, key] <-
           R.getAllTextSubmatches <$> (holeListRegex `R.matchM` holeLine) ->
             case getReplacement key of
               Left _ -> error $
-                "Key " <> showBs key <> " requires replacement with a list, \
-                \but an item was given"
+                [int||
+                Key #{showBs key} requires replacement with a list, \
+                but an item was given"
+                |]
               Right [] ->
                 ["[]"]
               Right replacements@(_ : _) ->

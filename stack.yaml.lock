@@ -18,6 +18,32 @@ packages:
       size: 4556
   original:
     hackage: cmark-gfm-0.2.5
+- completed:
+    commit: 5e158057b167275d2150454e2bb731cfe686ea7a
+    git: https://github.com/serokell/nyan-interpolation
+    name: nyan-interpolation
+    pantry-tree:
+      sha256: ede424e6010640f31a223865f2136570ca1870b5ae5ffeeebfc499c4f7043482
+      size: 714
+    subdir: full
+    version: '0.9'
+  original:
+    commit: 5e158057b167275d2150454e2bb731cfe686ea7a
+    git: https://github.com/serokell/nyan-interpolation
+    subdir: full
+- completed:
+    commit: 5e158057b167275d2150454e2bb731cfe686ea7a
+    git: https://github.com/serokell/nyan-interpolation
+    name: nyan-interpolation-core
+    pantry-tree:
+      sha256: 59d1c732629b06d0035229dccce484d6b4c3078d6bb3e493317afddc9be233df
+      size: 1516
+    subdir: core
+    version: '0.9'
+  original:
+    commit: 5e158057b167275d2150454e2bb731cfe686ea7a
+    git: https://github.com/serokell/nyan-interpolation
+    subdir: core
 snapshots:
 - completed:
     sha256: ef98d70e4018bf01feb00ccdcd33ab26d056dbb71b38057c78fdd0d1ec671c85

@@ -1,6 +1,6 @@
 === Invalid references found ===
 
-  ➥  In file check-virtualFiles.md
+  ➥  In file check-ignoreLocalRefsTo.md
      bad reference (absolute) at src:7:1-22:
        - text: "full path"
        - link: /one/a.md
@@ -10,7 +10,7 @@
         ./one/a.md
 
 
-  ➥  In file check-virtualFiles.md
+  ➥  In file check-ignoreLocalRefsTo.md
      bad reference (absolute) at src:9:1-26:
        - text: "glob wildcard"
        - link: /two/b.md
@@ -20,7 +20,7 @@
         ./two/b.md
 
 
-  ➥  In file check-virtualFiles.md
+  ➥  In file check-ignoreLocalRefsTo.md
      bad reference (absolute) at src:11:1-39:
        - text: "recursive directory glob"
        - link: /three/c.md
@@ -30,7 +30,7 @@
         ./three/c.md
 
 
-  ➥  In file check-virtualFiles.md
+  ➥  In file check-ignoreLocalRefsTo.md
      bad reference (absolute) at src:13:1-51:
        - text: "recursive nested directory glob"
        - link: /three/four/d.md
@@ -40,7 +40,7 @@
         ./three/four/d.md
 
 
-  ➥  In file check-virtualFiles.md
+  ➥  In file check-ignoreLocalRefsTo.md
      bad reference (absolute) at src:15:1-59:
        - text: "another recursive nested directory glob"
        - link: /three/five/e.md
@@ -51,8 +51,8 @@
 
 
   ➥  In file one/file.md
-     bad reference (relative) at src:7:1-53:
-       - text: "check virtualFiles are relative to the root"
+     bad reference (relative) at src:7:1-58:
+       - text: "check ignoreLocalRefsTo are relative to the root"
        - link: ./a.md
        - anchor: -
 

@@ -16,7 +16,7 @@ import Text.Regex.TDFA (Regex)
 import Xrefcheck.Config
 import Xrefcheck.Core
 import Xrefcheck.Progress (allowRewrite)
-import Xrefcheck.Scan (ScanResult (..), ecIgnoreRefsL, scanRepo, specificFormatsSupport)
+import Xrefcheck.Scan (ScanResult (..), ecIgnoreExternalRefsToL, scanRepo, specificFormatsSupport)
 import Xrefcheck.Scanners.Markdown
 import Xrefcheck.Util (ColorMode (WithoutColors))
 import Xrefcheck.Verify (VerifyError, VerifyResult, WithReferenceLoc (..), verifyErrors, verifyRepo)
@@ -87,4 +87,4 @@ test_ignoreRegex = give WithoutColors $
         in map (either (error . show) id) errOrRegexs
 
       setIgnoreRefs :: [Regex] -> Config -> Config
-      setIgnoreRefs regexs = (cExclusionsL . ecIgnoreRefsL) .~ regexs
+      setIgnoreRefs regexs = (cExclusionsL . ecIgnoreExternalRefsToL) .~ regexs

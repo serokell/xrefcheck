@@ -15,22 +15,24 @@ defConfigUnfilled :: ByteString
 defConfigUnfilled =
   [r|# Exclusion parameters.
 exclusions:
-  # Glob patterns describing files which we pretend do not exist
-  # (so they are neither analyzed nor can be referenced).
-  ignored: []
+  # Ignore these files. References to them will fail verification,
+  # and references from them will not be verified.
+  # List of glob patterns.
+  ignore: []
 
-  # Glob patterns describing the files, references in which should not be analyzed.
-  notScanned:
-    - :PLACEHOLDER:notScanned:
+  # References from these files will not be verified.
+  # List of glob patterns.
+  ignoreRefsFrom:
+    - :PLACEHOLDER:ignoreRefsFrom:
 
-  # Glob patterns describing the files which do not physically exist in the
-  # repository but should be treated as existing nevertheless.
-  virtualFiles:
-    - :PLACEHOLDER:virtualFiles:
+  # References to these paths will not be verified.
+  # List of glob patterns.
+  ignoreLocalRefsTo:
+    - :PLACEHOLDER:ignoreLocalRefsTo:
 
-  # POSIX extended regular expressions that match external references
-  # that have to be ignored (not verified).
-  ignoreRefs:
+  # References to these URIs will not be verified.
+  # List of POSIX extended regular expressions.
+  ignoreExternalRefsTo:
     # Ignore localhost links by default
     - ^(https?|ftps?)://(localhost|127\.0\.0\.1).*
 

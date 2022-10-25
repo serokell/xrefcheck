@@ -3,8 +3,7 @@
 # SPDX-License-Identifier: Unlicense
 
 exclusions:
-  ignoreRefs:
-    - ^(https?|ftps?)://(localhost|127\.0\.0\.1).*
+  ignoreExternalRefsTo: []
 
 scanners:
   markdown:

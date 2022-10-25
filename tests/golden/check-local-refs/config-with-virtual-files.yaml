@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: Unlicense
 
 exclusions:
-  virtualFiles:
+  ignoreLocalRefsTo:
     - ../d0f1.md
     - ../../a.md
     - b/../../*

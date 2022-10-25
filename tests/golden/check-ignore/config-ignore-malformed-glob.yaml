@@ -3,8 +3,8 @@
 # SPDX-License-Identifier: Unlicense
 
 exclusions:
-  notScanned:
-    - ./notScanned/inner-directory/bad-reference.md
+  ignore:
+    - </to-ignore/inner-directory/broken_annotation.md>
 
 scanners:
   markdown:

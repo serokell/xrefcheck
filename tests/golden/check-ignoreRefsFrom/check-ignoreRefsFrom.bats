@@ -10,31 +10,31 @@ load '../helpers/bats-file/load'
 load '../helpers'
 
 
-@test "Not scanned: full path" {
+@test "ignoreRefsFrom: full path" {
   run xrefcheck -c config-full-path.yaml
 
   assert_output --partial "All repository links are valid."
 }
 
-@test "Not scanned: glob wildcard" {
+@test "ignoreRefsFrom: glob wildcard" {
   run xrefcheck -c config-wildcard.yaml
 
   assert_output --partial "All repository links are valid."
 }
 
-@test "Not scanned: nested directories with glob wildcard" {
+@test "ignoreRefsFrom: nested directories with glob wildcard" {
   run xrefcheck -c config-nested-directories.yaml
 
   assert_output --partial "All repository links are valid."
 }
 
-@test "Not scanned: directory, check failure" {
+@test "ignoreRefsFrom: directory, check failure" {
   to_temp xrefcheck -c config-directory.yaml
 
   assert_diff - <<EOF
 === Invalid references found ===
 
-  ➥  In file notScanned/inner-directory/bad-reference.md
+  ➥  In file ignoreRefsFrom/inner-directory/bad-reference.md
      bad reference (absolute) at src:7:1-28:
        - text: "Bad reference"
        - link: /no-file.md

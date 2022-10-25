@@ -17,7 +17,7 @@ import Test.Tasty.Options as Tasty (IsOption (..), OptionDescription (Option), s
 
 import Xrefcheck.Config (Config, cExclusionsL, defConfig)
 import Xrefcheck.Core (Flavor (GitHub))
-import Xrefcheck.Scan (ecIgnoreRefsL)
+import Xrefcheck.Scan (ecIgnoreExternalRefsToL)
 import Xrefcheck.Verify
   (VerifyError (..), VerifyResult (VerifyResult), checkExternalResource, verifyErrors)
 
@@ -43,7 +43,7 @@ instance IsOption FtpHostOpt where
 
 
 config :: Config
-config = defConfig GitHub & cExclusionsL . ecIgnoreRefsL .~ []
+config = defConfig GitHub & cExclusionsL . ecIgnoreExternalRefsToL .~ []
 
 test_FtpLinks :: TestTree
 test_FtpLinks = askOption $ \(FtpHostOpt host) -> do

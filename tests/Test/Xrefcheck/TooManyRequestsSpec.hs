@@ -198,7 +198,7 @@ test_tooManyRequests = testGroup "429 response tests"
     verifyReferenceWithProgress :: Reference -> IORef VerifyProgress -> IO (VerifyResult VerifyError)
     verifyReferenceWithProgress reference progRef = do
       fmap wrlItem <$> verifyReference
-        (defConfig GitHub & cExclusionsL . ecIgnoreRefsL .~ []) FullMode
+        (defConfig GitHub & cExclusionsL . ecIgnoreExternalRefsToL .~ []) FullMode
         progRef (RepoInfo M.empty mempty) "." "" reference
 
     -- | When called for the first time, returns with a 429 and `Retry-After: @retryAfter@`.

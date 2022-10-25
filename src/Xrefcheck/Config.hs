@@ -162,7 +162,7 @@ defConfigText flavor =
     [
       "flavor" -: Left (show flavor)
 
-    , "notScanned" -: Right $ case flavor of
+    , "ignoreRefsFrom" -: Right $ case flavor of
         GitHub ->
           [ ".github/pull_request_template.md"
           , ".github/issue_template.md"
@@ -174,7 +174,7 @@ defConfigText flavor =
           , ".gitlab/issue_templates/**/*"
           ]
 
-    , "virtualFiles" -: Right $ case flavor of
+    , "ignoreLocalRefsTo" -: Right $ case flavor of
         GitHub ->
           [ "../../../issues"
           , "../../../issues/*"
@@ -216,10 +216,10 @@ overrideConfig config
 
     overrideExclusions exclusionConfig
       = ExclusionConfig
-        { ecIgnored      = overrideField ecIgnored
-        , ecVirtualFiles = overrideField ecVirtualFiles
-        , ecNotScanned   = overrideField ecNotScanned
-        , ecIgnoreRefs   = overrideField ecIgnoreRefs
+        { ecIgnore               = overrideField ecIgnore
+        , ecIgnoreLocalRefsTo    = overrideField ecIgnoreLocalRefsTo
+        , ecIgnoreRefsFrom       = overrideField ecIgnoreRefsFrom
+        , ecIgnoreExternalRefsTo = overrideField ecIgnoreExternalRefsTo
         }
       where
         overrideField :: (forall f. ExclusionConfig' f -> Field f a) -> a

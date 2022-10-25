@@ -36,3 +36,14 @@ Ignore link bug _regression test_ [link1](link1) [link2](link2)
 
 <!-- xrefcheck: ignore link -->
 Another ignore link bug _some [link1](link1) emphasis_ [link2](link2)
+
+### Ignore pragma should be followed by
+
+<!-- xrefcheck: ignore link -->
+
+This annotation expects link in paragraph right after it.
+
+So [link3](link3) is not ignored.
+
+Annotation inside paragraph <!-- xrefcheck: ignore link --> allows
+softbreaks and __other *things*__ in paragraph, so [link4](link4) is ignored.

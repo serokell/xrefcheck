@@ -32,6 +32,11 @@ Unreleased
 * [#198](https://github.com/serokell/xrefcheck/pull/198)
   + Now we're checking globs in config fields and CLI args (e.g. `ignored`),
     they must be valid globs relative to repository root (`foo/*` instead of `/foo/*`)
+* [#196](https://github.com/serokell/xrefcheck/pull/196)
+  + Now `xrefcheck: ignore link` annotation expects a link to ignore in next markdown node,
+    instead of expecting link in whole rest of file.
+    If you've got `Expected a LINK after "ignore link" annotation` message, see
+    PR's description for examples and details.
 
 0.2.1
 ==========

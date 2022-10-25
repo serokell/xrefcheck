@@ -38,19 +38,23 @@ test_ignoreAnnotations =
       ]
   , testGroup "\"ignore link\" mode"
       [ testCase "Check \"ignore link\" performance" $ do
-          fi <- getFI GitHub "tests/markdowns/with-annotations/ignore_link.md"
+          let file = "tests/markdowns/with-annotations/ignore_link.md"
+          (fi, errs) <- parse GitHub file
           getRefs fi @?=
-            ["team", "team", "team", "hire-us", "how-we-work", "privacy", "link2", "link2"]
+            ["team", "team", "team", "hire-us", "how-we-work", "privacy", "link2", "link2", "link3"]
+          errs @?= makeError (Just $ PosInfo 42 1 42 31) file LinkErr
       ]
   , testGroup "\"ignore paragraph\" mode"
       [ testCase "Check \"ignore paragraph\" performance" $ do
-         fi <- getFI GitHub "tests/markdowns/with-annotations/ignore_paragraph.md"
+         (fi, errs) <- parse GitHub "tests/markdowns/with-annotations/ignore_paragraph.md"
          getRefs fi @?= ["blog", "contacts"]
+         errs @?= []
       ]
   , testGroup "\"ignore file\" mode"
       [ testCase "Check \"ignore file\" performance" $ do
-        fi <- getFI GitHub "tests/markdowns/with-annotations/ignore_file.md"
+        (fi, errs) <- parse GitHub "tests/markdowns/with-annotations/ignore_file.md"
         getRefs fi @?= []
+        errs @?= []
       ]
   ]
   where

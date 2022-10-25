@@ -15,6 +15,8 @@ Unreleased
   + Reorganize top-level config keys.
 * [#178](https://github.com/serokell/xrefcheck/pull/178)
   + Rename exclusion-related config options.
+* [#183](https://github.com/serokell/xrefcheck/pull/183)
+  + Add support for image links.
 
 0.2.2
 ==========

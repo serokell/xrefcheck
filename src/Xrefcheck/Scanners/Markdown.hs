@@ -172,8 +172,8 @@ removeIgnored fp = withIgnoreMode . cataNodeWithParentNodeInfo remove
             -- We expect to find a paragraph immediately after the
             -- `ignore paragraph` annotanion. If the paragraph is not
             -- found we should report an error.
-            (IMSParagraph, PARAGRAPH) -> (ssIgnore .= Nothing) $> defNode
-            (IMSParagraph, x)         -> do
+            (IMSParagraph, PARAGRAPH)    -> (ssIgnore .= Nothing) $> defNode
+            (IMSParagraph, x)            -> do
               lift . tell . makeError modePos fp . ParagraphErr $ prettyType x
               ssIgnore .= Nothing
               Node pos ty <$> sequence subs
@@ -182,15 +182,18 @@ removeIgnored fp = withIgnoreMode . cataNodeWithParentNodeInfo remove
             -- since that annotation should be at the top of the file and
             -- the file should already be ignored when `checkIgnoreFile` is called.
             -- We should report an error if we find it anyway.
-            (IMSFile, _)              -> do
+            (IMSFile, _)                 -> do
               lift . tell $ makeError modePos fp FileErr
               ssIgnore .= Nothing
               Node pos ty <$> sequence subs
 
-            (IMSLink _, LINK {})       -> do
+            (IMSLink _, LINK {})         -> do
               ssIgnore .= Nothing
               return defNode
-            (IMSLink ignoreLinkState, _)             -> do
+            (IMSLink _, IMAGE {})        -> do
+              ssIgnore .= Nothing
+              return defNode
+            (IMSLink ignoreLinkState, _) -> do
               when (ignoreLinkState == ExpectingLinkInSubnodes) $
                 ssIgnore . _Just . ignoreMode .=  IMSLink ParentExpectsLink
               node' <- Node pos ty <$> sequence subs
@@ -314,19 +317,24 @@ nodeExtractInfo fp input@(Node _ _ nSubs) = do
             Nothing -> do
               return mempty
 
-        LINK url _ -> do
-          let rName = nodeExtractText node
-              rPos = toPosition pos
-              link = if null url then rName else url
-          let (rLink, rAnchor) = case T.splitOn "#" link of
-                  [t]    -> (t, Nothing)
-                  t : ts -> (t, Just $ T.intercalate "#" ts)
-                  []     -> error "impossible"
-          return $ FileInfoDiff
-            (DList.singleton $ Reference {rName, rPos, rLink, rAnchor})
-            DList.empty
+        LINK url _ -> extractLink url
+
+        IMAGE url _ -> extractLink url
 
         _ -> return mempty
+
+     where
+       extractLink url = do
+         let rName = nodeExtractText node
+             rPos = toPosition pos
+             link = if null url then rName else url
+         let (rLink, rAnchor) = case T.splitOn "#" link of
+                 [t]    -> (t, Nothing)
+                 t : ts -> (t, Just $ T.intercalate "#" ts)
+                 []     -> error "impossible"
+         return $ FileInfoDiff
+           (DList.singleton $ Reference {rName, rPos, rLink, rAnchor})
+           DList.empty
 
 -- | Check if there is `ignore file` at the beginning of the file,
 -- ignoring preceding comments if there are any.

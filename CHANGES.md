@@ -6,6 +6,10 @@
 
 Unreleased
 ==========
+
+0.2.2
+==========
+
 * [#145](https://github.com/serokell/xrefcheck/pull/145)
   + Add check that there is no unknown fields in config.
 * [#158](https://github.com/serokell/xrefcheck/pull/158)

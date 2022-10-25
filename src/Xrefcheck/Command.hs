@@ -15,9 +15,10 @@ import Fmt (blockListF', build, fmt, fmtLn, indentF)
 import System.Console.Pretty (supportsPretty)
 import System.Directory (doesFileExist)
 
-import Xrefcheck.CLI (Options (..), addTraversalOptions, addVerifyOptions, defaultConfigPaths)
+import Xrefcheck.CLI (Options (..), addExclusionOptions, addNetworkingOptions, defaultConfigPaths)
 import Xrefcheck.Config
-  (Config, Config' (..), ScannersConfig (..), defConfig, normaliseConfigFilePaths, overrideConfig)
+  (Config, Config' (..), ScannersConfig, ScannersConfig' (..), defConfig, normaliseConfigFilePaths,
+  overrideConfig)
 import Xrefcheck.Core (Flavor (..))
 import Xrefcheck.Progress (allowRewrite)
 import Xrefcheck.Scan
@@ -64,7 +65,7 @@ defaultAction Options{..} = do
     let showProgressBar = oShowProgressBar ?: not withinCI
 
     (ScanResult scanErrs repoInfo) <- allowRewrite showProgressBar $ \rw -> do
-      let fullConfig = addTraversalOptions (cTraversal config) oTraversalOptions
+      let fullConfig = addExclusionOptions (cExclusions config) oExclusionOptions
       scanRepo rw (formats $ cScanners config) fullConfig oRoot
 
     when oVerbose $
@@ -73,7 +74,8 @@ defaultAction Options{..} = do
     unless (null scanErrs) . reportScanErrs $ sortBy (compare `on` seFile) scanErrs
 
     verifyRes <- allowRewrite showProgressBar $ \rw -> do
-      let fullConfig = addVerifyOptions (cVerification config) oVerifyOptions
+      let fullConfig = config
+            { cNetworking = addNetworkingOptions (cNetworking config) oNetworkingOptions }
       verifyRepo rw fullConfig oMode oRoot repoInfo
 
     case verifyErrors verifyRes of

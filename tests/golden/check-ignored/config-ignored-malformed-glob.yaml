@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: Unlicense
 
-traversal:
+exclusions:
   ignored:
     - </to-ignore/inner-directory/broken_annotation.md>
 

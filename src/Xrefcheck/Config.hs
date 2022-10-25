@@ -20,8 +20,6 @@ import Data.Yaml (FromJSON (..), decodeEither', prettyPrintParseException, withT
 import Instances.TH.Lift ()
 import Text.Regex.TDFA qualified as R
 import Text.Regex.TDFA.ByteString ()
-import Text.Regex.TDFA.Common
-import Text.Regex.TDFA.Text qualified as R
 
 import Time (KnownRatName, Second, Time (..), unitsP)
 
@@ -29,7 +27,6 @@ import Xrefcheck.Config.Default
 import Xrefcheck.Core
 import Xrefcheck.Scan
 import Xrefcheck.Scanners.Markdown
-import Xrefcheck.System (RelGlobPattern, normaliseGlobPattern)
 import Xrefcheck.Util (Field, aesonConfigOption, postfixFields, (-:))
 
 -- | Type alias for Config' with all required fields.
@@ -40,55 +37,50 @@ type ConfigOptional = Config' Maybe
 
 -- | Overall config.
 data Config' f = Config
-  { cTraversal    :: Field f (TraversalConfig' f)
-  , cVerification :: Field f (VerifyConfig' f)
-  , cScanners     :: ScannersConfig
+  { cExclusions :: Field f (ExclusionConfig' f)
+  , cNetworking :: Field f (NetworkingConfig' f)
+  , cScanners   :: ScannersConfig' f
   } deriving stock (Generic)
 
 normaliseConfigFilePaths :: Config -> Config
 normaliseConfigFilePaths Config{..}
   = Config
-    { cTraversal = normaliseTraversalConfigFilePaths cTraversal
-    , cVerification = normaliseVerifyConfigFilePaths cVerification
-    , cScanners
+    { cExclusions = normaliseExclusionConfigFilePaths cExclusions
+    , ..
     }
 
--- | Type alias for VerifyConfig' with all required fields.
-type VerifyConfig = VerifyConfig' Identity
+-- | Type alias for NetworkingConfig' with all required fields.
+type NetworkingConfig = NetworkingConfig' Identity
 
--- | Config of verification.
-data VerifyConfig' f = VerifyConfig
-  { vcAnchorSimilarityThreshold :: Field f Double
-  , vcExternalRefCheckTimeout   :: Field f (Time Second)
-  , vcVirtualFiles              :: Field f [RelGlobPattern]
-    -- ^ Files which we pretend do exist.
-  , vcNotScanned                :: Field f [RelGlobPattern]
-    -- ^ Files, references in which we should not analyze.
-  , vcIgnoreRefs                :: Field f [Regex]
-    -- ^ Regular expressions that match external references we should not verify.
-  , vcIgnoreAuthFailures        :: Field f Bool
+-- | Config of networking.
+data NetworkingConfig' f = NetworkingConfig
+  { ncExternalRefCheckTimeout   :: Field f (Time Second)
+    -- ^ When checking external references, how long to wait on request before
+    -- declaring "Response timeout".
+  , ncIgnoreAuthFailures        :: Field f Bool
     -- ^ If True - links which return 403 or 401 code will be skipped,
     -- otherwise – will be marked as broken, because we can't check it.
-  , vcDefaultRetryAfter         :: Field f (Time Second)
+  , ncDefaultRetryAfter         :: Field f (Time Second)
     -- ^ Default Retry-After delay, applicable when we receive a 429 response
     -- and it does not contain a @Retry-After@ header.
-  , vcMaxRetries                :: Field f Int
+  , ncMaxRetries                :: Field f Int
+    -- ^ How many attempts to retry an external link after getting
+    -- a "429 Too Many Requests" response.
   } deriving stock (Generic)
 
-normaliseVerifyConfigFilePaths :: VerifyConfig -> VerifyConfig
-normaliseVerifyConfigFilePaths vc@VerifyConfig{ vcVirtualFiles, vcNotScanned}
-  = vc
-    { vcVirtualFiles = map normaliseGlobPattern vcVirtualFiles
-    , vcNotScanned = map normaliseGlobPattern vcNotScanned
-    }
+-- | Type alias for ScannersConfig' with all required fields.
+type ScannersConfig = ScannersConfig' Identity
 
 -- | Configs for all the supported scanners.
-data ScannersConfig = ScannersConfig
+data ScannersConfig' f = ScannersConfig
   { scMarkdown :: MarkdownConfig
+  , scAnchorSimilarityThreshold :: Field f Double
+    -- ^ On 'anchor not found' error, how much similar anchors should be displayed as
+    -- hint. Number should be between 0 and 1, larger value means stricter filter.
   } deriving stock (Generic)
 
 makeLensesWith postfixFields ''Config'
-makeLensesWith postfixFields ''VerifyConfig'
+makeLensesWith postfixFields ''NetworkingConfig'
 
 -- | Picks raw config with @:PLACEHOLDER:<key>:@ and fills the specified fields
 -- in it, picking a replacement suitable for the given key. Only strings and lists
@@ -206,33 +198,43 @@ defConfig flavor = normaliseConfigFilePaths $
 overrideConfig :: ConfigOptional -> Config
 overrideConfig config
   = Config
-    { cTraversal = TraversalConfig ignored
-    , cVerification = maybe defVerification overrideVerify $ cVerification config
-    , cScanners = cScanners config
+    { cExclusions = maybe defExclusions overrideExclusions $ cExclusions config
+    , cNetworking = maybe defNetworking overrideNetworking $ cNetworking config
+    , cScanners = ScannersConfig
+                  { scMarkdown = MarkdownConfig flavor
+                  , scAnchorSimilarityThreshold =
+                    fromMaybe (scAnchorSimilarityThreshold defScanners)
+                    $ scAnchorSimilarityThreshold (cScanners config)
+                  }
     }
   where
     flavor = mcFlavor . scMarkdown $ cScanners config
 
-    defTraversal = cTraversal $ defConfig flavor
+    defScanners = cScanners $ defConfig flavor
+    defExclusions = cExclusions $ defConfig flavor
+    defNetworking = cNetworking $ defConfig flavor
 
-    ignored = fromMaybe (tcIgnored defTraversal) $ tcIgnored =<< cTraversal config
-
-    defVerification = cVerification $ defConfig flavor
-
-    overrideVerify verifyConfig
-      = VerifyConfig
-        { vcAnchorSimilarityThreshold = overrideField vcAnchorSimilarityThreshold
-        , vcExternalRefCheckTimeout   = overrideField vcExternalRefCheckTimeout
-        , vcVirtualFiles              = overrideField vcVirtualFiles
-        , vcNotScanned                = overrideField vcNotScanned
-        , vcIgnoreRefs                = overrideField vcIgnoreRefs
-        , vcIgnoreAuthFailures        = overrideField vcIgnoreAuthFailures
-        , vcDefaultRetryAfter         = overrideField vcDefaultRetryAfter
-        , vcMaxRetries                = overrideField vcMaxRetries
+    overrideExclusions exclusionConfig
+      = ExclusionConfig
+        { ecIgnored      = overrideField ecIgnored
+        , ecVirtualFiles = overrideField ecVirtualFiles
+        , ecNotScanned   = overrideField ecNotScanned
+        , ecIgnoreRefs   = overrideField ecIgnoreRefs
         }
       where
-        overrideField :: (forall f. VerifyConfig' f -> Field f a) -> a
-        overrideField field = fromMaybe (field defVerification) $ field verifyConfig
+        overrideField :: (forall f. ExclusionConfig' f -> Field f a) -> a
+        overrideField field = fromMaybe (field defExclusions) $ field exclusionConfig
+
+    overrideNetworking networkingConfig
+      = NetworkingConfig
+        { ncExternalRefCheckTimeout   = overrideField ncExternalRefCheckTimeout
+        , ncIgnoreAuthFailures        = overrideField ncIgnoreAuthFailures
+        , ncDefaultRetryAfter         = overrideField ncDefaultRetryAfter
+        , ncMaxRetries                = overrideField ncMaxRetries
+        }
+      where
+        overrideField :: (forall f. NetworkingConfig' f -> Field f a) -> a
+        overrideField field = fromMaybe (field defNetworking) $ field networkingConfig
 
 -----------------------------------------------------------
 -- Yaml instances
@@ -242,37 +244,20 @@ instance KnownRatName unit => FromJSON (Time unit) where
   parseJSON = withText "time" $
     maybe (fail "Unknown time") pure . unitsP . toString
 
-instance FromJSON Regex where
-  parseJSON = withText "regex" $ \val -> do
-    let errOrRegex = R.compile defaultCompOption defaultExecOption val
-    either (error . show) return errOrRegex
-
--- Default boolean values according to
--- https://hackage.haskell.org/package/regex-tdfa-1.3.1.0/docs/Text-Regex-TDFA.html#t:CompOption
-defaultCompOption :: CompOption
-defaultCompOption = CompOption
-  { caseSensitive = True
-  , multiline = True
-  , rightAssoc = True
-  , newSyntax = True
-  , lastStarGreedy = False
-  }
-
--- ExecOption value to improve speed
-defaultExecOption :: ExecOption
-defaultExecOption = ExecOption {captureGroups = False}
-
 instance FromJSON (ConfigOptional) where
   parseJSON = genericParseJSON aesonConfigOption
 
 instance FromJSON (Config) where
   parseJSON = genericParseJSON aesonConfigOption
 
-instance FromJSON (VerifyConfig' Maybe) where
+instance FromJSON (NetworkingConfig' Maybe) where
   parseJSON = genericParseJSON aesonConfigOption
 
-instance FromJSON (VerifyConfig) where
+instance FromJSON (NetworkingConfig) where
   parseJSON = genericParseJSON aesonConfigOption
 
 instance FromJSON (ScannersConfig) where
+  parseJSON = genericParseJSON aesonConfigOption
+
+instance FromJSON (ScannersConfig' Maybe) where
   parseJSON = genericParseJSON aesonConfigOption

@@ -3,11 +3,13 @@
  - SPDX-License-Identifier: MPL-2.0
  -}
 
+{-# OPTIONS_GHC -Wno-orphans #-}
+
 -- | Generalised repo scanner and analyser.
 
 module Xrefcheck.Scan
-  ( TraversalConfig
-  , TraversalConfig' (..)
+  ( ExclusionConfig
+  , ExclusionConfig' (..)
   , Extension
   , ScanAction
   , FormatsSupport
@@ -16,14 +18,19 @@ module Xrefcheck.Scan
   , ScanErrorDescription (..)
   , ScanResult (..)
 
-  , normaliseTraversalConfigFilePaths
+  , normaliseExclusionConfigFilePaths
   , scanRepo
   , specificFormatsSupport
+  , ecIgnoredL
+  , ecVirtualFilesL
+  , ecNotScannedL
+  , ecIgnoreRefsL
   ) where
 
 import Universum
 
-import Data.Aeson (FromJSON (..), genericParseJSON)
+import Control.Lens (makeLensesWith)
+import Data.Aeson (FromJSON (..), genericParseJSON, withText)
 import Data.List qualified as L
 import Data.Map qualified as M
 import Data.Reflection (Given)
@@ -32,29 +39,38 @@ import System.Directory (doesDirectoryExist)
 import System.FilePath
   (dropTrailingPathSeparator, equalFilePath, splitDirectories, takeDirectory, takeExtension, (</>))
 import System.Process (cwd, readCreateProcess, shell)
+import Text.Regex.TDFA.Common (CompOption (..), ExecOption (..), Regex)
+import Text.Regex.TDFA.Text qualified as R
 
 import Xrefcheck.Core
 import Xrefcheck.Progress
 import Xrefcheck.System (RelGlobPattern, matchesGlobPatterns, normaliseGlobPattern, readingSystem)
 import Xrefcheck.Util
 
--- | Type alias for TraversalConfig' with all required fields.
-type TraversalConfig = TraversalConfig' Identity
+-- | Type alias for ExclusionConfig' with all required fields.
+type ExclusionConfig = ExclusionConfig' Identity
 
--- | Config of repositry traversal.
-data TraversalConfig' f = TraversalConfig
-  { tcIgnored :: Field f [RelGlobPattern]
+-- | Config of repositry exclusions.
+data ExclusionConfig' f = ExclusionConfig
+  { ecIgnored      :: Field f [RelGlobPattern]
     -- ^ Files and folders, files in which we completely ignore.
+  , ecVirtualFiles :: Field f [RelGlobPattern]
+    -- ^ Files which we pretend do exist.
+  , ecNotScanned   :: Field f [RelGlobPattern]
+    -- ^ Files, references in which we should not analyze.
+  , ecIgnoreRefs   :: Field f [Regex]
+    -- ^ Regular expressions that match external references we should not verify.
   } deriving stock (Generic)
 
-instance FromJSON (TraversalConfig' Maybe) where
-  parseJSON = genericParseJSON aesonConfigOption
+makeLensesWith postfixFields ''ExclusionConfig'
 
-instance FromJSON (TraversalConfig) where
-  parseJSON = genericParseJSON aesonConfigOption
-
-normaliseTraversalConfigFilePaths :: TraversalConfig -> TraversalConfig
-normaliseTraversalConfigFilePaths = TraversalConfig . map normaliseGlobPattern . tcIgnored
+normaliseExclusionConfigFilePaths :: ExclusionConfig -> ExclusionConfig
+normaliseExclusionConfigFilePaths ec@ExclusionConfig{..}
+  = ec
+    { ecIgnored = map normaliseGlobPattern ecIgnored
+    , ecVirtualFiles = map normaliseGlobPattern ecVirtualFiles
+    , ecNotScanned = map normaliseGlobPattern ecNotScanned
+    }
 
 -- | File extension, dot included.
 type Extension = String
@@ -110,7 +126,7 @@ specificFormatsSupport formats = \ext -> M.lookup ext formatsMap
 
 -- | Process files that are tracked by git and not ignored by the config.
 readDirectoryWith
-  :: forall a. TraversalConfig
+  :: forall a. ExclusionConfig
   -> (FilePath -> IO a)
   -> FilePath
   -> IO [(FilePath, a)]
@@ -124,7 +140,7 @@ readDirectoryWith config scanner root =
     scanFile = sequence . (normaliseWithNoTrailing &&& scanner)
 
     isIgnored :: FilePath -> Bool
-    isIgnored = matchesGlobPatterns root $ tcIgnored config
+    isIgnored = matchesGlobPatterns root $ ecIgnored config
 
     -- Strip leading "." and trailing "/"
     location :: FilePath
@@ -135,7 +151,7 @@ readDirectoryWith config scanner root =
 
 scanRepo
   :: MonadIO m
-  => Rewrite -> FormatsSupport -> TraversalConfig -> FilePath -> m ScanResult
+  => Rewrite -> FormatsSupport -> ExclusionConfig -> FilePath -> m ScanResult
 scanRepo rw formatsSupport config root = do
   putTextRewrite rw "Scanning repository..."
 
@@ -172,3 +188,33 @@ scanRepo rw formatsSupport config root = do
       let ext = takeExtension file
       let mscanner = formatsSupport ext
       forM mscanner ($ file)
+
+-----------------------------------------------------------
+-- Yaml instances
+-----------------------------------------------------------
+
+instance FromJSON Regex where
+  parseJSON = withText "regex" $ \val -> do
+    let errOrRegex = R.compile defaultCompOption defaultExecOption val
+    either (error . show) return errOrRegex
+
+-- Default boolean values according to
+-- https://hackage.haskell.org/package/regex-tdfa-1.3.1.0/docs/Text-Regex-TDFA.html#t:CompOption
+defaultCompOption :: CompOption
+defaultCompOption = CompOption
+  { caseSensitive = True
+  , multiline = True
+  , rightAssoc = True
+  , newSyntax = True
+  , lastStarGreedy = False
+  }
+
+-- ExecOption value to improve speed
+defaultExecOption :: ExecOption
+defaultExecOption = ExecOption {captureGroups = False}
+
+instance FromJSON (ExclusionConfig' Maybe) where
+  parseJSON = genericParseJSON aesonConfigOption
+
+instance FromJSON (ExclusionConfig) where
+  parseJSON = genericParseJSON aesonConfigOption

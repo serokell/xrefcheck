@@ -11,6 +11,8 @@ Unreleased
   + Enabled `autolink` extension for `cmark-gfm`, so now we're finding strings
   like `www.google.com` or `https://google.com`, threating them as links
   and checking.
+* [#175](https://github.com/serokell/xrefcheck/pull/175)
+  + Reorganize top-level config keys.
 
 0.2.2
 ==========
@@ -18,7 +20,7 @@ Unreleased
 * [#145](https://github.com/serokell/xrefcheck/pull/145)
   + Add check that there is no unknown fields in config.
 * [#158](https://github.com/serokell/xrefcheck/pull/158)
-  + Fixed bug when we reported footnotes as broken links
+  + Fixed bug when we reported footnotes as broken links.
 * [#163](https://github.com/serokell/xrefcheck/pull/163)
   + Fixed an issue where the progress bar thread might be unexpectedly cancelled and jumble up the output.
 * [#184](https://github.com/serokell/xrefcheck/pull/184)

@@ -15,9 +15,9 @@ import Test.Tasty (TestTree, askOption, testGroup)
 import Test.Tasty.HUnit (assertBool, assertFailure, testCase, (@?=))
 import Test.Tasty.Options as Tasty (IsOption (..), OptionDescription (Option), safeRead)
 
-import Xrefcheck.Config
-  (Config' (cVerification), VerifyConfig, VerifyConfig' (vcIgnoreRefs), defConfig)
+import Xrefcheck.Config (Config, cExclusionsL, defConfig)
 import Xrefcheck.Core (Flavor (GitHub))
+import Xrefcheck.Scan (ecIgnoreRefsL)
 import Xrefcheck.Verify
   (VerifyError (..), VerifyResult (VerifyResult), checkExternalResource, verifyErrors)
 
@@ -42,8 +42,8 @@ instance IsOption FtpHostOpt where
     )
 
 
-config :: VerifyConfig
-config = (cVerification $ defConfig GitHub) { vcIgnoreRefs = [] }
+config :: Config
+config = defConfig GitHub & cExclusionsL . ecIgnoreRefsL .~ []
 
 test_FtpLinks :: TestTree
 test_FtpLinks = askOption $ \(FtpHostOpt host) -> do

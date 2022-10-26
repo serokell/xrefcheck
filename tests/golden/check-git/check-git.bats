@@ -41,16 +41,18 @@ load '../helpers'
   to_temp xrefcheck
 
   assert_diff - <<EOF
+
+
 === Invalid references found ===
 
   ➥  In file git.md
-      bad reference (relative) at src:1:1-11:
-        - text: "a"
-        - link: ./a.md
-        - anchor: -
+     bad reference (relative) at src:1:1-11:
+       - text: "a"
+       - link: ./a.md
+       - anchor: -
 
-      ⛀  File does not exist:
-          a.md
+     ⛀  File does not exist:
+        a.md
 
 
 Invalid references dumped, 1 in total.

@@ -7,7 +7,7 @@
  <!-- a comment -->
  <!-- another comment -->
 
-<!-- xrefcheck:ignore file -->
+<!-- xrefcheck:ignore all -->
 
 Serokell [web-site](https://serokell.io/)
 Serokell [team](https://serokell.io/team)

@@ -6,6 +6,6 @@
 
 another file with broken annotation
 
-<!--xrefcheck: ignore file -->
+<!--xrefcheck: ignore all -->
 
 [Another bad reference](/a.md)

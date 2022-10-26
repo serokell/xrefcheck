@@ -27,10 +27,10 @@ test_ignoreAnnotations =
           let file = "tests/markdowns/with-annotations/no_paragraph.md"
           errs <- getErrs file
           errs @?= makeError (Just $ PosInfo 7 1 7 35) file (ParagraphErr "HEADING")
-      , testCase "Check if broken ignore file annotation produce error" do
+      , testCase "Check if broken ignore all annotation produce error" do
           let file = "tests/markdowns/with-annotations/unexpected_ignore_file.md"
           errs <- getErrs file
-          errs @?= makeError (Just $ PosInfo 9 1 9 30) file FileErr
+          errs @?= makeError (Just $ PosInfo 9 1 9 29) file FileErr
       , testCase "Check if broken unrecognised annotation produce error" do
           let file = "tests/markdowns/with-annotations/unrecognised_option.md"
           errs <- getErrs file
@@ -50,8 +50,8 @@ test_ignoreAnnotations =
          getRefs fi @?= ["blog", "contacts"]
          errs @?= []
       ]
-  , testGroup "\"ignore file\" mode"
-      [ testCase "Check \"ignore file\" performance" $ do
+  , testGroup "\"ignore all\" mode"
+      [ testCase "Check \"ignore all\" performance" $ do
         (fi, errs) <- parse GitHub "tests/markdowns/with-annotations/ignore_file.md"
         getRefs fi @?= []
         errs @?= []

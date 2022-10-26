@@ -78,7 +78,7 @@ nodeExtractText = T.strip . mconcat . map extractText . nodeFlatten
 data IgnoreMode
   = IMLink
   | IMParagraph
-  | IMFile
+  | IMAll
   deriving stock (Eq)
 
 -- | "ignore link" pragmas in different places behave slightly different,
@@ -103,7 +103,7 @@ data IgnoreLinkState
 data IgnoreModeState
   = IMSLink IgnoreLinkState
   | IMSParagraph
-  | IMSFile
+  | IMSAll
   deriving stock (Eq)
 
 -- | Bind `IgnoreMode` to its `PosInfo` so that we can tell where the
@@ -178,11 +178,11 @@ removeIgnored fp = withIgnoreMode . cataNodeWithParentNodeInfo remove
               ssIgnore .= Nothing
               Node pos ty <$> sequence subs
 
-            -- We don't expect to find an `ignore file` annotation here,
+            -- We don't expect to find an `ignore all` annotation here,
             -- since that annotation should be at the top of the file and
             -- the file should already be ignored when `checkIgnoreFile` is called.
             -- We should report an error if we find it anyway.
-            (IMSFile, _)                 -> do
+            (IMSAll, _)                 -> do
               lift . tell $ makeError modePos fp FileErr
               ssIgnore .= Nothing
               Node pos ty <$> sequence subs
@@ -228,7 +228,7 @@ removeIgnored fp = withIgnoreMode . cataNodeWithParentNodeInfo remove
 
           IMParagraph -> pure IMSParagraph
 
-          IMFile -> pure IMSFile
+          IMAll -> pure IMSAll
 
         (ssIgnore .= Just (Ignore ignoreModeState correctPos)) $> defNode
       InvalidMode msg -> do
@@ -257,7 +257,7 @@ removeIgnored fp = withIgnoreMode . cataNodeWithParentNodeInfo remove
         IMSLink _ -> do
             tell $ makeError pos fp LinkErr
             pure node
-        IMSFile -> do
+        IMSAll -> do
             tell $ makeError pos fp FileErr
             pure node
       (node, _) -> pure node
@@ -277,7 +277,7 @@ nodeExtractInfo
   -> Node
   -> ExtractorM FileInfo
 nodeExtractInfo fp input@(Node _ _ nSubs) = do
-  if checkIgnoreFile nSubs
+  if checkIgnoreAllFile nSubs
   then return def
   else diffToFileInfo <$> (foldNode extractor =<< lift (removeIgnored fp input))
 
@@ -336,10 +336,10 @@ nodeExtractInfo fp input@(Node _ _ nSubs) = do
            (DList.singleton $ Reference {rName, rPos, rLink, rAnchor})
            DList.empty
 
--- | Check if there is `ignore file` at the beginning of the file,
+-- | Check if there is `ignore all` at the beginning of the file,
 -- ignoring preceding comments if there are any.
-checkIgnoreFile :: [Node] -> Bool
-checkIgnoreFile nodes =
+checkIgnoreAllFile :: [Node] -> Bool
+checkIgnoreAllFile nodes =
   let isSimpleComment :: Node -> Bool
       isSimpleComment node = isComment node && not (isIgnoreFile node)
 
@@ -350,7 +350,7 @@ checkIgnoreFile nodes =
     isComment = isJust . getCommentContent
 
     isIgnoreFile :: Node -> Bool
-    isIgnoreFile = (ValidMode IMFile ==) . getIgnoreMode
+    isIgnoreFile = (ValidMode IMAll ==) . getIgnoreMode
 
 defNode :: Node
 defNode = Node Nothing DOCUMENT [] -- hard-coded default Node
@@ -398,7 +398,7 @@ textToMode :: [Text] -> GetIgnoreMode
 textToMode ("ignore" : [x])
   | x == "link"      = ValidMode IMLink
   | x == "paragraph" = ValidMode IMParagraph
-  | x == "file"      = ValidMode IMFile
+  | x == "all"      = ValidMode IMAll
   | otherwise        = InvalidMode x
 textToMode _         = NotAnAnnotation
 

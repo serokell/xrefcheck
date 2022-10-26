@@ -146,7 +146,7 @@ xrefcheck --help
         <!-- a comment -->
         <!-- another comment -->
 
-        <!-- xrefcheck: ignore file -->
+        <!-- xrefcheck: ignore all -->
         ...the rest of the file...
         ```
 

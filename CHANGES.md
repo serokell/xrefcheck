@@ -52,6 +52,11 @@ Unreleased
     instead of expecting link in whole rest of file.
     If you've got `Expected a LINK after "ignore link" annotation` message, see
     PR's description for examples and details.
+* [#199](https://github.com/serokell/xrefcheck/pull/199)
+  + Now annotation
+  `<!-- xrefcheck: ignore all -->` instead of `<!-- xrefcheck: ignore file -->`
+  should be used to disable checking for links in file, so it's clearer that
+  file itself is not ignored (and links can target it).
 
 0.2.1
 ==========

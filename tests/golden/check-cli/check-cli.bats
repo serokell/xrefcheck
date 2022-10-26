@@ -33,7 +33,7 @@ load '../helpers'
   assert_output --partial "All repository links are valid."
 }
 
-@test "Reduchant slashes in ignore" {
+@test "Redundant slashes in ignore" {
   run xrefcheck \
     --ignore ./././././././//to-ignore/* \
     --root .
@@ -45,6 +45,8 @@ load '../helpers'
   to_temp xrefcheck --root .
 
   assert_diff - <<EOF
+
+
 === Invalid references found ===
 
   ➥  In file to-ignore/broken-link.md
@@ -65,6 +67,8 @@ EOF
   to_temp xrefcheck --root ././///././././//./
 
   assert_diff - <<EOF
+
+
 === Invalid references found ===
 
   ➥  In file to-ignore/broken-link.md
@@ -85,6 +89,8 @@ EOF
   to_temp xrefcheck
 
   assert_diff - <<EOF
+
+
 === Invalid references found ===
 
   ➥  In file to-ignore/broken-link.md

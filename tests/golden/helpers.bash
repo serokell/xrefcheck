@@ -67,9 +67,6 @@ assert_diff() {
   : "{output_file?}"
 
   diff $output_file $1 \
-    --ignore-space-change \
     --ignore-tab-expansion \
-    --ignore-trailing-space \
-    --ignore-blank-lines \
-    --new-file # treat absent files as empty
+    --ignore-trailing-space
 }

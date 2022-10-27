@@ -23,11 +23,12 @@ import Xrefcheck.Config
 import Xrefcheck.Core (Flavor (..))
 import Xrefcheck.Progress (allowRewrite)
 import Xrefcheck.Scan
-  (FormatsSupport, ScanError (..), ScanResult (..), scanRepo, specificFormatsSupport)
+  (FormatsSupport, ScanError (..), ScanResult (..), reportScanErrs, scanRepo,
+  specificFormatsSupport)
 import Xrefcheck.Scanners.Markdown (markdownSupport)
 import Xrefcheck.System (askWithinCI)
 import Xrefcheck.Util
-import Xrefcheck.Verify (verifyErrors, verifyRepo)
+import Xrefcheck.Verify (reportVerifyErrs, verifyErrors, verifyRepo)
 
 readConfig :: FilePath -> IO Config
 readConfig path = fmap (normaliseConfigFilePaths . overrideConfig) do
@@ -92,19 +93,3 @@ defaultAction Options{..} = do
         unless (null scanErrs) $ fmt "\n"
         reportVerifyErrs verifyErrs
         exitFailure
-  where
-    reportScanErrs errs = fmt
-      [int||
-      === Scan errors found ===
-
-      #{interpolateIndentF 2 (interpolateBlockListF' "➥ " build errs)}
-      Scan errors dumped, #{length errs} in total.
-      |]
-
-    reportVerifyErrs errs = fmt
-      [int||
-      === Invalid references found ===
-
-      #{interpolateIndentF 2 (interpolateBlockListF' "➥ " build errs)}
-      Invalid references dumped, #{length errs} in total.
-      |]

@@ -29,12 +29,13 @@ module Xrefcheck.Verify
 
     -- * URI parsing
   , parseUri
+  , reportVerifyErrs
   ) where
 
 import Universum
 
-import Control.Concurrent.Async (async, wait, withAsync)
-import Control.Exception (throwIO)
+import Control.Concurrent.Async (AsyncCancelled (AsyncCancelled), async, cancel, wait, withAsync)
+import Control.Exception (AsyncException (..), handle, throwIO)
 import Control.Monad.Catch (handleJust)
 import Control.Monad.Except (MonadError (..))
 import Data.ByteString qualified as BS
@@ -45,7 +46,7 @@ import Data.Text.Metrics (damerauLevenshteinNorm)
 import Data.Time (UTCTime, defaultTimeLocale, formatTime, readPTime, rfc822DateFormat)
 import Data.Time.Clock.POSIX (getPOSIXTime)
 import Data.Traversable (for)
-import Fmt (Buildable (..), maybeF, nameF)
+import Fmt (Buildable (..), blockListF', fmt, fmtLn, maybeF, nameF, (+|), (|+))
 import GHC.Exts qualified as Exts
 import GHC.Read (Read (readPrec))
 import Network.FTP.Client
@@ -227,6 +228,17 @@ instance Given ColorMode => Buildable VerifyError where
       ⛂  #{err}
       |]
 
+reportVerifyErrs
+  :: Given ColorMode => NonEmpty (WithReferenceLoc VerifyError) -> IO ()
+reportVerifyErrs errs = fmt
+  [int||
+  === Invalid references found ===
+
+  #{interpolateIndentF 2 (interpolateBlockListF' "➥ " build errs)}
+  Invalid references dumped, #{length errs} in total.
+  |]
+
+
 data RetryAfter = Date UTCTime | Seconds (Time Second)
   deriving stock (Show, Eq)
 
@@ -260,22 +272,39 @@ data NeedsCaching key
 -- then the @action@ will not be executed, and the value is added to the accumulator list.
 -- After the whole list has been traversed, the accumulator is traversed once again to ensure
 -- every asynchronous action is completed.
+-- If interrupted by AsyncException, returns this exception and list of already calcualted results
+-- (their subset can be arbitrary). Computations that were not ended till this moment are cancelled.
 forConcurrentlyCaching
   :: Ord cacheKey
-  => [a] -> (a -> NeedsCaching cacheKey) -> (a -> IO b) -> IO [b]
-forConcurrentlyCaching list needsCaching action = go [] M.empty list
+  => [a] -> (a -> NeedsCaching cacheKey) -> (a -> IO b) -> IO (Either (AsyncException, [b]) [b])
+forConcurrentlyCaching list needsCaching action = do
+  res <- go [] M.empty list
+  case res of
+    Right r -> return $ Right $ map (fromMaybe (error "impossible")) r
+      -- impossible, since no actions were cancelled
+
+    Left (exception, partialResult) -> return $  Left (exception, catMaybes partialResult)
   where
-    go acc cached (x : xs) = case needsCaching x of
-      NoCaching -> do
-        withAsync (action x) $ \b ->
-          go (b : acc) cached xs
-      CacheUnderKey cacheKey -> do
-        case M.lookup cacheKey cached of
-          Nothing -> do
-            withAsync (action x) $ \b ->
-              go (b : acc) (M.insert cacheKey b cached) xs
-          Just b -> go (b : acc) cached xs
-    go acc _ [] = for acc wait <&> reverse
+    interruptibleAction a = handle (\AsyncCancelled -> pure Nothing) (Just <$> action a)
+
+    go acc cached items = handle
+      (\exception -> Left . (exception,) <$> for acc (\f -> cancel f >> wait f))
+      -- If action was already completed, then @cancel@ will have no effect, and we
+      -- will get a result from @cancel f >> wait f@. Otherwise interrupted action
+      -- will return us @Nothing@.
+      case items of
+        [] -> Right . reverse <$> for acc wait
+
+        (x : xs) -> case needsCaching x of
+          NoCaching -> do
+            withAsync (interruptibleAction x) $ \b ->
+              go (b : acc) cached xs
+          CacheUnderKey cacheKey -> do
+            case M.lookup cacheKey cached of
+              Nothing -> do
+                withAsync (interruptibleAction x) $ \b ->
+                  go (b : acc) (M.insert cacheKey b cached) xs
+              Just b -> go (b : acc) cached xs
 
 verifyRepo
   :: Given ColorMode
@@ -306,7 +335,17 @@ verifyRepo
   accumulated <- loopAsyncUntil (printer progressRef) do
     forConcurrentlyCaching toScan ifExternalThenCache $ \(file, ref) ->
       verifyReference config mode progressRef repoInfo' root file ref
-  return $ fold accumulated
+  case accumulated of
+    Right res -> return $ fold res
+    Left (exception, partialRes) -> do
+      let errs = verifyErrors (fold partialRes)
+          total = length toScan
+          checked = length partialRes
+      whenJust errs $ reportVerifyErrs
+      fmtLn $ "\nInterrupted (" <> show exception <> "), checked "
+        +| checked |+ " out of " +| total |+ " references."
+      exitFailure
+
   where
     printer :: IORef VerifyProgress -> IO ()
     printer progressRef = do
@@ -681,12 +720,12 @@ checkExternalResource Config{..} link
       -> Bool
       -> ExceptT VerifyError IO ()
     makeFtpRequest host port path secure = handler host port $
-      \handle response -> do
+      \ftpHandle response -> do
         -- check connection status
         when (frStatus response /= Success) $
           throwError $ ExternalFtpResourceUnavailable response
         -- anonymous login
-        loginResp <- login handle "anonymous" ""
+        loginResp <- login ftpHandle "anonymous" ""
         -- check login status
         when (frStatus loginResp /= Success) $
           if ncIgnoreAuthFailures
@@ -694,13 +733,13 @@ checkExternalResource Config{..} link
           else throwError $ ExternalFtpException $ UnsuccessfulException loginResp
         -- If the response is non-null, the path is definitely a directory;
         -- If the response is null, the path may be a file or may not exist.
-        dirList <- nlst handle [ "-a", path ]
+        dirList <- nlst ftpHandle [ "-a", path ]
         when (BS.null dirList) $ do
           -- The server-PI will respond to the SIZE command with a 213 reply
           -- giving the transfer size of the file whose pathname was supplied,
           -- or an error response if the file does not exist, the size is
           -- unavailable, or some other error has occurred.
-          _ <- size handle path `catch` \case
+          _ <- size ftpHandle path `catch` \case
               UnsuccessfulException _ -> throwError $ FtpEntryDoesNotExist path
               FailureException FTPResponse{..} | frCode == 550 ->
                 throwError $ FtpEntryDoesNotExist path

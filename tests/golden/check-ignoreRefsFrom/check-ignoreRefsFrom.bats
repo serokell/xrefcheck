@@ -32,8 +32,6 @@ load '../helpers'
   to_temp xrefcheck -c config-directory.yaml
 
   assert_diff - <<EOF
-
-
 === Invalid references found ===
 
   ➥  In file ignoreRefsFrom/inner-directory/bad-reference.md
@@ -44,7 +42,6 @@ load '../helpers'
 
      ⛀  File does not exist:
         ./no-file.md
-
 
 Invalid references dumped, 1 in total.
 EOF

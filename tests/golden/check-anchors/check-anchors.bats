@@ -12,8 +12,6 @@ load '../helpers'
 @test "We report ambiguous anchor references" {
   to_temp xrefcheck -r ambiguous-anchors
 assert_diff - <<EOF
-
-
 === Invalid references found ===
 
   ➥  In file ambiguous-anchors/a.md
@@ -32,7 +30,6 @@ assert_diff - <<EOF
          Use of ambiguous anchors is discouraged because the target
          can change silently while the document containing it evolves.
 
-
   ➥  In file ambiguous-anchors/b.md
      bad reference (relative) at src:7:1-48:
        - text: "ambiguous anchor in other file"
@@ -49,7 +46,6 @@ assert_diff - <<EOF
          Use of ambiguous anchors is discouraged because the target
          can change silently while the document containing it evolves.
 
-
 Invalid references dumped, 2 in total.
 EOF
 }
@@ -57,8 +53,6 @@ EOF
 @test "We report references to non-existing anchors, giving hints about similar ones" {
   to_temp xrefcheck -r non-existing-anchors
 assert_diff - <<EOF
-
-
 === Invalid references found ===
 
   ➥  In file non-existing-anchors/a.md
@@ -71,8 +65,6 @@ assert_diff - <<EOF
          - h1 (header I) at src:6:1-4
          - h2 (header II) at src:8:1-5
 
-
-
   ➥  In file non-existing-anchors/a.md
      bad reference (current file) at src:14:1-18:
        - text: "broken"
@@ -82,8 +74,6 @@ assert_diff - <<EOF
      ⛀  Anchor 'heading' is not present, did you mean:
          - the-heading (header I) at src:10:1-13
 
-
-
   ➥  In file non-existing-anchors/a.md
      bad reference (current file) at src:16:1-31:
        - text: "broken"
@@ -91,7 +81,6 @@ assert_diff - <<EOF
        - anchor: really-unique-anchor
 
      ⛀  Anchor 'really-unique-anchor' is not present
-
 
 Invalid references dumped, 3 in total.
 EOF

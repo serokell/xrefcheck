@@ -1,5 +1,3 @@
-
-
 === Invalid references found ===
 
   ➥  In file check-ignoreExternalRefsTo.md
@@ -10,8 +8,6 @@
 
      ⛂  InternalException (HostCannotConnect "localhost" [Network.Socket.connect: <socket: N>: does not exist (Connection refused)])
 
-
-
   ➥  In file check-ignoreExternalRefsTo.md
      bad reference (external) at src:9:10-45:
        - text: "team"
@@ -19,8 +15,6 @@
        - anchor: -
 
      ⛂  InternalException (HostCannotConnect "127.0.0.1" [Network.Socket.connect: <socket: N>: does not exist (Connection refused)])
-
-
 
   ➥  In file check-ignoreExternalRefsTo.md
      bad reference (external) at src:11:10-44:
@@ -30,8 +24,6 @@
 
      ⛂  ConnectionFailure Network.Socket.connect: <socket: N>: does not exist (Connection refused)
 
-
-
   ➥  In file check-ignoreExternalRefsTo.md
      bad reference (external) at src:13:10-44:
        - text: "labs"
@@ -39,7 +31,5 @@
        - anchor: -
 
      ⛂  ConnectionFailure Network.Socket.connect: <socket: N>: does not exist (Connection refused)
-
-
 
 Invalid references dumped, 4 in total.

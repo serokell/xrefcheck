@@ -118,7 +118,6 @@ instance (Given ColorMode, Buildable a) => Buildable (WithReferenceLoc a) where
     In file #{styleIfNeeded Faint (styleIfNeeded Bold wrlFile)}
     bad #{wrlReference}
     #{wrlItem}
-
     |]
 
 data VerifyError
@@ -160,7 +159,7 @@ instance Given ColorMode => Buildable VerifyError where
       | otherwise ->
         [int||
         ⛀  Anchor '#{anchor}' is not present, did you mean:
-        #{indentF 4 $ blockListF similar}
+        #{indentF 4 $ blockListF similar}\
         |]
 
     AmbiguousAnchorRef file anchor fileAnchors ->
@@ -229,7 +228,6 @@ instance Given ColorMode => Buildable VerifyError where
     ExternalResourceSomeError err ->
       [int||
       ⛂  #{err}
-
       |]
 
 data RetryAfter = Date UTCTime | Seconds (Time Second)

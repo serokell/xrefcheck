@@ -29,9 +29,6 @@
     - anchors:
         []
 
-
-
-
 === Invalid references found ===
 
   ➥  In file check-images.md
@@ -42,7 +39,6 @@
 
      ⛂  Resource unavailable (404 Not Found)
 
-
   ➥  In file check-images.md
      bad reference (external) at src:16:1-33:
        - text: "bad image ref 2"
@@ -50,7 +46,6 @@
        - anchor: -
 
      ⛂  Resource unavailable (404 Not Found)
-
 
   ➥  In file check-images.md
      bad reference (relative) at src:20:1-34:
@@ -61,7 +56,6 @@
      ⛀  File does not exist:
         3.png
 
-
   ➥  In file check-images.md
      bad reference (relative) at src:21:1-33:
        - text: "bad image ref 4"
@@ -70,6 +64,5 @@
 
      ⛀  File does not exist:
         4.png
-
 
 Invalid references dumped, 4 in total.

@@ -41,8 +41,6 @@ load '../helpers'
   to_temp xrefcheck
 
   assert_diff - <<EOF
-
-
 === Invalid references found ===
 
   ➥  In file git.md
@@ -53,7 +51,6 @@ load '../helpers'
 
      ⛀  File does not exist:
         a.md
-
 
 Invalid references dumped, 1 in total.
 EOF

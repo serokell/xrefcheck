@@ -75,7 +75,7 @@ defaultAction Options{..} = do
       fmt [int||
       === Repository data ===
 
-      #{indentF 2 (build repoInfo)}
+      #{indentF 2 (build repoInfo)}\
       |]
 
     unless (null scanErrs) . reportScanErrs $ sortBy (compare `on` seFile) scanErrs
@@ -89,7 +89,7 @@ defaultAction Options{..} = do
       Nothing | null scanErrs -> fmtLn "All repository links are valid."
       Nothing -> exitFailure
       Just (toList -> verifyErrs) -> do
-        fmt "\n\n"
+        unless (null scanErrs) $ fmt "\n"
         reportVerifyErrs verifyErrs
         exitFailure
   where

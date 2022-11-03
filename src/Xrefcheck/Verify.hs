@@ -45,7 +45,7 @@ import Data.Text.Metrics (damerauLevenshteinNorm)
 import Data.Time (UTCTime, defaultTimeLocale, formatTime, readPTime, rfc822DateFormat)
 import Data.Time.Clock.POSIX (getPOSIXTime)
 import Data.Traversable (for)
-import Fmt (Buildable (..), blockListF', indentF, listF, maybeF, nameF, unlinesF, (+|), (|+))
+import Fmt (Buildable (..), indentF, listF, maybeF, nameF, blockListF)
 import GHC.Exts qualified as Exts
 import GHC.Read (Read (readPrec))
 import Network.FTP.Client
@@ -59,6 +59,7 @@ import Network.HTTP.Types.Header (hRetryAfter)
 import Network.HTTP.Types.Status (Status, statusCode, statusMessage)
 import System.FilePath
   (equalFilePath, joinPath, makeRelative, normalise, splitDirectories, takeDirectory, (</>))
+import Text.Interpolation.Nyan
 import Text.ParserCombinators.ReadPrec qualified as ReadPrec (lift)
 import Text.Regex.TDFA.Text (Regex, regexec)
 import Text.URI (Authority (..), ParseExceptionBs, URI (..), mkURIBs)
@@ -113,10 +114,12 @@ data WithReferenceLoc a = WithReferenceLoc
   }
 
 instance (Given ColorMode, Buildable a) => Buildable (WithReferenceLoc a) where
-  build WithReferenceLoc{..} =
-    "In file " +| styleIfNeeded Faint (styleIfNeeded Bold wrlFile) |+ "\nbad "
-    +| wrlReference |+ "\n"
-    +| wrlItem |+ "\n\n"
+  build WithReferenceLoc{..} = [int||
+    In file #{styleIfNeeded Faint (styleIfNeeded Bold wrlFile)}
+    bad #{wrlReference}
+    #{wrlItem}
+
+    |]
 
 data VerifyError
   = LocalFileDoesNotExist FilePath
@@ -138,65 +141,96 @@ data VerifyError
 instance Given ColorMode => Buildable VerifyError where
   build = \case
     LocalFileDoesNotExist file ->
-      "⛀  File does not exist:\n   " +| file |+ "\n"
+      [int||
+      ⛀  File does not exist:
+         #{file}
+      |]
 
     LocalFileOutsideRepo file ->
-      "⛀  Link targets a local file outside repository:\n   " +| file |+ "\n"
+      [int||
+      ⛀  Link targets a local file outside repository:
+         #{file}
+      |]
 
-    AnchorDoesNotExist anchor similar ->
-      "⛀  Anchor '" +| anchor |+ "' is not present" +|
-      anchorHints similar
+    AnchorDoesNotExist anchor similar
+      | null similar ->
+        [int||
+        ⛀  Anchor '#{anchor}' is not present
+        |]
+      | otherwise ->
+        [int||
+        ⛀  Anchor '#{anchor}' is not present, did you mean:
+        #{indentF 4 $ blockListF similar}
+        |]
 
     AmbiguousAnchorRef file anchor fileAnchors ->
-      "⛀  Ambiguous reference to anchor '" +| anchor |+ "'\n   " +|
-      "In file " +| file |+ "\n   " +|
-      "Similar anchors are:\n" +|
-          blockListF' "    -" build fileAnchors |+ "" +|
-      "   Use of such anchors is discouraged because referenced object\n\
-      \   can change silently whereas the document containing it evolves.\n"
+      [int||
+      ⛀  Ambiguous reference to anchor '#{anchor}'
+         In file #{file}
+         It could refer to either:
+      #{indentF 4 $ blockListF fileAnchors}
+          Use of ambiguous anchors is discouraged because the target
+          can change silently while the document containing it evolves.
+      |]
 
     ExternalResourceInvalidUri err ->
-      "⛂  Invalid URI (" +| err |+ ")\n"
+      [int||
+      ⛂  Invalid URI (#{err})
+      |]
 
     ExternalResourceUriConversionError err ->
-      unlinesF
-        [ "⛂  Invalid URI"
-        , indentF 4 . build $ displayException err
-        ]
+      [int||
+      ⛂  Invalid URI
+      #{indentF 4 . build $ displayException err}
+      |]
 
     ExternalResourceInvalidUrl Nothing ->
-      "⛂  Invalid URL\n"
+      [int||
+      ⛂  Invalid URL
+      |]
 
     ExternalResourceInvalidUrl (Just message) ->
-      "⛂  Invalid URL (" +| message |+ ")\n"
+      [int||
+      ⛂  Invalid URL (#{message})
+      |]
 
     ExternalResourceUnknownProtocol ->
-      "⛂  Bad url (expected 'http','https', 'ftp' or 'ftps')\n"
+      [int||
+      ⛂  Bad url (expected 'http','https', 'ftp' or 'ftps')
+      |]
 
     ExternalHttpResourceUnavailable status ->
-      "⛂  Resource unavailable (" +| statusCode status |+ " " +|
-      decodeUtf8 @Text (statusMessage status) |+ ")\n"
+      [int||
+      ⛂  Resource unavailable (#{statusCode status} #{decodeUtf8 @Text (statusMessage status)})
+      |]
 
     ExternalHttpTooManyRequests retryAfter ->
-      "⛂  Resource unavailable (429 Too Many Requests; retry after " +|
-      maybeF retryAfter |+ ")\n"
+      [int||
+      ⛂  Resource unavailable (429 Too Many Requests; retry after #{maybeF retryAfter})
+      |]
 
     ExternalFtpResourceUnavailable response ->
-      "⛂  Resource unavailable:\n" +| response |+ "\n"
+      [int||
+      ⛂  Resource unavailable:
+      #{response}
+      |]
 
     ExternalFtpException err ->
-      "⛂  FTP exception (" +| err |+ ")\n"
+      [int||
+      ⛂  FTP exception (#{err})
+      |]
 
     FtpEntryDoesNotExist entry ->
-      "⛂ File or directory does not exist:\n" +| entry |+ "\n"
+      [int||
+      ⛂ File or directory does not exist:
+      #{entry}
+      |]
 
     ExternalResourceSomeError err ->
-      "⛂  " +| build err |+ "\n\n"
-    where
-      anchorHints = \case
-        []  -> "\n"
-        [h] -> ",\n   did you mean " +| h |+ "?\n"
-        hs  -> ", did you mean:\n" +| blockListF' "    -" build hs
+      [int||
+      ⛂  #{err}
+
+      |]
 
 data RetryAfter = Date UTCTime | Seconds (Time Second)
   deriving stock (Show, Eq)

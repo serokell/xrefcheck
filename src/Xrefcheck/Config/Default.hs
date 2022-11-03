@@ -3,8 +3,6 @@
  - SPDX-License-Identifier: MPL-2.0
  -}
 
-{-# LANGUAGE QuasiQuotes #-}
-
 module Xrefcheck.Config.Default where
 
 import Universum

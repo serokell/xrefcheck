@@ -29,7 +29,8 @@ import Data.DList qualified as DList
 import Data.Default (def)
 import Data.Text qualified as T
 import Data.Text.Lazy qualified as LT
-import Fmt (Buildable (..), blockListF, nameF, (+|), (|+))
+import Fmt (Buildable (..), blockListF, nameF)
+import Text.Interpolation.Nyan
 import Text.HTML.TagSoup
 
 import Xrefcheck.Core
@@ -56,11 +57,13 @@ toPosition = Position . \case
   Nothing -> Nothing
   Just PosInfo{..}
     | startLine == endLine -> Just $
-        startLine |+ ":" +| startColumn |+ "-" +| endColumn |+ ""
+        [int|s|
+        #{startLine}:#{startColumn}-#{endColumn}
+        |]
     | otherwise -> Just $
-        "" +|
-        startLine |+ ":" +| startColumn |+ " - " +|
-        endLine |+ ":" +| endColumn |+ ""
+        [int|s|
+        #{startLine}:#{startColumn}-#{endLine}:#{endColumn}
+        |]
 
 -- | Extract text from the topmost node.
 nodeExtractText :: Node -> Text

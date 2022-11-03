@@ -34,11 +34,12 @@ import Data.Aeson (FromJSON (..), genericParseJSON, withText)
 import Data.List qualified as L
 import Data.Map qualified as M
 import Data.Reflection (Given)
-import Fmt (Buildable (..), nameF, (+|), (|+))
+import Fmt (Buildable (..))
 import System.Directory (doesDirectoryExist)
 import System.FilePath
   (dropTrailingPathSeparator, equalFilePath, splitDirectories, takeDirectory, takeExtension, (</>))
 import System.Process (cwd, readCreateProcess, shell)
+import Text.Interpolation.Nyan
 import Text.Regex.TDFA.Common (CompOption (..), ExecOption (..), Regex)
 import Text.Regex.TDFA.Text qualified as R
 
@@ -93,10 +94,14 @@ data ScanError = ScanError
   } deriving stock (Show, Eq)
 
 instance Given ColorMode => Buildable ScanError where
-  build ScanError{..} =
-    "In file " +| styleIfNeeded Faint (styleIfNeeded Bold seFile) |+ "\n"
-    +| nameF ("scan error " +| sePosition |+ "") mempty |+ "\n⛀  "
-    +| seDescription |+ "\n\n\n"
+  build ScanError{..} = [int||
+    In file #{styleIfNeeded Faint (styleIfNeeded Bold seFile)}
+    scan error #{sePosition}:
+
+    ⛀  #{seDescription}
+
+
+    |]
 
 data ScanErrorDescription
   = LinkErr
@@ -107,13 +112,13 @@ data ScanErrorDescription
 
 instance Buildable ScanErrorDescription where
   build = \case
-    LinkErr -> "Expected a LINK after \"ignore link\" annotation"
-    FileErr -> "Annotation \"ignore all\" must be at the top of \
-      \markdown or right after comments at the top"
-    ParagraphErr txt -> "Expected a PARAGRAPH after \
-          \\"ignore paragraph\" annotation, but found " +| txt |+ ""
-    UnrecognisedErr txt ->  "Unrecognised option \"" +| txt |+ "\" perhaps you meant \
-          \<\"ignore link\"|\"ignore paragraph\"|\"ignore all\"> "
+    LinkErr -> [int||Expected a LINK after "ignore link" annotation|]
+    FileErr -> [int||Annotation "ignore all" must be at the top of \
+                     markdown or right after comments at the top|]
+    ParagraphErr txt -> [int||Expected a PARAGRAPH after \
+                              "ignore paragraph" annotation, but found #{txt}|]
+    UnrecognisedErr txt -> [int||Unrecognised option "#{txt}" perhaps you meant \
+                                 <"ignore link"|"ignore paragraph"|"ignore all">|]
 
 specificFormatsSupport :: [([Extension], ScanAction)] -> FormatsSupport
 specificFormatsSupport formats = \ext -> M.lookup ext formatsMap

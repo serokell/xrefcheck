@@ -24,6 +24,8 @@ import System.Environment (lookupEnv)
 import System.FilePath (isRelative, (</>))
 import System.FilePath.Glob (CompOptions (errorRecovery))
 import System.FilePath.Glob qualified as Glob
+import Text.Interpolation.Nyan
+
 import Xrefcheck.Util (normaliseWithNoTrailing)
 
 -- | We can quite safely treat surrounding filesystem as frozen,
@@ -51,13 +53,14 @@ mkGlobPattern path = do
   case Glob.tryCompileWith globCompileOptions spath of
     Right _ -> return (RelGlobPattern spath)
     Left err -> Left
-      $ "Glob pattern compilation failed.\n"
-      <> "Error message is:\n"
-      <> err
-      <> "\nThe syntax for glob patterns is described here:\n"
-      <> "https://hackage.haskell.org/package/Glob/docs/System-FilePath-Glob.html#v:compile"
-      <> "\nSpecial characters in file names can be escaped using square brackets"
-      <> ", e.g. <a> -> [<]a[>]."
+        [int||
+        Glob pattern compilation failed.
+        Error message is:
+        #{err}
+        The syntax for glob patterns is described here:
+        https://hackage.haskell.org/package/Glob/docs/System-FilePath-Glob.html#v:compile
+        Special characters in file names can be escaped using square brackets, e.g. <a> -> [<]a[>].
+        |]
 
 normaliseGlobPattern :: RelGlobPattern -> RelGlobPattern
 normaliseGlobPattern = RelGlobPattern . normaliseWithNoTrailing . coerce

@@ -26,7 +26,8 @@
             - text: "bad image ref 4"
             - link: ./4.png
             - anchor: -
-    - anchors: []
+    - anchors:
+        []
 
 
 

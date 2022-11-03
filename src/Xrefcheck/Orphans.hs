@@ -13,9 +13,10 @@ import Universum
 
 import Data.ByteString.Char8 qualified as C
 
-import Fmt (Buildable (..), unlinesF, (+|), (|+))
+import Fmt (Buildable (..))
 import Network.FTP.Client
   (FTPException (..), FTPMessage (..), FTPResponse (..), ResponseStatus (..))
+import Text.Interpolation.Nyan
 import Text.URI (RText, unRText)
 import URI.ByteString (SchemaError (..), URIParseError (..))
 
@@ -33,10 +34,11 @@ instance Buildable FTPMessage where
     )
 
 instance Buildable FTPResponse where
-  build FTPResponse{..} = unlinesF
-    [ frStatus |+ " (" +| frCode |+ "):"
-    , build frMessage
-    ]
+  build FTPResponse{..} =
+    [int||
+    #{frStatus} (#{frCode}):
+    #{frMessage}
+    |]
 
 instance Buildable FTPException where
   build (BadProtocolResponseException _) = "Raw FTP exception"

@@ -15,17 +15,18 @@ import Control.Lens (makeLenses)
 import Data.Aeson (FromJSON (..), withText)
 import Data.Char (isAlphaNum)
 import Data.Char qualified as C
+import Data.DList (DList)
+import Data.DList qualified as DList
 import Data.Default (Default (..))
 import Data.List qualified as L
 import Data.Map qualified as M
 import Data.Reflection (Given)
 import Data.Text qualified as T
-import Fmt (Buildable (..), blockListF, blockListF', nameF, (+|), (|+))
+import Fmt (Buildable (..), blockListF, blockListF', indentF)
 import System.FilePath (isPathSeparator, pathSeparator)
+import Text.Interpolation.Nyan
 import Time (Second, Time)
 
-import Data.DList (DList)
-import Data.DList qualified as DList
 import Xrefcheck.Progress
 import Xrefcheck.Util
 
@@ -142,14 +143,12 @@ instance NFData FileInfo
 
 instance Given ColorMode => Buildable Reference where
   build Reference{..} =
-    nameF ("reference " +| paren (build loc) |+ " " +| rPos |+ "") $
-      blockListF
-      [ "text: " <> show rName
-      , "link: " <> build rLink
-      , "anchor: " <> build (rAnchor ?: styleIfNeeded Faint "-")
-      ]
-    where
-      loc = locationType rLink
+    [int||
+    reference #{paren . build $ locationType rLink} #{rPos}:
+      - text: #s{rName}
+      - link: #{rLink}
+      - anchor: #{rAnchor ?: styleIfNeeded Faint "-"}
+    |]
 
 instance Given ColorMode => Buildable AnchorType where
   build = styleIfNeeded Faint . \case
@@ -167,23 +166,29 @@ instance Given ColorMode => Buildable AnchorType where
         n -> error "Bad header level: " <> show n
 
 instance Given ColorMode => Buildable Anchor where
-  build (Anchor t a p) = a |+ " (" +| t |+ ") " +| p |+ ""
+  build Anchor{..} =
+    [int||
+    #{aName} (#{aType}) #{aPos}
+    |]
 
 instance Given ColorMode => Buildable FileInfo where
-  build FileInfo{..} = blockListF
-    [ nameF "references" $ blockListF _fiReferences
-    , nameF "anchors" $ blockListF _fiAnchors
-    ]
+  build FileInfo{..} =
+    [int||
+    - references:
+    #{indentF 4 $ blockListF _fiReferences}\
+    - anchors:
+    #{indentF 4 $ blockListF _fiAnchors}\
+    |]
 
 instance Given ColorMode => Buildable RepoInfo where
   build (RepoInfo m _) =
     blockListF' "⮚" buildFileReport (mapMaybe sequence $ M.toList m)
     where
-      buildFileReport (name, info) = mconcat
-        [ colorIfNeeded Cyan $ fromString name <> ":\n"
-        , build info
-        , "\n"
-        ]
+      buildFileReport (name, info) =
+        [int||
+        #{colorIfNeeded Cyan $ name}:
+        #{info}
+        |]
 
 -----------------------------------------------------------
 -- Analysing

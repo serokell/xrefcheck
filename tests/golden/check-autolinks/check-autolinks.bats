@@ -24,7 +24,8 @@ assert_diff - <<EOF
             - text: "www.commonmark.org"
             - link: http://www.commonmark.org
             - anchor: -
-    - anchors: []
+    - anchors:
+        []
 
 
 All repository links are valid.

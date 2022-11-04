@@ -1,5 +1,3 @@
-
-
 === Invalid references found ===
 
   ➥  In file broken-link-in-footnote/file-with-footnote-with-broken-link.md
@@ -10,6 +8,5 @@
 
      ⛀  File does not exist:
         broken-link-in-footnote/notExists
-
 
 Invalid references dumped, 1 in total.

@@ -45,8 +45,6 @@ load '../helpers'
   to_temp xrefcheck --root .
 
   assert_diff - <<EOF
-
-
 === Invalid references found ===
 
   ➥  In file to-ignore/broken-link.md
@@ -57,7 +55,6 @@ load '../helpers'
 
      ⛀  File does not exist:
         ./one/two/three
-
 
 Invalid references dumped, 1 in total.
 EOF
@@ -67,8 +64,6 @@ EOF
   to_temp xrefcheck --root ././///././././//./
 
   assert_diff - <<EOF
-
-
 === Invalid references found ===
 
   ➥  In file to-ignore/broken-link.md
@@ -79,7 +74,6 @@ EOF
 
      ⛀  File does not exist:
         ./one/two/three
-
 
 Invalid references dumped, 1 in total.
 EOF
@@ -89,8 +83,6 @@ EOF
   to_temp xrefcheck
 
   assert_diff - <<EOF
-
-
 === Invalid references found ===
 
   ➥  In file to-ignore/broken-link.md
@@ -101,7 +93,6 @@ EOF
 
      ⛀  File does not exist:
         ./one/two/three
-
 
 Invalid references dumped, 1 in total.
 EOF

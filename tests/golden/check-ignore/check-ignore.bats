@@ -45,7 +45,6 @@ load '../helpers'
 
      ⛀  Annotation "ignore all" must be at the top of markdown or right after comments at the top
 
-
 Scan errors dumped, 1 in total.
 EOF
 }
@@ -61,9 +60,7 @@ EOF
 
      ⛀  Annotation "ignore all" must be at the top of markdown or right after comments at the top
 
-
 Scan errors dumped, 1 in total.
-
 
 === Invalid references found ===
 
@@ -75,7 +72,6 @@ Scan errors dumped, 1 in total.
 
      ⛀  File does not exist:
         ./referenced-file.md
-
 
 Invalid references dumped, 1 in total.
 EOF

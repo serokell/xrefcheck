@@ -27,7 +27,6 @@ assert_diff - <<EOF
     - anchors:
         []
 
-
 All repository links are valid.
 EOF
 }

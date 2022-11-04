@@ -100,7 +100,6 @@ instance Given ColorMode => Buildable ScanError where
 
     ⛀  #{seDescription}
 
-
     |]
 
 data ScanErrorDescription

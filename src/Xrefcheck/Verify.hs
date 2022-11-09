@@ -286,23 +286,6 @@ forConcurrentlyCaching list needsCaching action = go [] M.empty list
       -> [a]
       -> IO (Either (AsyncException, [b]) [b])
     go acc cached items =
-      ( handleJust
-        (\case
-          UserInterrupt -> Just UserInterrupt
-          _ -> Nothing
-        )
-        \exception -> do
-                partialResults <- for acc \asyncAction -> do
-                  cancel asyncAction
-                  poll asyncAction <&> \case
-                    Just (Right a) -> Just a
-                    Just (Left _ex) -> Nothing
-                    Nothing -> Nothing
-                pure $ Left (exception, catMaybes partialResults)
-      -- If action was already completed, then @cancel@ will have no effect, and we
-      -- will get result from @cancel f >> pool f@. Otherwise action will be interrupted,
-      -- so pool will return @Left (SomeException AsyncCancelled)@
-      )
       case items of
 
         (x : xs) -> case needsCaching x of
@@ -316,7 +299,24 @@ forConcurrentlyCaching list needsCaching action = go [] M.empty list
                   go (b : acc) (M.insert cacheKey b cached) xs
               Just b -> go (b : acc) cached xs
 
-        [] -> Right . reverse <$> for acc wait
+        [] -> handleJust
+                (\case
+                  UserInterrupt -> Just UserInterrupt
+                  _ -> Nothing
+                )
+                (\exception -> do
+                        partialResults <- for acc \asyncAction -> do
+                          cancel asyncAction
+                          poll asyncAction <&> \case
+                            Just (Right a) -> Just a
+                            Just (Left _ex) -> Nothing
+                            Nothing -> Nothing
+                        pure $ Left (exception, catMaybes partialResults)
+                )
+                $ Right . reverse <$> for acc wait
+      -- If action was already completed, then @cancel@ will have no effect, and we
+      -- will get result from @cancel f >> pool f@. Otherwise action will be interrupted,
+      -- so pool will return @Left (SomeException AsyncCancelled)@
 
 verifyRepo
   :: Given ColorMode
@@ -355,7 +355,7 @@ verifyRepo
           total = length toScan
           checked = length partialRes
       whenJust errs $ reportVerifyErrs
-      fmt [int||
+      fmt [int|A|
           Interrupted (#s{exception}), checked #{checked} out of #{total} references.
           |]
       exitFailure

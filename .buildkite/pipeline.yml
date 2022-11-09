@@ -30,6 +30,9 @@ steps:
 
   - command: nix run -f ci.nix xrefcheck-static -c xrefcheck --ignore 'tests/markdowns/**/*' --ignore 'tests/golden/**/*'
     label: Xrefcheck itself
+    retry:
+      automatic:
+        limit: 2
 
   - label: lint
     command: nix run -f ci.nix pkgs.haskellPackages.hlint -c hlint .

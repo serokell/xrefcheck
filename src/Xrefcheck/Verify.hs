@@ -5,6 +5,7 @@
 
 {-# LANGUAGE DeriveFunctor         #-}
 {-# LANGUAGE PartialTypeSignatures #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# OPTIONS_GHC -Wno-partial-type-signatures #-}
 
 module Xrefcheck.Verify
@@ -34,8 +35,8 @@ module Xrefcheck.Verify
 
 import Universum
 
-import Control.Concurrent.Async (AsyncCancelled (AsyncCancelled), async, cancel, wait, withAsync)
-import Control.Exception (AsyncException (..), handle, throwIO)
+import Control.Concurrent.Async (async, cancel, wait, withAsync, Async, poll)
+import Control.Exception (AsyncException (..), throwIO)
 import Control.Monad.Catch (handleJust)
 import Control.Monad.Except (MonadError (..))
 import Data.ByteString qualified as BS
@@ -46,7 +47,7 @@ import Data.Text.Metrics (damerauLevenshteinNorm)
 import Data.Time (UTCTime, defaultTimeLocale, formatTime, readPTime, rfc822DateFormat)
 import Data.Time.Clock.POSIX (getPOSIXTime)
 import Data.Traversable (for)
-import Fmt (Buildable (..), blockListF', fmt, fmtLn, maybeF, nameF, (+|), (|+))
+import Fmt (Buildable (..), fmt, maybeF, nameF)
 import GHC.Exts qualified as Exts
 import GHC.Read (Read (readPrec))
 import Network.FTP.Client
@@ -275,36 +276,47 @@ data NeedsCaching key
 -- If interrupted by AsyncException, returns this exception and list of already calcualted results
 -- (their subset can be arbitrary). Computations that were not ended till this moment are cancelled.
 forConcurrentlyCaching
-  :: Ord cacheKey
+  :: forall a b cacheKey.  Ord cacheKey
   => [a] -> (a -> NeedsCaching cacheKey) -> (a -> IO b) -> IO (Either (AsyncException, [b]) [b])
-forConcurrentlyCaching list needsCaching action = do
-  res <- go [] M.empty list
-  case res of
-    Right r -> return $ Right $ map (fromMaybe (error "impossible")) r
-      -- impossible, since no actions were cancelled
-
-    Left (exception, partialResult) -> return $  Left (exception, catMaybes partialResult)
+forConcurrentlyCaching list needsCaching action = go [] M.empty list
   where
-    interruptibleAction a = handle (\AsyncCancelled -> pure Nothing) (Just <$> action a)
-
-    go acc cached items = handle
-      (\exception -> Left . (exception,) <$> for acc (\f -> cancel f >> wait f))
+    go
+      :: [Async b]
+      -> Map cacheKey (Async b)
+      -> [a]
+      -> IO (Either (AsyncException, [b]) [b])
+    go acc cached items =
+      ( handleJust
+        (\case
+          UserInterrupt -> Just UserInterrupt
+          _ -> Nothing
+        )
+        \exception -> do
+                partialResults <- for acc \asyncAction -> do
+                  cancel asyncAction
+                  poll asyncAction <&> \case
+                    Just (Right a) -> Just a
+                    Just (Left _ex) -> Nothing
+                    Nothing -> Nothing
+                pure $ Left (exception, catMaybes partialResults)
       -- If action was already completed, then @cancel@ will have no effect, and we
-      -- will get a result from @cancel f >> wait f@. Otherwise interrupted action
-      -- will return us @Nothing@.
+      -- will get result from @cancel f >> pool f@. Otherwise action will be interrupted,
+      -- so pool will return @Left (SomeException AsyncCancelled)@
+      )
       case items of
-        [] -> Right . reverse <$> for acc wait
 
         (x : xs) -> case needsCaching x of
           NoCaching -> do
-            withAsync (interruptibleAction x) $ \b ->
+            withAsync (action x) $ \b ->
               go (b : acc) cached xs
           CacheUnderKey cacheKey -> do
             case M.lookup cacheKey cached of
               Nothing -> do
-                withAsync (interruptibleAction x) $ \b ->
+                withAsync (action x) $ \b ->
                   go (b : acc) (M.insert cacheKey b cached) xs
               Just b -> go (b : acc) cached xs
+
+        [] -> Right . reverse <$> for acc wait
 
 verifyRepo
   :: Given ColorMode
@@ -338,12 +350,14 @@ verifyRepo
   case accumulated of
     Right res -> return $ fold res
     Left (exception, partialRes) -> do
+      -- The user has hit Ctrl+C; display any verification errors we managed to find and exit.
       let errs = verifyErrors (fold partialRes)
           total = length toScan
           checked = length partialRes
       whenJust errs $ reportVerifyErrs
-      fmtLn $ "\nInterrupted (" <> show exception <> "), checked "
-        +| checked |+ " out of " +| total |+ " references."
+      fmt [int||
+          Interrupted (#s{exception}), checked #{checked} out of #{total} references.
+          |]
       exitFailure
 
   where

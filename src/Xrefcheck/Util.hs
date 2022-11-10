@@ -13,6 +13,7 @@ module Xrefcheck.Util
   , posixTimeToTimeSecond
   , utcTimeToTimeSecond
   , module Xrefcheck.Util.Colorize
+  , module Xrefcheck.Util.Interpolate
   ) where
 
 import Universum
@@ -30,6 +31,7 @@ import System.FilePath (dropTrailingPathSeparator, normalise)
 import Time (Second, Time (..), sec)
 
 import Xrefcheck.Util.Colorize
+import Xrefcheck.Util.Interpolate
 
 paren :: Builder -> Builder
 paren a

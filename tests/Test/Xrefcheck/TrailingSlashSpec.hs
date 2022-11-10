@@ -7,16 +7,17 @@ module Test.Xrefcheck.TrailingSlashSpec where
 
 import Universum
 
-import Fmt (blockListF, pretty, unlinesF)
 import System.Directory (doesFileExist)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertFailure, testCase)
+import Text.Interpolation.Nyan
 
 import Xrefcheck.Config
 import Xrefcheck.Core
 import Xrefcheck.Progress
 import Xrefcheck.Scan
 import Xrefcheck.Scanners.Markdown
+import Xrefcheck.Util
 
 test_slash :: TestTree
 test_slash = testGroup "Trailing forward slash detection" $
@@ -33,12 +34,12 @@ test_slash = testGroup "Trailing forward slash detection" $
           return $ if predicate
                     then Right ()
                     else Left filePath)
-        if null nonExistentFiles
-        then pass
-        else assertFailure $ pretty $ unlinesF
-          [ "Expected all filepaths to be valid, but these filepaths do not exist:"
-          , blockListF nonExistentFiles
-          ]
+        whenJust (nonEmpty nonExistentFiles) $ \files ->
+          assertFailure
+            [int||
+            Expected all filepaths to be valid, but these filepaths do not exist:
+            #{interpolateBlockListF files}
+            |]
   where
     roots :: [FilePath]
     roots =

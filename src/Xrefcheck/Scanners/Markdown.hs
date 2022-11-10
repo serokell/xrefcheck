@@ -25,13 +25,13 @@ import Control.Lens (_Just, makeLenses, makeLensesFor, (.=))
 import Control.Monad.Trans.Writer.CPS (Writer, runWriter, tell)
 import Data.Aeson (FromJSON (..), genericParseJSON)
 import Data.ByteString.Lazy qualified as BSL
-import Data.DList qualified as DList
 import Data.Default (def)
+import Data.DList qualified as DList
 import Data.Text qualified as T
 import Data.Text.Lazy qualified as LT
-import Fmt (Buildable (..), blockListF, nameF)
-import Text.Interpolation.Nyan
+import Fmt (Buildable (..), nameF)
 import Text.HTML.TagSoup
+import Text.Interpolation.Nyan
 
 import Xrefcheck.Core
 import Xrefcheck.Scan
@@ -50,7 +50,8 @@ defGithubMdConfig = MarkdownConfig
   }
 
 instance Buildable Node where
-  build (Node _mpos ty subs) = nameF (show ty) $ blockListF subs
+  build (Node _mpos ty mSubs) = nameF (show ty) $
+    maybe "[]" interpolateBlockListF (nonEmpty mSubs)
 
 toPosition :: Maybe PosInfo -> Position
 toPosition = Position . \case

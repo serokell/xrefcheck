@@ -146,7 +146,6 @@ tests:
       - xrefcheck
       - bytestring
       - directory
-      - fmt
       - http-types
       - o-clock
       - regex-tdfa
@@ -159,6 +158,7 @@ tests:
       - uri-bytestring
       - yaml
       - reflection
+      - nyan-interpolation
 
   ftp-tests:
     main: Main.hs

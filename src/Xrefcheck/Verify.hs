@@ -45,7 +45,7 @@ import Data.Text.Metrics (damerauLevenshteinNorm)
 import Data.Time (UTCTime, defaultTimeLocale, formatTime, readPTime, rfc822DateFormat)
 import Data.Time.Clock.POSIX (getPOSIXTime)
 import Data.Traversable (for)
-import Fmt (Buildable (..), indentF, listF, maybeF, nameF, blockListF)
+import Fmt (Buildable (..), maybeF, nameF)
 import GHC.Exts qualified as Exts
 import GHC.Read (Read (readPrec))
 import Network.FTP.Client
@@ -87,9 +87,6 @@ newtype VerifyResult e = VerifyResult [e]
 
 deriving newtype instance Semigroup (VerifyResult e)
 deriving newtype instance Monoid (VerifyResult e)
-
-instance Buildable e => Buildable (VerifyResult e) where
-  build vr = maybe "ok" listF (verifyErrors vr)
 
 verifyOk :: VerifyResult e -> Bool
 verifyOk (VerifyResult errors) = null errors
@@ -151,25 +148,25 @@ instance Given ColorMode => Buildable VerifyError where
          #{file}
       |]
 
-    AnchorDoesNotExist anchor similar
-      | null similar ->
+    AnchorDoesNotExist anchor similar -> case nonEmpty similar of
+      Nothing ->
         [int||
         ⛀  Anchor '#{anchor}' is not present
         |]
-      | otherwise ->
+      Just otherAnchors ->
         [int||
         ⛀  Anchor '#{anchor}' is not present, did you mean:
-        #{indentF 4 $ blockListF similar}\
+        #{interpolateIndentF 4 $ interpolateBlockListF otherAnchors}
         |]
 
     AmbiguousAnchorRef file anchor fileAnchors ->
       [int||
       ⛀  Ambiguous reference to anchor '#{anchor}'
-         In file #{file}
-         It could refer to either:
-      #{indentF 4 $ blockListF fileAnchors}
-          Use of ambiguous anchors is discouraged because the target
-          can change silently while the document containing it evolves.
+        In file #{file}
+        It could refer to either:
+      #{interpolateIndentF 4 $ interpolateBlockListF fileAnchors}
+        Use of ambiguous anchors is discouraged because the target
+        can change silently while the document containing it evolves.
       |]
 
     ExternalResourceInvalidUri err ->
@@ -180,7 +177,7 @@ instance Given ColorMode => Buildable VerifyError where
     ExternalResourceUriConversionError err ->
       [int||
       ⛂  Invalid URI
-      #{indentF 4 . build $ displayException err}
+      #{interpolateIndentF 4 . build $ displayException err}
       |]
 
     ExternalResourceInvalidUrl Nothing ->

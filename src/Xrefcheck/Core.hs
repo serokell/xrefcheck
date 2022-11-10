@@ -15,14 +15,13 @@ import Control.Lens (makeLenses)
 import Data.Aeson (FromJSON (..), withText)
 import Data.Char (isAlphaNum)
 import Data.Char qualified as C
+import Data.Default (Default (..))
 import Data.DList (DList)
 import Data.DList qualified as DList
-import Data.Default (Default (..))
 import Data.List qualified as L
-import Data.Map qualified as M
 import Data.Reflection (Given)
 import Data.Text qualified as T
-import Fmt (Buildable (..), blockListF, blockListF', indentF)
+import Fmt (Buildable (..))
 import System.FilePath (isPathSeparator, pathSeparator)
 import Text.Interpolation.Nyan
 import Time (Second, Time)
@@ -146,7 +145,7 @@ instance Given ColorMode => Buildable Reference where
     [int||
     reference #{paren . build $ locationType rLink} #{rPos}:
       - text: #s{rName}
-      - link: #{rLink}
+      - link: #{if null rLink then "-" else rLink}
       - anchor: #{rAnchor ?: styleIfNeeded Faint "-"}
     |]
 
@@ -175,20 +174,21 @@ instance Given ColorMode => Buildable FileInfo where
   build FileInfo{..} =
     [int||
     - references:
-    #{indentF 4 $ blockListF _fiReferences}\
+    #{ interpolateIndentF 4 $ maybe "none" interpolateBlockListF (nonEmpty _fiReferences) }
     - anchors:
-    #{indentF 4 $ blockListF _fiAnchors}\
+    #{ interpolateIndentF 4 $ maybe "none" interpolateBlockListF (nonEmpty _fiAnchors) }
     |]
 
 instance Given ColorMode => Buildable RepoInfo where
-  build (RepoInfo m _) =
-    blockListF' "⮚" buildFileReport (mapMaybe sequence $ M.toList m)
+  build (RepoInfo (nonEmpty . mapMaybe sequence . toPairs -> Just m) _) =
+    interpolateBlockListF' "⮚" buildFileReport m
     where
       buildFileReport (name, info) =
         [int||
         #{colorIfNeeded Cyan $ name}:
         #{info}
         |]
+  build _ = "No scannable files found."
 
 -----------------------------------------------------------
 -- Analysing

@@ -18,9 +18,9 @@ import Data.ByteString qualified as BS
 import Data.Map qualified as Map
 import Data.Yaml (FromJSON (..), decodeEither', prettyPrintParseException, withText)
 import Instances.TH.Lift ()
+import Text.Interpolation.Nyan
 import Text.Regex.TDFA qualified as R
 import Text.Regex.TDFA.ByteString ()
-import Text.Interpolation.Nyan
 
 import Time (KnownRatName, Second, Time (..), unitsP)
 

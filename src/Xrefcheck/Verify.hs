@@ -5,8 +5,6 @@
 
 {-# LANGUAGE DeriveFunctor         #-}
 {-# LANGUAGE PartialTypeSignatures #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# OPTIONS_GHC -Wno-partial-type-signatures #-}
 
 module Xrefcheck.Verify
   ( -- * General verification
@@ -37,7 +35,6 @@ import Universum
 
 import Control.Concurrent.Async (async, cancel, wait, withAsync, Async, poll)
 import Control.Exception (AsyncException (..), throwIO)
-import Control.Monad.Catch (handleJust)
 import Control.Monad.Except (MonadError (..))
 import Data.ByteString qualified as BS
 import Data.List qualified as L
@@ -76,6 +73,7 @@ import Xrefcheck.Progress
 import Xrefcheck.Scan
 import Xrefcheck.System
 import Xrefcheck.Util
+import Control.Exception.Safe (handleAsync, handleJust)
 
 {-# ANN module ("HLint: ignore Use uncurry" :: Text) #-}
 {-# ANN module ("HLint: ignore Use 'runExceptT' from Universum" :: Text) #-}
@@ -299,24 +297,26 @@ forConcurrentlyCaching list needsCaching action = go [] M.empty list
                   go (b : acc) (M.insert cacheKey b cached) xs
               Just b -> go (b : acc) cached xs
 
-        [] -> handleJust
-                (\case
-                  UserInterrupt -> Just UserInterrupt
-                  _ -> Nothing
-                )
-                (\exception -> do
-                        partialResults <- for acc \asyncAction -> do
-                          cancel asyncAction
-                          poll asyncAction <&> \case
-                            Just (Right a) -> Just a
-                            Just (Left _ex) -> Nothing
-                            Nothing -> Nothing
-                        pure $ Left (exception, catMaybes partialResults)
-                )
-                $ Right . reverse <$> for acc wait
+        [] -> handleAsync
+        -- Wait for all children threads to complete.
+        --
+        -- If, while the threads are running, the user hits Ctrl+C,
+        -- a `UserInterrupt :: AsyncException` will be thrown onto the main thread.
+        -- We catch it here, cancel all child threads,
+        -- and return the results of only the threads that finished successfully.
+          (\exception -> do
+            partialResults <- for acc \asyncAction -> do
+              cancel asyncAction
+              poll asyncAction <&> \case
+                Just (Right a) -> Just a
+                Just (Left _ex) -> Nothing
+                Nothing -> Nothing
+            pure $ Left (exception, catMaybes partialResults)
+          )
+          $ Right . reverse <$> for acc wait
       -- If action was already completed, then @cancel@ will have no effect, and we
-      -- will get result from @cancel f >> pool f@. Otherwise action will be interrupted,
-      -- so pool will return @Left (SomeException AsyncCancelled)@
+      -- will get result from @cancel f >> poll f@. Otherwise action will be interrupted,
+      -- so poll will return @Left (SomeException AsyncCancelled)@
 
 verifyRepo
   :: Given ColorMode

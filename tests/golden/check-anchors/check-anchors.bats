@@ -17,18 +17,17 @@ assert_diff - <<EOF
   ➥  In file ambiguous-anchors/a.md
      bad reference (current file) at src:16:1-43:
        - text: "ambiguous anchor in this file"
-       - link:
+       - link: -
        - anchor: some-text
 
      ⛀  Ambiguous reference to anchor 'some-text'
-        In file ambiguous-anchors/a.md
-        It could refer to either:
+       In file ambiguous-anchors/a.md
+       It could refer to either:
          - some-text (header I) at src:6:1-11
          - some-text (header I) at src:8:1-15
          - some-text (header II) at src:12:1-12
-
-         Use of ambiguous anchors is discouraged because the target
-         can change silently while the document containing it evolves.
+       Use of ambiguous anchors is discouraged because the target
+       can change silently while the document containing it evolves.
 
   ➥  In file ambiguous-anchors/b.md
      bad reference (relative) at src:7:1-48:
@@ -37,14 +36,13 @@ assert_diff - <<EOF
        - anchor: some-text
 
      ⛀  Ambiguous reference to anchor 'some-text'
-        In file ambiguous-anchors/a.md
-        It could refer to either:
+       In file ambiguous-anchors/a.md
+       It could refer to either:
          - some-text (header I) at src:6:1-11
          - some-text (header I) at src:8:1-15
          - some-text (header II) at src:12:1-12
-
-         Use of ambiguous anchors is discouraged because the target
-         can change silently while the document containing it evolves.
+       Use of ambiguous anchors is discouraged because the target
+       can change silently while the document containing it evolves.
 
 Invalid references dumped, 2 in total.
 EOF
@@ -58,7 +56,7 @@ assert_diff - <<EOF
   ➥  In file non-existing-anchors/a.md
      bad reference (current file) at src:12:1-13:
        - text: "broken"
-       - link:
+       - link: -
        - anchor: h3
 
      ⛀  Anchor 'h3' is not present, did you mean:
@@ -68,7 +66,7 @@ assert_diff - <<EOF
   ➥  In file non-existing-anchors/a.md
      bad reference (current file) at src:14:1-18:
        - text: "broken"
-       - link:
+       - link: -
        - anchor: heading
 
      ⛀  Anchor 'heading' is not present, did you mean:
@@ -77,7 +75,7 @@ assert_diff - <<EOF
   ➥  In file non-existing-anchors/a.md
      bad reference (current file) at src:16:1-31:
        - text: "broken"
-       - link:
+       - link: -
        - anchor: really-unique-anchor
 
      ⛀  Anchor 'really-unique-anchor' is not present

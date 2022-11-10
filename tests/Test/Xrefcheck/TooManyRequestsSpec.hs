@@ -13,11 +13,11 @@ import Data.CaseInsensitive qualified as CI
 import Data.Map qualified as M
 import Data.Time (addUTCTime, defaultTimeLocale, formatTime, getCurrentTime, rfc822DateFormat)
 import Data.Time.Clock.POSIX (getPOSIXTime)
-import Fmt (indentF, pretty, unlinesF)
 import Network.HTTP.Types (Status (..), ok200, serviceUnavailable503, tooManyRequests429)
 import Network.HTTP.Types.Header (hRetryAfter)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertBool, testCase, (@?=))
+import Text.Interpolation.Nyan
 import Time (sec, (-:-))
 import Web.Firefly (ToResponse (toResponse), getMethod, route, run)
 
@@ -162,18 +162,20 @@ test_tooManyRequests = testGroup "429 response tests"
     checkLinkAndProgressWithServer mock link progress vrExpectation =
       E.bracket (forkIO mock) killThread $ \_ -> do
         (result, progRes) <- verifyLink link
-        flip assertBool (result == vrExpectation) . pretty $ unlinesF
-          [ "Verification results differ: expected"
-          , indentF 2 (show vrExpectation)
-          , "but got"
-          , indentF 2 (show result)
-          ]
-        flip assertBool (progRes `progEquiv` progress) . pretty $ unlinesF
-          [ "Expected the progress bar state to be"
-          , indentF 2 (show progress)
-          , "but got"
-          , indentF 2 (show progRes)
-          ]
+        flip assertBool (result == vrExpectation) $
+          [int||
+          Verification results differ: expected
+          #{interpolateIndentF 2 (show vrExpectation)}
+          but got
+          #{interpolateIndentF 2 (show result)}
+          |]
+        flip assertBool (progRes `progEquiv` progress) $
+          [int||
+          Expected the progress bar state to be
+          #{interpolateIndentF 2 (show progress)}
+          but got
+          #{interpolateIndentF 2 (show progRes)}
+          |]
       where
         -- | Check whether the two @Progress@ values are equal up to similarity of their essential
         -- components, ignoring the comparison of @pTaskTimestamp@s, which is done to prevent test

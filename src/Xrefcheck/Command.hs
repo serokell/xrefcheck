@@ -11,7 +11,7 @@ import Universum
 
 import Data.Reflection (give)
 import Data.Yaml (decodeFileEither, prettyPrintParseException)
-import Fmt (blockListF', build, fmt, fmtLn, indentF)
+import Fmt (build, fmt, fmtLn)
 import System.Console.Pretty (supportsPretty)
 import System.Directory (doesFileExist)
 import Text.Interpolation.Nyan
@@ -75,10 +75,10 @@ defaultAction Options{..} = do
       fmt [int||
       === Repository data ===
 
-      #{indentF 2 (build repoInfo)}\
+      #{interpolateIndentF 2 (build repoInfo)}
       |]
 
-    unless (null scanErrs) . reportScanErrs $ sortBy (compare `on` seFile) scanErrs
+    whenJust (nonEmpty $ sortBy (compare `on` seFile) scanErrs) $ reportScanErrs
 
     verifyRes <- allowRewrite showProgressBar $ \rw -> do
       let fullConfig = config
@@ -88,7 +88,7 @@ defaultAction Options{..} = do
     case verifyErrors verifyRes of
       Nothing | null scanErrs -> fmtLn "All repository links are valid."
       Nothing -> exitFailure
-      Just (toList -> verifyErrs) -> do
+      Just verifyErrs -> do
         unless (null scanErrs) $ fmt "\n"
         reportVerifyErrs verifyErrs
         exitFailure
@@ -97,7 +97,7 @@ defaultAction Options{..} = do
       [int||
       === Scan errors found ===
 
-      #{indentF 2 (blockListF' "➥ " build errs)}\
+      #{interpolateIndentF 2 (interpolateBlockListF' "➥ " build errs)}
       Scan errors dumped, #{length errs} in total.
       |]
 
@@ -105,6 +105,6 @@ defaultAction Options{..} = do
       [int||
       === Invalid references found ===
 
-      #{indentF 2 (blockListF' "➥ " build errs)}\
+      #{interpolateIndentF 2 (interpolateBlockListF' "➥ " build errs)}
       Invalid references dumped, #{length errs} in total.
       |]

@@ -110,3 +110,15 @@
     name: "Avoid style function that ignore ColorMode"
     lhs: 'System.Console.Pretty.style'
     rhs: 'Xrefcheck.Util.Colorize.styleIfNeeded'
+- warn:
+    name: "Avoid functions that generate extra trailing newlines/whitespaces"
+    lhs: 'Fmt.indentF'
+    rhs: 'Xrefcheck.Util.Interpolate.interpolateIndentF'
+- warn:
+    name: "Avoid functions that generate extra trailing newlines/whitespaces"
+    lhs: 'Fmt.blockListF'
+    rhs: 'Xrefcheck.Util.Interpolate.interpolateBlockListF'
+- warn:
+    name: "Avoid functions that generate extra trailing newlines/whitespaces"
+    lhs: "Fmt.blockListF'"
+    rhs: "Xrefcheck.Util.Interpolate.interpolateBlockListF'"

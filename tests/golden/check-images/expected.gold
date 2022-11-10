@@ -27,7 +27,7 @@
             - link: ./4.png
             - anchor: -
     - anchors:
-        []
+        none
 
 === Invalid references found ===
 

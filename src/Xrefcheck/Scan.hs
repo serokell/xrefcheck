@@ -14,6 +14,7 @@ module Xrefcheck.Scan
   , ScanAction
   , FormatsSupport
   , RepoInfo (..)
+  , ReadDirectoryMode(..)
   , ScanError (..)
   , ScanErrorDescription (..)
   , ScanResult (..)
@@ -138,18 +139,41 @@ specificFormatsSupport formats = \ext -> M.lookup ext formatsMap
         , extension <- extensions
         ]
 
--- | Process files that are tracked by git and not ignored by the config.
+data ReadDirectoryMode
+  = RdmTracked
+  -- ^ Consider files tracked by Git, obtained from "git ls-files"
+  | RdmUntracked
+  -- ^ Consider files that are not tracked nor ignored by Git, obtained from
+  -- "git ls-files --others --exclude-standard"
+  | RdmBothTrackedAndUtracked
+  -- ^ Combine output from commands listed above, so we consider all files
+  -- except ones that are explicitly ignored by Git
+
+-- | Process files that match given @ReadDirectoryMode@ and aren't ignored by the config.
 readDirectoryWith
-  :: forall a. ExclusionConfig
+  :: forall a. ReadDirectoryMode
+  -> ExclusionConfig
   -> (FilePath -> IO a)
   -> FilePath
   -> IO [(FilePath, a)]
-readDirectoryWith config scanner root =
+readDirectoryWith mode config scanner root =
   traverse scanFile
   . filter (not . isIgnored)
   . fmap (location </>)
-  . L.lines =<< readCreateProcess (shell "git ls-files"){cwd = Just root} ""
+  . L.lines =<< getFiles
+
   where
+
+    getFiles = case mode of
+      RdmTracked -> getTrackedFiles
+      RdmUntracked -> getUntrackedFiles
+      RdmBothTrackedAndUtracked -> liftA2 (<>) getTrackedFiles getUntrackedFiles
+
+    getTrackedFiles = readCreateProcess
+      (shell "git ls-files"){cwd = Just root} ""
+    getUntrackedFiles = readCreateProcess
+      (shell "git ls-files --others --exclude-standard"){cwd = Just root} ""
+
     scanFile :: FilePath -> IO (FilePath, a)
     scanFile = sequence . (normaliseWithNoTrailing &&& scanner)
 
@@ -172,14 +196,35 @@ scanRepo rw formatsSupport config root = do
   when (not $ isDirectory root) $
     die $ "Repository's root does not seem to be a directory: " <> root
 
-  (errs, fileInfos) <- liftIO
-    $ (gatherScanErrs &&& gatherFileInfos)
-    <$> readDirectoryWith config processFile root
+  (errs, processedFiles) <- liftIO
+    $ (gatherScanErrs &&& gatherFileStatuses)
+    <$> readDirectoryWith RdmTracked config processFile root
 
-  let dirs = fromList $ foldMap (getDirs . fst) fileInfos
+  notProcessedFiles <- liftIO $
+    readDirectoryWith RdmUntracked config (const $ pure NotAddedToGit) root
 
-  return . ScanResult errs $ RepoInfo (M.fromList fileInfos) dirs
+  let scannableNotProcessedFiles = filter (isJust . mscanner . fst) notProcessedFiles
+
+  whenJust (nonEmpty $ map fst scannableNotProcessedFiles) $ \files -> hPutStrLn @Text stderr
+    [int|A|
+    Those files are not added by Git, so we're not scanning them:
+    #{interpolateBlockListF files}
+    Please run "git add" before running xrefcheck or enable \
+    --include-untracked CLI option to check these files.
+    |]
+
+  let trackedDirs = foldMap (getDirs . fst) processedFiles
+      untrackedDirs = foldMap (getDirs . fst) notProcessedFiles
+  return . ScanResult errs $ RepoInfo
+    { riFiles = M.fromList $ processedFiles <> notProcessedFiles
+    , riDirectories = M.fromList
+                      $ map (, TrackedDirectory) trackedDirs
+                      <> map (, UntrackedDirectory) untrackedDirs
+    }
   where
+    mscanner :: FilePath -> Maybe ScanAction
+    mscanner = formatsSupport . takeExtension
+
     isDirectory :: FilePath -> Bool
     isDirectory = readingSystem . doesDirectoryExist
 
@@ -188,20 +233,19 @@ scanRepo rw formatsSupport config root = do
     getDirs = scanl (</>) "" . splitDirectories . takeDirectory
 
     gatherScanErrs
-      :: [(FilePath, Maybe (FileInfo, [ScanError]))]
+      :: [(FilePath, (FileStatus, [ScanError]))]
       -> [ScanError]
-    gatherScanErrs = fold . mapMaybe (fmap snd . snd)
+    gatherScanErrs = foldMap (snd . snd)
 
-    gatherFileInfos
-      :: [(FilePath, Maybe (FileInfo, [ScanError]))]
-      -> [(FilePath, Maybe FileInfo)]
-    gatherFileInfos = map (second (fmap fst))
+    gatherFileStatuses
+      :: [(FilePath, (FileStatus, [ScanError]))]
+      -> [(FilePath, FileStatus)]
+    gatherFileStatuses = map (second fst)
 
-    processFile :: FilePath -> IO $ Maybe (FileInfo, [ScanError])
-    processFile file = do
-      let ext = takeExtension file
-      let mscanner = formatsSupport ext
-      forM mscanner ($ file)
+    processFile :: FilePath -> IO (FileStatus, [ScanError])
+    processFile file = case mscanner file of
+        Nothing -> pure (NotScannable, [])
+        Just scanner -> scanner file <&> _1 %~ Scanned
 
 -----------------------------------------------------------
 -- Yaml instances

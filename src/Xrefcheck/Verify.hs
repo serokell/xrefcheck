@@ -304,14 +304,16 @@ forConcurrentlyCaching list needsCaching action = go [] M.empty list
         -- a `UserInterrupt :: AsyncException` will be thrown onto the main thread.
         -- We catch it here, cancel all child threads,
         -- and return the results of only the threads that finished successfully.
-          (\exception -> do
-            partialResults <- for acc \asyncAction -> do
-              cancel asyncAction
-              poll asyncAction <&> \case
-                Just (Right a) -> Just a
-                Just (Left _ex) -> Nothing
-                Nothing -> Nothing
-            pure $ Left (exception, catMaybes partialResults)
+          (\case
+            UserInterrupt -> do
+              partialResults <- for acc \asyncAction -> do
+                cancel asyncAction
+                poll asyncAction <&> \case
+                  Just (Right a)  -> Just a
+                  Just (Left _ex) -> Nothing
+                  Nothing         -> Nothing
+              pure $ Left (UserInterrupt, catMaybes partialResults)
+            otherAsyncEx -> throwM otherAsyncEx
           )
           $ Right . reverse <$> for acc wait
       -- If action was already completed, then @cancel@ will have no effect, and we

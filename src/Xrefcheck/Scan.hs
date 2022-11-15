@@ -189,19 +189,25 @@ readDirectoryWith mode config scanner root =
 
 scanRepo
   :: MonadIO m
-  => Rewrite -> FormatsSupport -> ExclusionConfig -> FilePath -> m ScanResult
-scanRepo rw formatsSupport config root = do
+  => ScanPolicy -> Rewrite -> FormatsSupport -> ExclusionConfig -> FilePath -> m ScanResult
+scanRepo scanMode rw formatsSupport config root = do
   putTextRewrite rw "Scanning repository..."
 
   when (not $ isDirectory root) $
     die $ "Repository's root does not seem to be a directory: " <> root
 
-  (errs, processedFiles) <- liftIO
+  (errs, processedFiles) <-
+    let mode = case scanMode of
+          OnlyTracked -> RdmTracked
+          IncludeUntracked -> RdmBothTrackedAndUtracked
+    in liftIO
     $ (gatherScanErrs &&& gatherFileStatuses)
-    <$> readDirectoryWith RdmTracked config processFile root
+    <$> readDirectoryWith mode config processFile root
 
-  notProcessedFiles <- liftIO $
-    readDirectoryWith RdmUntracked config (const $ pure NotAddedToGit) root
+  notProcessedFiles <-  case scanMode of
+    OnlyTracked -> liftIO $
+      readDirectoryWith RdmUntracked config (const $ pure NotAddedToGit) root
+    IncludeUntracked -> pure []
 
   let scannableNotProcessedFiles = filter (isJust . mscanner . fst) notProcessedFiles
 

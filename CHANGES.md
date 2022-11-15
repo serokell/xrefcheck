@@ -22,6 +22,10 @@ Unreleased
   `<!-- xrefcheck: ignore all -->` instead of `<!-- xrefcheck: ignore file -->`
   should be used to disable checking for links in file, so it's clearer that
   file itself is not ignored (and links can target it).
+* [#215](https://github.com/serokell/xrefcheck/pull/215)
+  + Now we notify user when there are scannable files that were not added to Git
+  yet. Also added CLI option `--include-untracked` to scan such files and treat
+  as existing.
 
 0.2.2
 ==========

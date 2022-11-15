@@ -38,6 +38,31 @@ Please run "git add" before running xrefcheck or enable --include-untracked CLI 
 EOF
 }
 
+@test "Git: bad file not tracked, --include-untracked enabled, check failure" {
+  cd $TEST_TEMP_DIR
+
+  git init
+
+  echo "[a](./a.md)" >> "git.md"
+
+  to_temp xrefcheck --include-untracked
+
+  assert_diff - <<EOF
+=== Invalid references found ===
+
+  ➥  In file git.md
+     bad reference (relative) at src:1:1-11:
+       - text: "a"
+       - link: ./a.md
+       - anchor: -
+
+     ⛀  File does not exist:
+        a.md
+
+Invalid references dumped, 1 in total.
+EOF
+}
+
 @test "Git: bad file tracked, check failure" {
   cd $TEST_TEMP_DIR
 
@@ -96,3 +121,20 @@ Invalid references dumped, 1 in total.
 EOF
 }
 
+@test "Git: link to untracked file, --include-untracked enabled" {
+  cd $TEST_TEMP_DIR
+
+  git init
+
+  echo "[a](./a.md)" >> "git.md"
+
+  touch ./a.md
+
+  git add git.md
+
+  run xrefcheck --include-untracked
+
+  assert_success
+
+  assert_output --partial "All repository links are valid."
+}

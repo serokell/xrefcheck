@@ -70,7 +70,7 @@ defaultAction Options{..} = do
 
     (ScanResult scanErrs repoInfo) <- allowRewrite showProgressBar $ \rw -> do
       let fullConfig = addExclusionOptions (cExclusions config) oExclusionOptions
-      scanRepo rw (formats $ cScanners config) fullConfig oRoot
+      scanRepo oScanPolicy rw (formats $ cScanners config) fullConfig oRoot
 
     when oVerbose $
       fmt [int||

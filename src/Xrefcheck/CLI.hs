@@ -81,6 +81,7 @@ data Options = Options
   , oColorMode         :: ColorMode
   , oExclusionOptions  :: ExclusionOptions
   , oNetworkingOptions :: NetworkingOptions
+  , oScanPolicy        :: ScanPolicy
   }
 
 data ExclusionOptions = ExclusionOptions
@@ -181,9 +182,13 @@ optionsParser = do
     ]
   oColorMode <- flag WithColors WithoutColors $
     long "no-color" <>
-    help "Disable ANSI coloring of output"
+    help "Disable ANSI coloring of output."
   oExclusionOptions <- exclusionOptionsParser
   oNetworkingOptions <- networkingOptionsParser
+  oScanPolicy <- flag OnlyTracked IncludeUntracked $
+    long "include-untracked" <>
+    help "Scan and treat as existing files that were not added to Git.\
+         \ Files explicitly ignored by Git are always ignored by xrefcheck."
   return Options{..}
 
 exclusionOptionsParser :: Parser ExclusionOptions

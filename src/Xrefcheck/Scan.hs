@@ -25,6 +25,7 @@ module Xrefcheck.Scan
   , ecIgnoreLocalRefsToL
   , ecIgnoreRefsFromL
   , ecIgnoreExternalRefsToL
+  , reportScanErrs
   ) where
 
 import Universum
@@ -34,7 +35,7 @@ import Data.Aeson (FromJSON (..), genericParseJSON, withText)
 import Data.List qualified as L
 import Data.Map qualified as M
 import Data.Reflection (Given)
-import Fmt (Buildable (..))
+import Fmt (Buildable (..), fmt)
 import System.Directory (doesDirectoryExist)
 import System.FilePath
   (dropTrailingPathSeparator, equalFilePath, splitDirectories, takeDirectory, takeExtension, (</>))
@@ -101,6 +102,15 @@ instance Given ColorMode => Buildable ScanError where
     ⛀  #{seDescription}
 
     |]
+
+reportScanErrs :: Given ColorMode => NonEmpty ScanError -> IO ()
+reportScanErrs errs = fmt
+  [int||
+  === Scan errors found ===
+
+  #{interpolateIndentF 2 (interpolateBlockListF' "➥ " build errs)}
+  Scan errors dumped, #{length errs} in total.
+  |]
 
 data ScanErrorDescription
   = LinkErr

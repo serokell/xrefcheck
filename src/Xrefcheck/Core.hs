@@ -328,7 +328,7 @@ data VerifyProgress = VerifyProgress
 initVerifyProgress :: [Reference] -> VerifyProgress
 initVerifyProgress references = VerifyProgress
   { vrLocal = initProgress (length localRefs)
-  , vrExternal = initProgress (length (L.nubBy ((==) `on` rLink) extRefs))
+  , vrExternal = initProgress (length (ordNub $ map rLink extRefs))
   }
   where
     (extRefs, localRefs) = L.partition (isExternal . locationType . rLink) references

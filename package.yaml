@@ -85,7 +85,6 @@ library:
     - data-default
     - directory
     - dlist
-    - exceptions
     - filepath
     - raw-strings-qq
     - fmt
@@ -113,6 +112,7 @@ library:
     - yaml
     - reflection
     - nyan-interpolation
+    - safe-exceptions
 
 executables:
   xrefcheck:

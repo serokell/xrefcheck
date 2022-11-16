@@ -5,7 +5,6 @@
 
 {-# LANGUAGE DeriveFunctor         #-}
 {-# LANGUAGE PartialTypeSignatures #-}
-{-# OPTIONS_GHC -Wno-partial-type-signatures #-}
 
 module Xrefcheck.Verify
   ( -- * General verification
@@ -29,13 +28,13 @@ module Xrefcheck.Verify
 
     -- * URI parsing
   , parseUri
+  , reportVerifyErrs
   ) where
 
 import Universum
 
-import Control.Concurrent.Async (async, wait, withAsync)
-import Control.Exception (throwIO)
-import Control.Monad.Catch (handleJust)
+import Control.Concurrent.Async (async, cancel, wait, withAsync, Async, poll)
+import Control.Exception (AsyncException (..), throwIO)
 import Control.Monad.Except (MonadError (..))
 import Data.ByteString qualified as BS
 import Data.List qualified as L
@@ -45,7 +44,7 @@ import Data.Text.Metrics (damerauLevenshteinNorm)
 import Data.Time (UTCTime, defaultTimeLocale, formatTime, readPTime, rfc822DateFormat)
 import Data.Time.Clock.POSIX (getPOSIXTime)
 import Data.Traversable (for)
-import Fmt (Buildable (..), maybeF, nameF)
+import Fmt (Buildable (..), fmt, maybeF, nameF)
 import GHC.Exts qualified as Exts
 import GHC.Read (Read (readPrec))
 import Network.FTP.Client
@@ -74,6 +73,7 @@ import Xrefcheck.Progress
 import Xrefcheck.Scan
 import Xrefcheck.System
 import Xrefcheck.Util
+import Control.Exception.Safe (handleAsync, handleJust)
 
 {-# ANN module ("HLint: ignore Use uncurry" :: Text) #-}
 {-# ANN module ("HLint: ignore Use 'runExceptT' from Universum" :: Text) #-}
@@ -227,6 +227,17 @@ instance Given ColorMode => Buildable VerifyError where
       ⛂  #{err}
       |]
 
+reportVerifyErrs
+  :: Given ColorMode => NonEmpty (WithReferenceLoc VerifyError) -> IO ()
+reportVerifyErrs errs = fmt
+  [int||
+  === Invalid references found ===
+
+  #{interpolateIndentF 2 (interpolateBlockListF' "➥ " build errs)}
+  Invalid references dumped, #{length errs} in total.
+  |]
+
+
 data RetryAfter = Date UTCTime | Seconds (Time Second)
   deriving stock (Show, Eq)
 
@@ -260,22 +271,54 @@ data NeedsCaching key
 -- then the @action@ will not be executed, and the value is added to the accumulator list.
 -- After the whole list has been traversed, the accumulator is traversed once again to ensure
 -- every asynchronous action is completed.
+-- If interrupted by AsyncException, returns this exception and list of already calcualted results
+-- (their subset can be arbitrary). Computations that were not ended till this moment are cancelled.
 forConcurrentlyCaching
-  :: Ord cacheKey
-  => [a] -> (a -> NeedsCaching cacheKey) -> (a -> IO b) -> IO [b]
+  :: forall a b cacheKey.  Ord cacheKey
+  => [a] -> (a -> NeedsCaching cacheKey) -> (a -> IO b) -> IO (Either (AsyncException, [b]) [b])
 forConcurrentlyCaching list needsCaching action = go [] M.empty list
   where
-    go acc cached (x : xs) = case needsCaching x of
-      NoCaching -> do
-        withAsync (action x) $ \b ->
-          go (b : acc) cached xs
-      CacheUnderKey cacheKey -> do
-        case M.lookup cacheKey cached of
-          Nothing -> do
+    go
+      :: [Async b]
+      -> Map cacheKey (Async b)
+      -> [a]
+      -> IO (Either (AsyncException, [b]) [b])
+    go acc cached items =
+      case items of
+
+        (x : xs) -> case needsCaching x of
+          NoCaching -> do
             withAsync (action x) $ \b ->
-              go (b : acc) (M.insert cacheKey b cached) xs
-          Just b -> go (b : acc) cached xs
-    go acc _ [] = for acc wait <&> reverse
+              go (b : acc) cached xs
+          CacheUnderKey cacheKey -> do
+            case M.lookup cacheKey cached of
+              Nothing -> do
+                withAsync (action x) $ \b ->
+                  go (b : acc) (M.insert cacheKey b cached) xs
+              Just b -> go (b : acc) cached xs
+
+        [] -> handleAsync
+        -- Wait for all children threads to complete.
+        --
+        -- If, while the threads are running, the user hits Ctrl+C,
+        -- a `UserInterrupt :: AsyncException` will be thrown onto the main thread.
+        -- We catch it here, cancel all child threads,
+        -- and return the results of only the threads that finished successfully.
+          (\case
+            UserInterrupt -> do
+              partialResults <- for acc \asyncAction -> do
+                cancel asyncAction
+                poll asyncAction <&> \case
+                  Just (Right a)  -> Just a
+                  Just (Left _ex) -> Nothing
+                  Nothing         -> Nothing
+              pure $ Left (UserInterrupt, catMaybes partialResults)
+            otherAsyncEx -> throwM otherAsyncEx
+          )
+          $ Right . reverse <$> for acc wait
+      -- If action was already completed, then @cancel@ will have no effect, and we
+      -- will get result from @cancel f >> poll f@. Otherwise action will be interrupted,
+      -- so poll will return @Left (SomeException AsyncCancelled)@
 
 verifyRepo
   :: Given ColorMode
@@ -306,7 +349,19 @@ verifyRepo
   accumulated <- loopAsyncUntil (printer progressRef) do
     forConcurrentlyCaching toScan ifExternalThenCache $ \(file, ref) ->
       verifyReference config mode progressRef repoInfo' root file ref
-  return $ fold accumulated
+  case accumulated of
+    Right res -> return $ fold res
+    Left (exception, partialRes) -> do
+      -- The user has hit Ctrl+C; display any verification errors we managed to find and exit.
+      let errs = verifyErrors (fold partialRes)
+          total = length toScan
+          checked = length partialRes
+      whenJust errs $ reportVerifyErrs
+      fmt [int|A|
+          Interrupted (#s{exception}), checked #{checked} out of #{total} references.
+          |]
+      exitFailure
+
   where
     printer :: IORef VerifyProgress -> IO ()
     printer progressRef = do
@@ -681,12 +736,12 @@ checkExternalResource Config{..} link
       -> Bool
       -> ExceptT VerifyError IO ()
     makeFtpRequest host port path secure = handler host port $
-      \handle response -> do
+      \ftpHandle response -> do
         -- check connection status
         when (frStatus response /= Success) $
           throwError $ ExternalFtpResourceUnavailable response
         -- anonymous login
-        loginResp <- login handle "anonymous" ""
+        loginResp <- login ftpHandle "anonymous" ""
         -- check login status
         when (frStatus loginResp /= Success) $
           if ncIgnoreAuthFailures
@@ -694,13 +749,13 @@ checkExternalResource Config{..} link
           else throwError $ ExternalFtpException $ UnsuccessfulException loginResp
         -- If the response is non-null, the path is definitely a directory;
         -- If the response is null, the path may be a file or may not exist.
-        dirList <- nlst handle [ "-a", path ]
+        dirList <- nlst ftpHandle [ "-a", path ]
         when (BS.null dirList) $ do
           -- The server-PI will respond to the SIZE command with a 213 reply
           -- giving the transfer size of the file whose pathname was supplied,
           -- or an error response if the file does not exist, the size is
           -- unavailable, or some other error has occurred.
-          _ <- size handle path `catch` \case
+          _ <- size ftpHandle path `catch` \case
               UnsuccessfulException _ -> throwError $ FtpEntryDoesNotExist path
               FailureException FTPResponse{..} | frCode == 550 ->
                 throwError $ FtpEntryDoesNotExist path

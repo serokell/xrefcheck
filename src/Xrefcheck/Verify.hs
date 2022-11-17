@@ -120,6 +120,7 @@ instance (Given ColorMode, Buildable a) => Buildable (WithReferenceLoc a) where
 data VerifyError
   = LocalFileDoesNotExist FilePath
   | LocalFileOutsideRepo FilePath
+  | LinkTargetNotAddedToGit FilePath
   | AnchorDoesNotExist Text [Anchor]
   | AmbiguousAnchorRef FilePath Text (NonEmpty Anchor)
   | ExternalResourceInvalidUri URIBS.URIParseError
@@ -146,6 +147,14 @@ instance Given ColorMode => Buildable VerifyError where
       [int||
       ⛀  Link targets a local file outside repository:
          #{file}
+      |]
+
+
+    LinkTargetNotAddedToGit file ->
+      [int||
+      ⛀  Link target is not tracked by Git:
+         #{file}
+         Please run "git add" before running xrefcheck or enable --include-untracked CLI option.
       |]
 
     AnchorDoesNotExist anchor similar -> case nonEmpty similar of
@@ -339,10 +348,13 @@ verifyRepo
         (file, fileInfo) <- M.toList files
         guard . not $ matchesGlobPatterns root (ecIgnoreRefsFrom cExclusions) file
         case fileInfo of
-          Just fi -> do
+          Scanned fi -> do
             ref <- _fiReferences fi
             return (file, ref)
-          Nothing -> empty -- no support for such file, can do nothing
+          NotScannable -> empty -- No support for such file, can do nothing.
+          NotAddedToGit -> empty -- If this file is scannable, we've notified
+                                 -- user that we are scanning only files
+                                 -- added to Git while gathering RepoInfo.
 
   progressRef <- newIORef $ initVerifyProgress (map snd toScan)
 
@@ -504,14 +516,15 @@ verifyReference
     checkRef mAnchor referredFile = verifying $
       unless (isVirtual referredFile) do
         checkReferredFileIsInsideRepo referredFile
-        checkReferredFileExists referredFile
-        case lookupFilePath referredFile $ M.toList files of
-          Nothing -> pass  -- no support for such file, can do nothing
-          Just referredFileInfo -> whenJust mAnchor $
+        mFileStatus <- tryGetFileStatus referredFile
+        case mFileStatus of
+          Right (Scanned referredFileInfo) -> whenJust mAnchor $
             checkAnchor referredFile (_fiAnchors referredFileInfo)
-
-    lookupFilePath :: FilePath -> [(FilePath, Maybe FileInfo)] -> Maybe FileInfo
-    lookupFilePath fp = snd <=< find (equalFilePath (expandIndirections fp) . fst)
+          Right NotScannable -> pass  -- no support for such file, can do nothing
+          Right NotAddedToGit -> throwError (LinkTargetNotAddedToGit referredFile)
+          Left UntrackedDirectory -> throwError (LinkTargetNotAddedToGit referredFile)
+          Left TrackedDirectory -> pass -- path leads to directory, currently
+                                        -- if such link contain anchor, we ignore it
 
     -- expands ".." and "."
     -- expandIndirections "a/b/../c"      = "a/c"
@@ -545,18 +558,21 @@ verifyReference
         nestingChange "." = 0
         nestingChange _ = 1
 
-    checkReferredFileExists file = do
-      unless (fileExists || dirExists) $
-        throwError (LocalFileDoesNotExist file)
+    -- Returns `Nothing` when path corresponds to an existing (and tracked) directory
+    tryGetFileStatus :: FilePath -> ExceptT VerifyError IO (Either DirectoryStatus FileStatus)
+    tryGetFileStatus file
+      | Just f <- mFile = return $ Right f
+      | Just d <- mDir = return $ Left d
+      | otherwise = throwError (LocalFileDoesNotExist file)
       where
         matchesFilePath :: FilePath -> Bool
         matchesFilePath = equalFilePath $ expandIndirections file
 
-        fileExists :: Bool
-        fileExists = any matchesFilePath $ M.keys files
+        mFile :: Maybe FileStatus
+        mFile = (files M.!) <$> find matchesFilePath (M.keys files)
 
-        dirExists :: Bool
-        dirExists = any matchesFilePath dirs
+        mDir :: Maybe DirectoryStatus
+        mDir = (dirs M.!) <$> find matchesFilePath (M.keys dirs)
 
     checkAnchor file fileAnchors anchor = do
       checkAnchorReferenceAmbiguity file fileAnchors anchor

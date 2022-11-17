@@ -122,12 +122,36 @@ makeLenses ''FileInfo
 instance Default FileInfo where
   def = diffToFileInfo mempty
 
+data ScanPolicy
+  = OnlyTracked
+  -- ^ Scan and treat as existing only files tracked by Git.
+  -- Warn when there are scannable files not added to Git yet.
+  | IncludeUntracked
+  -- ^ Also scan and treat as existing
+  -- files that were neither tracked nor ignored by Git.
+  deriving stock (Show, Eq)
+
+data FileStatus
+  = Scanned FileInfo
+  | NotScannable
+  -- ^ Files that are not supported by our scanners
+  | NotAddedToGit
+  -- ^ We are not scanning files that are not added to git
+  -- unless --include-untracked CLI option was enabled, but we're
+  -- gathering information about them to improve reports.
+  deriving stock (Show)
+
+data DirectoryStatus
+  = TrackedDirectory
+  | UntrackedDirectory
+  deriving stock (Show)
+
 -- | All tracked files and directories.
 data RepoInfo = RepoInfo
- { riFiles       :: Map FilePath (Maybe FileInfo)
-   -- ^ Files from the repo with `FileInfo` attached to files that we can scan.
- , riDirectories :: Set FilePath
-   -- ^ Tracked directories.
+ { riFiles       :: Map FilePath FileStatus
+   -- ^ Files from the repo with `FileInfo` attached to files that we've scanned.
+ , riDirectories :: Map FilePath DirectoryStatus
+   -- ^ Directories containing those files.
  } deriving stock (Show)
 
 -----------------------------------------------------------
@@ -180,8 +204,9 @@ instance Given ColorMode => Buildable FileInfo where
     |]
 
 instance Given ColorMode => Buildable RepoInfo where
-  build (RepoInfo (nonEmpty . mapMaybe sequence . toPairs -> Just m) _) =
-    interpolateBlockListF' "⮚" buildFileReport m
+  build (RepoInfo m _)
+    | Just scanned <- nonEmpty [(name, info) | (name, Scanned info) <- toPairs m]
+    = interpolateBlockListF' "⮚" buildFileReport scanned
     where
       buildFileReport (name, info) =
         [int||

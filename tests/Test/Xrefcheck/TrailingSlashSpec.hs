@@ -28,7 +28,7 @@ test_slash = testGroup "Trailing forward slash detection" $
       root <>
       "\" should exist") $ do
         (ScanResult _ (RepoInfo repoInfo _)) <- allowRewrite False $ \rw ->
-          scanRepo rw format (cExclusions config & ecIgnoreL .~ []) root
+          scanRepo OnlyTracked rw format (cExclusions config & ecIgnoreL .~ []) root
         nonExistentFiles <- lefts <$> forM (keys repoInfo) (\filePath -> do
           predicate <- doesFileExist filePath
           return $ if predicate

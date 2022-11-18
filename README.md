@@ -8,44 +8,43 @@
 
 [![Build status](https://badge.buildkite.com/75461331a6058b334383cdfca1071dc1f908b70cf069d857b7.svg?branch=master)](https://buildkite.com/serokell/xrefcheck)
 
-Xrefcheck is a tool for verifying local and external references in repository documentation that is quick, easy to setup, and suitable to be added to CI.
+Xrefcheck is a tool for verifying local and external references in a repository's documentation that is quick, easy to setup, and suitable to be run on a CI pipeline.
 
 <img src="https://user-images.githubusercontent.com/5394217/70820564-06b06e00-1dea-11ea-9680-27f661ca2a58.png" alt="Output sample" width="600"/>
 
-### Motivation
+## Motivation [↑](#xrefcheck)
 
-As the project evolves, links in documentation have a tendency to get broken. This is usually because of:
-1. File movements;
-2. Markdown header renames;
-3. Outer sites ceasing their existence.
+As a project evolves, links in markdown documentation have a tendency to become broken. This is usually because:
+1. A file has been moved;
+2. A markdown header has been renamed;
+3. An external site has ceased to exist.
 
 This tool will help you to keep references in order.
+You can run `xrefcheck` continuously in your CI pipeline,
+and it will let you know when it finds a broken link.
 
-### Aims
+## Aims [↑](#xrefcheck)
 
 Comparing to alternative solutions, this tool tries to achieve the following points:
 
-* Quickness - local references are verified instantly even for moderately-sized repositories.
-* Easy setup - no extra actions required, just run the tool in the repository root.
-Both relative and absolute local links are supported out of the box.
+* Quickness
+  * References are verified in parallel.
+  * References with the same target URI are only verified once.
+  * It first attempts to verify external links with a `HEAD` request; only when that fails does it try a `GET` request.
+* Resilience
+  * When you have many links to the same domain, the service is likely to start replying with "429 Too Many Requests".
+    When this happens, `xrefcheck` will wait the requested amount of seconds before retrying.
+* Easy setup - no extra actions required, just run `xrefcheck` in the repository root.
 * Conservative verifier allows using this tool in CI, no false positives (e.g. on sites which require authentication) should be reported.
 
-### A comparison with other solutions
+## Features [↑](#xrefcheck)
 
-* [linky](https://github.com/mattias-p/linky) - a well-configurable verifier written in Rust, scans one specified file at a time and works good in pair with system utilities like `find`.
-  This tool requires some configuring before it can be applied to a repository or added to CI.
-* [awesome_bot](https://github.com/dkhamsing/awesome_bot) - a solution written in Ruby that can be easily included in CI or integrated into GitHub.
-  Its features include duplicated URLs detection, specifying allowed HTTP error codes and reporting generation.
-  At the moment of writing, it scans only external references and checking anchors is not possible.
-* [remark-validate-links](https://github.com/remarkjs/remark-validate-links) and [remark-lint-no-dead-urls](https://github.com/davidtheclark/remark-lint-no-dead-urls) - highly configurable Javascript solution for checking local and remote links resp.
-  It is able to check multiple repositores at once if they are gathered in one folder.
-  Being written on JavaScript, it is fairly slow on large repositories.
-* [markdown-link-check](https://github.com/tcort/markdown-link-check) - another checker written in JavaScript, scans one specific file at a time.
-  Supports `mailto:` link resolution.
-* [url-checker](https://github.com/paramt/url-checker) - GitHub action which checks links in specified files.
-* [linkcheck](https://github.com/filiph/linkcheck) - advanced site crawler, checks for `HTML` files. There are other solutions for this particular task which we don't mention here.
-
-At the moment of writing, the listed solutions don't support ftp/ftps links.
+* Supports both GitHub and GitLab flavored markdown.
+* Supports Windows and Unix systems.
+* Supports relative and absolute local links.
+* Supports external links (`http`, `https`, `ftp` and `ftps`).
+* Detects broken and ambiguous anchors in local links.
+* Integration with GitHub Actions.
 
 ## Dependencies [↑](#xrefcheck)
 
@@ -55,23 +54,27 @@ Xrefcheck requires you to have `git` version 2.18.0 or later in your PATH.
 
 We provide the following ways for you to use xrefcheck:
 
-- [GitHub action](https://github.com/marketplace/actions/xrefcheck)
-- [statically linked binaries](https://github.com/serokell/xrefcheck/releases)
+- [GitHub Actions](https://github.com/marketplace/actions/xrefcheck)
+- [Statically linked binaries](https://github.com/serokell/xrefcheck/releases)
 - [Docker image](https://hub.docker.com/r/serokell/xrefcheck)
-- [building from source](#build-instructions-)
+- [Building from source](#build-instructions-)
+- Nix
+  ```
+  nix shell -f https://github.com/serokell/xrefcheck/archive/master.tar.gz -c xrefcheck
+  ```
 
 If none of those are suitable for you, please open an issue!
 
-To find all broken links in a repository, run from within its folder:
+To find all broken links in a repository, simply run `xrefcheck` from its root folder:
 
 ```sh
 xrefcheck
 ```
 
-To also display all found links and anchors:
+To also display a list of all links and anchors:
 
 ```sh
-xrefcheck -v
+xrefcheck --verbose
 ```
 
 For description of other options:
@@ -80,112 +83,82 @@ For description of other options:
 xrefcheck --help
 ```
 
-
-### Special functionality
-
-<details>
-  <summary>Ignoring external links</summary>
-
-  If you want some external links to not be verified, you can use one of the following ways to ignore those links:
-
-1. Add the regular expression that matches the ignoring link to the `ignoreRefs` parameter of your config file.
-
-    For example:
-    ```yaml
-    ignoreRefs:
-      - https://bad.reference.(org|com)(/?)
-    ```
-    allows to ignore both `https://bad.reference.org` and `https://bad.reference.com` with or without last "/".
-
-2. Add right in-place annotation using one of the following ignoring modes (each mode is just a comment with a certain syntax).
-
-    * Ignore the link:
-
-        There are several ways to add this annotation:
-
-      * Just add it like a regular text before the ignoring link.
-
-        ```markdown
-        Bad ['com' reference](https://bad.reference.com) <!-- xrefcheck: ignore link --> and bad ['org' reference](https://bad.reference.org)
-        ```
-
-      * Separate the ignoring link from the annotation and the following text with single new lines.
-
-        ```markdown
-        Bad ['com' reference](https://bad.reference.com) and bad <!-- xrefcheck: ignore link -->
-        ['org'](https://bad.reference.org)
-        reference
-        ```
-
-        Therefore only `https://bad.reference.org` will be ignored.
-
-      * If the ignoring link is the first in a paragraph, then the annotation can also be added before a paragraph.
-
-        ```markdown
-        <!-- xrefcheck: ignore link -->
-        [Bad 'org' reference](https://bad.reference.org)
-        [Bad 'com' reference](https://bad.reference.com)
-        ```
-
-        It is still the same `https://bad.reference.org` will be ignored in this case.
-
-    * Ignore the paragraph:
-
-        ```markdown
-        <!-- xrefcheck: ignore paragraph -->
-        Bad ['org' reference](https://bad.reference.org)
-        Bad ['com' reference](https://bad.reference.com)
-
-        Bad ['io' reference](https://bad.reference.io)
-        ```
-
-        In this way, `https://bad.reference.org` and `https://bad.reference.com` will be ignored and `https://bad.reference.io` will still be verified.
-
-    * Ignore the whole file:
-        ```markdown
-        <!-- a comment -->
-        <!-- another comment -->
-
-        <!-- xrefcheck: ignore all -->
-        ...the rest of the file...
-        ```
-
-        Using this you can ignore the whole file.
-        </details>
-
-## Configuring
-
-Configuration template (with all options explained) can be dumped with:
+To configure `xrefcheck`, run:
 
 ```sh
-xrefcheck dump-config -t GitHub
+xrefcheck dump-config --type GitHub
 ```
 
-Currently supported options include:
-* Timeout for checking external references;
-* List of ignored files.
+This will create a `.xrefcheck.yaml` file with all the configuration
+options, [here's an example](tests/configs/github-config.yaml).
+This file should be committed to your repository.
 
 ## Build instructions [↑](#xrefcheck)
 
 Run `stack install` to build everything and install the executable.
-If you want to use cabal, you need to run (`stack2cabal`)[https://hackage.haskell.org/package/stack2cabal] first!
+If you wish to use `cabal`, you need to run [`stack2cabal`](https://hackage.haskell.org/package/stack2cabal) first!
 
-### CI and nix [↑](#xrefcheck)
+## FAQ [↑](#xrefcheck)
 
-To build only the executables, run `nix-build`. You can use this line on your CI to use xrefcheck:
-```
-nix run -f https://github.com/serokell/xrefcheck/archive/master.tar.gz -c xrefcheck
-```
+1. How do I ignore specific files?
+    * To ignore a specific file, you can either use the `--ignore <glob pattern>` command-line option,
+    or the `ignore` list in the config file. Links _to_ those files will be reported as errors, links _from_ those files will not be verified.
 
-Our CI uses `nix-build xrefcheck.nix` to build the whole project, including tests and Haddock.
-It is based on the [`haskell.nix`](https://input-output-hk.github.io/haskell.nix/) project.
-You can do that too if you wish.
+1. How do I ignore specific links?
+    * Add an entry to the `ignoreLocalRefsTo` or `ignoreExternalRefsTo` lists in the config file.
+    * Alternatively, add a `<!-- xrefcheck: ignore link -->` annotation before the link:
+      ```md
+      <!-- xrefcheck: ignore link -->
+      Link to some [invalid resource](https://fictitious.uri/).
+      ```
+      ```md
+      A [valid link](https://www.google.com)
+      followed by an <!-- xrefcheck: ignore link --> [invalid link](https://fictitious.uri/).
+      ```
+    * You can also use a `<!-- xrefcheck: ignore paragraph -->` annotation to ignore all links in a paragraph.
 
-## For further work [↑](#xrefcheck)
+1. How do I ignore all links from a specific markdown file?
+    * Add a glob pattern to the `ignoreRefsFrom` list in the config file.
+    * Or add a `<!-- xrefcheck: ignore all -->` at the top of the file.
+
+1. How do I ignore all external links?
+    * If you wish to ignore all http/ftp links, you can use `--mode local-only`.
+
+1. How does `xrefcheck` handle links that require authentication?
+    * It's common for projects to contains links to protected resources.
+      By default, when `xrefcheck` attempts to verify a link and is faced with a `403 Forbidden` or a `401 Unauthorized`, it assumes the link is valid.
+    * This behavior can be disabled by setting `ignoreAuthFailures: false` in the config file.
+
+1. How does `xrefcheck` handle redirects?
+    * `xrefcheck` follows up to 10 HTTP redirects.
+
+1. How does `xrefcheck` handle localhost links?
+    * By default, `xrefcheck` will ignore links to localhost.
+    * This behavior can be disabled by removing the corresponding entry from the `ignoreExternalRefsTo` list in the config file.
+
+## Further work [↑](#xrefcheck)
 
 - [ ] Support for non-Unix systems.
 - [ ] Support link detection in different languages, not only Markdown.
   - [ ] Haskell Haddock is first in turn.
+
+## A comparison with other solutions [↑](#xrefcheck)
+
+* [linky](https://github.com/mattias-p/linky) - a well-configurable verifier written in Rust, scans one specified file at a time and works well with system utilities like `find`.
+  This tool requires some configuring before it can be applied to a repository or added to CI.
+* [awesome_bot](https://github.com/dkhamsing/awesome_bot) - a solution written in Ruby that can be easily included in CI or integrated into GitHub.
+  Its features include duplicated URLs detection, specifying allowed HTTP error codes and reporting generation.
+  At the moment of writing, it scans only external references and checking anchors is not possible.
+* [remark-validate-links](https://github.com/remarkjs/remark-validate-links) and [remark-lint-no-dead-urls](https://github.com/davidtheclark/remark-lint-no-dead-urls) - highly configurable JavaScript solution for checking local and external links respectively.
+  It is able to check multiple repositores at once if they are gathered in one folder.
+  Doesn't handle "429 Too Many Requests", so false positives are likely when you have many links to the same domain.
+* [markdown-link-check](https://github.com/tcort/markdown-link-check) - another checker written in JavaScript, scans one specific file at a time.
+  Supports `mailto:` link resolution.
+* [url-checker](https://github.com/paramt/url-checker) - GitHub Action which checks external links in specified files.
+  Does not check local links.
+* [linkcheck](https://github.com/filiph/linkcheck) - advanced site crawler, verifies links in `HTML` files. There are other solutions for this particular task which we don't mention here.
+
+At the moment of writing, the listed solutions don't support ftp/ftps links.
 
 ## Issue tracker [↑](#xrefcheck)
 

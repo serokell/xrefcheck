@@ -56,4 +56,4 @@ steps:
       - nix run -f ci.nix pkgs.skopeo -c ./scripts/upload-docker-image.sh "docker-archive:$(readlink result)" "docker://docker.io/serokell/xrefcheck:${BUILDKITE_BRANCH}"
     label: Push release to dockerhub
     if: |
-      build.branch =~ /^v[0-9]+.*/
+      build.tag =~ /^v[0-9]+.*/

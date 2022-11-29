@@ -5,22 +5,17 @@
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Xrefcheck.Config where
+module Xrefcheck.Config
+  ( module Xrefcheck.Config
+  , defConfigText
+  ) where
 
-import Universum.Unsafe qualified as Unsafe
 
 import Universum
 
-import Control.Exception (assert)
 import Control.Lens (makeLensesWith)
 import Data.Aeson (genericParseJSON)
-import Data.ByteString qualified as BS
-import Data.Map qualified as Map
 import Data.Yaml (FromJSON (..), decodeEither', prettyPrintParseException, withText)
-import Instances.TH.Lift ()
-import Text.Interpolation.Nyan
-import Text.Regex.TDFA qualified as R
-import Text.Regex.TDFA.ByteString ()
 
 import Time (KnownRatName, Second, Time (..), unitsP)
 
@@ -28,7 +23,7 @@ import Xrefcheck.Config.Default
 import Xrefcheck.Core
 import Xrefcheck.Scan
 import Xrefcheck.Scanners.Markdown
-import Xrefcheck.Util (Field, aesonConfigOption, postfixFields, (-:))
+import Xrefcheck.Util (Field, aesonConfigOption, postfixFields)
 
 -- | Type alias for Config' with all required fields.
 type Config = Config' Identity
@@ -83,121 +78,10 @@ data ScannersConfig' f = ScannersConfig
 makeLensesWith postfixFields ''Config'
 makeLensesWith postfixFields ''NetworkingConfig'
 
--- | Picks raw config with @:PLACEHOLDER:<key>:@ and fills the specified fields
--- in it, picking a replacement suitable for the given key. Only strings and lists
--- of strings can be filled this way.
---
--- This will fail if any placeholder is left unreplaced, however extra keys in
--- the provided replacement won't cause any warnings or failures.
-fillHoles
-  :: HasCallStack
-  => [(ByteString, Either ByteString [ByteString])]
-  -> ByteString
-  -> ByteString
-fillHoles allReplacements rawConfig =
-  let holesLocs = R.getAllMatches $ holeLineRegex `R.match` rawConfig
-  in mconcat $ replaceHoles 0 holesLocs
-  where
-    showBs :: ByteString -> Text
-    showBs = show @_ @Text . decodeUtf8
-
-    holeLineRegex :: R.Regex
-    holeLineRegex = R.makeRegex ("[ -]+:PLACEHOLDER:[^:]+:" :: Text)
-
-    replacementsMap = Map.fromList allReplacements
-    getReplacement key =
-      Map.lookup key replacementsMap
-      ?: error ("Replacement for key " <> showBs key <> " is not specified")
-
-    pickConfigSubstring :: Int -> Int -> ByteString
-    pickConfigSubstring from len = BS.take len $ BS.drop from rawConfig
-
-    replaceHoles :: Int -> [(R.MatchOffset, R.MatchLength)] -> [ByteString]
-    replaceHoles processedLen [] = one $ BS.drop processedLen rawConfig
-    replaceHoles processedLen ((off, len) : locs) =
-      -- in our case matches here should not overlap
-      assert (off > processedLen) $
-        pickConfigSubstring processedLen (off - processedLen) :
-        replaceHole (pickConfigSubstring off len) ++
-        replaceHoles (off + len) locs
-
-    holeItemRegex :: R.Regex
-    holeItemRegex = R.makeRegex ("(^|:)([ ]*):PLACEHOLDER:([^:]+):" :: Text)
-
-    holeListRegex :: R.Regex
-    holeListRegex = R.makeRegex ("^([ ]*-[ ]*):PLACEHOLDER:([^:]+):" :: Text)
-
-    replaceHole :: ByteString -> [ByteString]
-    replaceHole holeLine = if
-      | Just [_wholeMatch, _beginning, leadingSpaces, key] <-
-          R.getAllTextSubmatches <$> (holeItemRegex `R.matchM` holeLine) ->
-            case getReplacement key of
-              Left replacement -> [leadingSpaces, replacement]
-              Right _ -> error $
-                [int||
-                Key #{showBs key} requires replacement with an item, \
-                but list was given"
-                |]
-
-      | Just [_wholeMatch, leadingChars, key] <-
-          R.getAllTextSubmatches <$> (holeListRegex `R.matchM` holeLine) ->
-            case getReplacement key of
-              Left _ -> error $
-                [int||
-                Key #{showBs key} requires replacement with a list, \
-                but an item was given"
-                |]
-              Right [] ->
-                ["[]"]
-              Right replacements@(_ : _) ->
-                Unsafe.init $ do
-                  replacement <- replacements
-                  [leadingChars, replacement, "\n"]
-
-      | otherwise ->
-          error $ "Unrecognized placeholder pattern " <> showBs holeLine
-
--- | Default config in textual representation.
---
--- Sometimes you cannot just use 'defConfig' because clarifying comments
--- would be lost.
-defConfigText :: Flavor -> ByteString
-defConfigText flavor =
-  flip fillHoles defConfigUnfilled
-    [
-      "flavor" -: Left (show flavor)
-
-    , "ignoreRefsFrom" -: Right $ case flavor of
-        GitHub ->
-          [ ".github/pull_request_template.md"
-          , ".github/issue_template.md"
-          , ".github/PULL_REQUEST_TEMPLATE/**/*"
-          , ".github/ISSUE_TEMPLATE/**/*"
-          ]
-        GitLab ->
-          [ ".gitlab/merge_request_templates/**/*"
-          , ".gitlab/issue_templates/**/*"
-          ]
-
-    , "ignoreLocalRefsTo" -: Right $ case flavor of
-        GitHub ->
-          [ "../../../issues"
-          , "../../../issues/*"
-          , "../../../pulls"
-          , "../../../pulls/*"
-          ]
-        GitLab ->
-          [ "../../issues"
-          , "../../issues/*"
-          , "../../merge_requests"
-          , "../../merge_requests/*"
-          ]
-    ]
-
 defConfig :: HasCallStack => Flavor -> Config
 defConfig flavor = normaliseConfigFilePaths $
   either (error . toText . prettyPrintParseException) id $
-  decodeEither' (defConfigText flavor)
+  decodeEither' $ encodeUtf8 $ defConfigText flavor
 
 -- | Override missed fields with default values.
 overrideConfig :: ConfigOptional -> Config

@@ -25,8 +25,8 @@ import Control.Lens (_Just, makeLenses, makeLensesFor, (.=))
 import Control.Monad.Trans.Writer.CPS (Writer, runWriter, tell)
 import Data.Aeson (FromJSON (..), genericParseJSON)
 import Data.ByteString.Lazy qualified as BSL
-import Data.Default (def)
 import Data.DList qualified as DList
+import Data.Default (def)
 import Data.Text qualified as T
 import Data.Text.Lazy qualified as LT
 import Fmt (Buildable (..), nameF)

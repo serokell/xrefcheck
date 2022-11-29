@@ -33,7 +33,7 @@ module Xrefcheck.Verify
 
 import Universum
 
-import Control.Concurrent.Async (async, cancel, wait, withAsync, Async, poll)
+import Control.Concurrent.Async (Async, async, cancel, poll, wait, withAsync)
 import Control.Exception (AsyncException (..), throwIO)
 import Control.Monad.Except (MonadError (..))
 import Data.ByteString qualified as BS
@@ -65,6 +65,7 @@ import Text.URI (Authority (..), ParseExceptionBs, URI (..), mkURIBs)
 import Time (RatioNat, Second, Time (..), ms, sec, threadDelay, timeout, (+:+), (-:-))
 import URI.ByteString qualified as URIBS
 
+import Control.Exception.Safe (handleAsync, handleJust)
 import Data.Bits (toIntegralSized)
 import Xrefcheck.Config
 import Xrefcheck.Core
@@ -73,7 +74,6 @@ import Xrefcheck.Progress
 import Xrefcheck.Scan
 import Xrefcheck.System
 import Xrefcheck.Util
-import Control.Exception.Safe (handleAsync, handleJust)
 
 {-# ANN module ("HLint: ignore Use uncurry" :: Text) #-}
 {-# ANN module ("HLint: ignore Use 'runExceptT' from Universum" :: Text) #-}

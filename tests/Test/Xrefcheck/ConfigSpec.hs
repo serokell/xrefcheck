@@ -10,7 +10,6 @@ import Universum
 import Control.Concurrent (forkIO, killThread)
 import Control.Exception qualified as E
 
-import Data.ByteString qualified as BS
 import Data.List (isInfixOf)
 import Data.Yaml (ParseException (..), decodeEither')
 import Network.HTTP.Types (Status (..))
@@ -38,7 +37,7 @@ test_config =
     -- The config we match against can be regenerated with
     -- stack exec xrefcheck -- dump-config -t GitHub -o tests/configs/github-config.yaml
       [ testCase "Config matches" $ do
-        config <- BS.readFile "tests/configs/github-config.yaml"
+        config <- readFile "tests/configs/github-config.yaml"
         when (config /= defConfigText GitHub) $
           assertFailure $ toString $ unwords
             [ "Config does not match the expected format."
@@ -76,7 +75,7 @@ test_config =
        ]
   , testGroup "Config parser reject input with unknown fields"
       [ testCase "throws error with useful messages" $ do
-          case decodeEither' @Config (defConfigText GitHub <> "strangeField: []") of
+          case decodeEither' @Config $ encodeUtf8 $ defConfigText GitHub <> "strangeField: []" of
             Left (AesonException str) ->
               if "unknown fields: [\"strangeField\"]" `isInfixOf` str
               then pure ()

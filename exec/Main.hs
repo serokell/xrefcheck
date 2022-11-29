@@ -7,7 +7,6 @@ module Main where
 
 import Universum
 
-import Data.ByteString qualified as BS
 import Main.Utf8 (withUtf8)
 
 import Xrefcheck.CLI (Command (..), getCommand)
@@ -21,4 +20,4 @@ main = withUtf8 $ do
     DefaultCommand options ->
       defaultAction options
     DumpConfig repoType path ->
-      BS.writeFile path (defConfigText repoType)
+      writeFile path (defConfigText repoType)

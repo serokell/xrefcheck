@@ -86,7 +86,6 @@ library:
     - directory
     - dlist
     - filepath
-    - raw-strings-qq
     - fmt
     - ftp-client
     - Glob
@@ -104,7 +103,6 @@ library:
     - tagsoup
     - text
     - text-metrics
-    - th-lift-instances
     - time
     - transformers
     - universum
@@ -127,7 +125,6 @@ executables:
       - -O2
     dependencies:
       - xrefcheck
-      - bytestring
       - universum
       - with-utf8
 
@@ -144,7 +141,6 @@ tests:
       - cmark-gfm
       - firefly
       - xrefcheck
-      - bytestring
       - directory
       - http-types
       - o-clock

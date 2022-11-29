@@ -7,11 +7,15 @@ module Xrefcheck.Config.Default where
 
 import Universum
 
-import Text.RawString.QQ
+import Text.Interpolation.Nyan
 
-defConfigUnfilled :: ByteString
-defConfigUnfilled =
-  [r|# Exclusion parameters.
+import Xrefcheck.Core
+import Xrefcheck.Util
+
+defConfigText :: Flavor -> Text
+defConfigText flavor =
+  [int|D|
+# Exclusion parameters.
 exclusions:
   # Ignore these files. References to them will fail verification,
   # and references from them will not be verified.
@@ -21,18 +25,18 @@ exclusions:
   # References from these files will not be verified.
   # List of glob patterns.
   ignoreRefsFrom:
-    - :PLACEHOLDER:ignoreRefsFrom:
+#{interpolateIndentF 4 $ interpolateBlockListF $ ignoreLocalRefsFrom}
 
   # References to these paths will not be verified.
   # List of glob patterns.
   ignoreLocalRefsTo:
-    - :PLACEHOLDER:ignoreLocalRefsTo:
+#{interpolateIndentF 4 $ interpolateBlockListF $ ignoreLocalRefsTo}
 
   # References to these URIs will not be verified.
   # List of POSIX extended regular expressions.
   ignoreExternalRefsTo:
     # Ignore localhost links by default
-    - ^(https?|ftps?)://(localhost|127\.0\.0\.1).*
+    - ^(https?|ftps?)://(localhost|127\\.0\\.0\\.1).*
 
 # Networking parameters.
 networking:
@@ -62,5 +66,33 @@ scanners:
     # Flavor of markdown, e.g. GitHub-flavor.
     #
     # This affects which anchors are generated for headers.
-    flavor: :PLACEHOLDER:flavor:
+    flavor: #s{flavor}
 |]
+  where
+    ignoreLocalRefsFrom :: NonEmpty Text
+    ignoreLocalRefsFrom = fromList $  case flavor of
+      GitHub ->
+        [ ".github/pull_request_template.md"
+        , ".github/issue_template.md"
+        , ".github/PULL_REQUEST_TEMPLATE/**/*"
+        , ".github/ISSUE_TEMPLATE/**/*"
+        ]
+      GitLab ->
+        [ ".gitlab/merge_request_templates/**/*"
+        , ".gitlab/issue_templates/**/*"
+        ]
+
+    ignoreLocalRefsTo :: NonEmpty Text
+    ignoreLocalRefsTo = fromList $  case flavor of
+      GitHub ->
+        [ "../../../issues"
+        , "../../../issues/*"
+        , "../../../pulls"
+        , "../../../pulls/*"
+        ]
+      GitLab ->
+        [ "../../issues"
+        , "../../issues/*"
+        , "../../merge_requests"
+        , "../../merge_requests/*"
+        ]

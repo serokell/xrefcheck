@@ -57,7 +57,7 @@ to_temp() {
 #             - link: no-anchor.md
 #             - anchor: invalid-anchor
 #
-#           ⛀  Anchor 'invalid-anchor' is not present
+#           Anchor 'invalid-anchor' is not present
 #
 #
 # Invalid references dumped, 1 in total.

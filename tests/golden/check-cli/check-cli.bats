@@ -53,8 +53,8 @@ load '../helpers'
        - link: /one/two/three
        - anchor: -
 
-     ⛀  File does not exist:
-        ./one/two/three
+     File does not exist:
+       ./one/two/three
 
 Invalid references dumped, 1 in total.
 EOF
@@ -72,8 +72,8 @@ EOF
        - link: /one/two/three
        - anchor: -
 
-     ⛀  File does not exist:
-        ./one/two/three
+     File does not exist:
+       ./one/two/three
 
 Invalid references dumped, 1 in total.
 EOF
@@ -91,8 +91,8 @@ EOF
        - link: /one/two/three
        - anchor: -
 
-     ⛀  File does not exist:
-        ./one/two/three
+     File does not exist:
+       ./one/two/three
 
 Invalid references dumped, 1 in total.
 EOF

@@ -139,38 +139,38 @@ instance Given ColorMode => Buildable VerifyError where
   build = \case
     LocalFileDoesNotExist file ->
       [int||
-      ⛀  File does not exist:
-         #{file}
+      File does not exist:
+        #{file}
       |]
 
     LocalFileOutsideRepo file ->
       [int||
-      ⛀  Link targets a local file outside repository:
-         #{file}
+      Link targets a local file outside repository:
+        #{file}
       |]
 
 
     LinkTargetNotAddedToGit file ->
       [int||
-      ⛀  Link target is not tracked by Git:
-         #{file}
-         Please run "git add" before running xrefcheck or enable --include-untracked CLI option.
+      Link target is not tracked by Git:
+        #{file}
+        Please run "git add" before running xrefcheck or enable --include-untracked CLI option.
       |]
 
     AnchorDoesNotExist anchor similar -> case nonEmpty similar of
       Nothing ->
         [int||
-        ⛀  Anchor '#{anchor}' is not present
+        Anchor '#{anchor}' is not present
         |]
       Just otherAnchors ->
         [int||
-        ⛀  Anchor '#{anchor}' is not present, did you mean:
+        Anchor '#{anchor}' is not present, did you mean:
         #{interpolateIndentF 4 $ interpolateBlockListF otherAnchors}
         |]
 
     AmbiguousAnchorRef file anchor fileAnchors ->
       [int||
-      ⛀  Ambiguous reference to anchor '#{anchor}'
+      Ambiguous reference to anchor '#{anchor}'
         In file #{file}
         It could refer to either:
       #{interpolateIndentF 4 $ interpolateBlockListF fileAnchors}
@@ -180,60 +180,60 @@ instance Given ColorMode => Buildable VerifyError where
 
     ExternalResourceInvalidUri err ->
       [int||
-      ⛂  Invalid URI (#{err})
+      Invalid URI (#{err})
       |]
 
     ExternalResourceUriConversionError err ->
       [int||
-      ⛂  Invalid URI
+      Invalid URI
       #{interpolateIndentF 4 . build $ displayException err}
       |]
 
     ExternalResourceInvalidUrl Nothing ->
       [int||
-      ⛂  Invalid URL
+      Invalid URL
       |]
 
     ExternalResourceInvalidUrl (Just message) ->
       [int||
-      ⛂  Invalid URL (#{message})
+      Invalid URL (#{message})
       |]
 
     ExternalResourceUnknownProtocol ->
       [int||
-      ⛂  Bad url (expected 'http','https', 'ftp' or 'ftps')
+      Bad url (expected 'http','https', 'ftp' or 'ftps')
       |]
 
     ExternalHttpResourceUnavailable status ->
       [int||
-      ⛂  Resource unavailable (#{statusCode status} #{decodeUtf8 @Text (statusMessage status)})
+      Resource unavailable (#{statusCode status} #{decodeUtf8 @Text (statusMessage status)})
       |]
 
     ExternalHttpTooManyRequests retryAfter ->
       [int||
-      ⛂  Resource unavailable (429 Too Many Requests; retry after #{maybeF retryAfter})
+      Resource unavailable (429 Too Many Requests; retry after #{maybeF retryAfter})
       |]
 
     ExternalFtpResourceUnavailable response ->
       [int||
-      ⛂  Resource unavailable:
+      Resource unavailable:
       #{response}
       |]
 
     ExternalFtpException err ->
       [int||
-      ⛂  FTP exception (#{err})
+      FTP exception (#{err})
       |]
 
     FtpEntryDoesNotExist entry ->
       [int||
-      ⛂ File or directory does not exist:
+      File or directory does not exist:
       #{entry}
       |]
 
     ExternalResourceSomeError err ->
       [int||
-      ⛂  #{err}
+      #{err}
       |]
 
 reportVerifyErrs

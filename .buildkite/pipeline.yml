@@ -28,7 +28,7 @@ steps:
     artifact_paths:
       - "result/bin/*"
 
-  - command: nix run -f ci.nix xrefcheck-static -c xrefcheck --ignore 'tests/markdowns/**/*' --ignore 'tests/golden/**/*'
+  - command: nix run -f ci.nix xrefcheck-static -c xrefcheck --ignore 'tests/markdowns/**/*' --ignore 'tests/golden/**/*' --ignore 'docs/output-sample/**/*'
     label: Xrefcheck itself
     retry:
       automatic:

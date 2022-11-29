@@ -30,6 +30,8 @@ Unreleased
   + Now we consider slash `/` (and only it) as path separator in local links for all OS,
     so xrefcheck's report is OS-independent
   + Use utf-8 compatible codepage on Windows
+* [#224](https://github.com/serokell/xrefcheck/pull/224)
+  + Now the program output does not contain unicode characters that are not widely supported.
 
 0.2.2
 ==========

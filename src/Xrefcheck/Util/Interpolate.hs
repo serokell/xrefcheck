@@ -9,6 +9,7 @@ module Xrefcheck.Util.Interpolate
     interpolateIndentF
   , interpolateBlockListF
   , interpolateBlockListF'
+  , interpolateUnlinesF
   )
   where
 
@@ -16,7 +17,7 @@ import Universum
 
 import Data.Text.Lazy qualified as TL
 import Data.Text.Lazy.Builder (fromLazyText, toLazyText)
-import Fmt (Buildable, Builder, blockListF, blockListF', indentF)
+import Fmt (Buildable, Builder, blockListF, blockListF', indentF, unlinesF)
 
 {- $notes
 The `blockListF` and `indentF` frunctions from @fmt@ add a trailing newline, which makes them unsuitable for string interpolation.
@@ -62,6 +63,10 @@ interpolateBlockListF' =  stripLastNewline . stripTrailingSpaces ... blockListF'
 -- | Like @Fmt.blockListF@, but strips trailing spaces and does not add a trailing newline.
 interpolateBlockListF :: HasCallStack => Buildable a => NonEmpty a -> Builder
 interpolateBlockListF = stripLastNewline . stripTrailingSpaces . blockListF
+
+-- | Like @Fmt.unlinesF@, but strips trailing spaces and does not add a trailing newline.
+interpolateUnlinesF :: HasCallStack => Buildable a => NonEmpty a -> Builder
+interpolateUnlinesF = stripLastNewline . stripTrailingSpaces . unlinesF
 
 -- remove trailing whitespace from all lines.
 -- Note: output always ends with newline (adds trailing newline if there wasn't one).

@@ -14,7 +14,7 @@ load '../helpers'
 assert_diff - <<EOF
 === Repository data ===
 
-  ⮚ file-with-autolinks.md:
+  file-with-autolinks.md:
     - references:
         - reference (external) :
             - text: "https://www.google.com/doodles"

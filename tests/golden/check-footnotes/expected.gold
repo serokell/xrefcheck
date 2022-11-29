@@ -6,7 +6,7 @@
        - link: ./notExists
        - anchor: -
 
-     ⛀  File does not exist:
-        broken-link-in-footnote/notExists
+     File does not exist:
+       broken-link-in-footnote/notExists
 
 Invalid references dumped, 1 in total.

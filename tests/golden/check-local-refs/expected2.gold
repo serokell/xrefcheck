@@ -6,7 +6,7 @@
        - link: -
        - anchor: bad
 
-     ⛀  Anchor 'bad' is not present
+     Anchor 'bad' is not present
 
   ➥  In file dir1/dir2/d2f1.md
      bad reference (relative) at src:27:1-43:
@@ -14,8 +14,8 @@
        - link: ../a/b/c/unexisting-file.md
        - anchor: -
 
-     ⛀  File does not exist:
-        dir1/dir2/../a/b/c/unexisting-file.md
+     File does not exist:
+       dir1/dir2/../a/b/c/unexisting-file.md
 
   ➥  In file dir1/dir2/d2f1.md
      bad reference (relative) at src:28:1-31:
@@ -23,8 +23,8 @@
        - link: D2F2.md/
        - anchor: -
 
-     ⛀  File does not exist:
-        dir1/dir2/D2F2.md/
+     File does not exist:
+       dir1/dir2/D2F2.md/
 
   ➥  In file dir1/dir2/d2f1.md
      bad reference (relative) at src:29:1-32:
@@ -32,8 +32,8 @@
        - link: ../DIR2
        - anchor: -
 
-     ⛀  File does not exist:
-        dir1/dir2/../DIR2
+     File does not exist:
+       dir1/dir2/../DIR2
 
   ➥  In file dir1/dir2/d2f1.md
      bad reference (relative) at src:31:1-38:
@@ -41,7 +41,7 @@
        - link: d2f2.md
        - anchor: bad-anchor
 
-     ⛀  Anchor 'bad-anchor' is not present
+     Anchor 'bad-anchor' is not present
 
   ➥  In file dir1/dir2/d2f1.md
      bad reference (relative) at src:32:1-49:
@@ -49,8 +49,8 @@
        - link: unexisting-file.md
        - anchor: bad-anchor
 
-     ⛀  File does not exist:
-        dir1/dir2/unexisting-file.md
+     File does not exist:
+       dir1/dir2/unexisting-file.md
 
   ➥  In file dir1/dir2/d2f1.md
      bad reference (absolute) at src:36:1-29:
@@ -58,8 +58,8 @@
        - link: /dir1/./d1f1.md
        - anchor: -
 
-     ⛀  File does not exist:
-        dir1/dir1/./d1f1.md
+     File does not exist:
+       dir1/dir1/./d1f1.md
 
   ➥  In file dir1/dir2/d2f1.md
      bad reference (absolute) at src:37:1-21:
@@ -67,8 +67,8 @@
        - link: /dir1
        - anchor: -
 
-     ⛀  File does not exist:
-        dir1/dir1
+     File does not exist:
+       dir1/dir1
 
   ➥  In file dir1/dir2/d2f1.md
      bad reference (absolute) at src:38:1-30:
@@ -76,8 +76,8 @@
        - link: /dir1/dir2/../
        - anchor: -
 
-     ⛀  File does not exist:
-        dir1/dir1/dir2/../
+     File does not exist:
+       dir1/dir1/dir2/../
 
   ➥  In file dir1/dir2/d2f1.md
      bad reference (absolute) at src:39:1-58:
@@ -85,8 +85,8 @@
        - link: /dir1/../dir1/d1f1.md
        - anchor: existing-anchor-d1f1
 
-     ⛀  File does not exist:
-        dir1/dir1/../dir1/d1f1.md
+     File does not exist:
+       dir1/dir1/../dir1/d1f1.md
 
   ➥  In file dir1/dir2/d2f1.md
      bad reference (absolute) at src:40:1-73:
@@ -94,8 +94,8 @@
        - link: /dir1/dir2/../../dir1/./dir2/d2f2.md
        - anchor: existing-anchor-d2f2
 
-     ⛀  File does not exist:
-        dir1/dir1/dir2/../../dir1/./dir2/d2f2.md
+     File does not exist:
+       dir1/dir1/dir2/../../dir1/./dir2/d2f2.md
 
   ➥  In file dir1/dir2/d2f1.md
      bad reference (relative) at src:51:1-42:
@@ -103,8 +103,8 @@
        - link: ../../dir1/d1f1.md
        - anchor: -
 
-     ⛀  Link targets a local file outside repository:
-        dir1/dir2/../../dir1/d1f1.md
+     Link targets a local file outside repository:
+       dir1/dir2/../../dir1/d1f1.md
 
   ➥  In file dir1/dir2/d2f1.md
      bad reference (relative) at src:52:1-75:
@@ -112,8 +112,8 @@
        - link: ../../dir1/d1f1.md
        - anchor: existing-anchor-d1f1
 
-     ⛀  Link targets a local file outside repository:
-        dir1/dir2/../../dir1/d1f1.md
+     Link targets a local file outside repository:
+       dir1/dir2/../../dir1/d1f1.md
 
   ➥  In file dir1/dir2/d2f1.md
      bad reference (relative) at src:53:1-26:
@@ -121,8 +121,8 @@
        - link: ../../d0f1.md
        - anchor: -
 
-     ⛀  Link targets a local file outside repository:
-        dir1/dir2/../../d0f1.md
+     Link targets a local file outside repository:
+       dir1/dir2/../../d0f1.md
 
   ➥  In file dir1/dir2/d2f1.md
      bad reference (absolute) at src:57:1-16:
@@ -130,8 +130,8 @@
        - link: /../../a.md
        - anchor: -
 
-     ⛀  Link targets a local file outside repository:
-        dir1/../../a.md
+     Link targets a local file outside repository:
+       dir1/../../a.md
 
   ➥  In file dir1/dir2/d2f1.md
      bad reference (absolute) at src:58:1-18:
@@ -139,7 +139,7 @@
        - link: /b/../../b.md
        - anchor: -
 
-     ⛀  Link targets a local file outside repository:
-        dir1/b/../../b.md
+     Link targets a local file outside repository:
+       dir1/b/../../b.md
 
 Invalid references dumped, 16 in total.

@@ -21,7 +21,7 @@ import Data.Default (Default (..))
 import Data.List qualified as L
 import Data.Reflection (Given)
 import Data.Text qualified as T
-import Fmt (Buildable (..))
+import Fmt (Buildable (..), Builder)
 import System.FilePath.Posix (isPathSeparator)
 import Text.Interpolation.Nyan
 import Time (Second, Time)
@@ -206,12 +206,13 @@ instance Given ColorMode => Buildable FileInfo where
 instance Given ColorMode => Buildable RepoInfo where
   build (RepoInfo m _)
     | Just scanned <- nonEmpty [(name, info) | (name, Scanned info) <- toPairs m]
-    = interpolateBlockListF' "⮚" buildFileReport scanned
+    = interpolateUnlinesF $ buildFileReport <$> scanned
     where
+      buildFileReport :: ([Char], FileInfo) -> Builder
       buildFileReport (name, info) =
         [int||
-        #{colorIfNeeded Cyan $ name}:
-        #{info}
+        #{ colorIfNeeded Cyan $ name }:
+        #{ interpolateIndentF 2 $ build info }
         |]
   build _ = "No scannable files found."
 

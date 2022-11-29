@@ -10,7 +10,7 @@
 
 Xrefcheck is a tool for verifying local and external references in a repository's documentation that is quick, easy to setup, and suitable to be run on a CI pipeline.
 
-<img src="https://user-images.githubusercontent.com/5394217/70820564-06b06e00-1dea-11ea-9680-27f661ca2a58.png" alt="Output sample" width="600"/>
+<img src="./docs/output-sample/output-sample.png" alt="Output sample" width="600"/>
 
 ## Motivation [↑](#xrefcheck)
 

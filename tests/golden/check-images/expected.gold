@@ -1,6 +1,6 @@
 === Repository data ===
 
-  ⮚ check-images.md:
+  check-images.md:
     - references:
         - reference (external) at src:7:1-76:
             - text: "good image ref 1"
@@ -37,7 +37,7 @@
        - link: https://serokell.io/1.png
        - anchor: -
 
-     ⛂  Resource unavailable (404 Not Found)
+     Resource unavailable (404 Not Found)
 
   ➥  In file check-images.md
      bad reference (external) at src:16:1-33:
@@ -45,7 +45,7 @@
        - link: https://serokell.io/2.png
        - anchor: -
 
-     ⛂  Resource unavailable (404 Not Found)
+     Resource unavailable (404 Not Found)
 
   ➥  In file check-images.md
      bad reference (relative) at src:20:1-34:
@@ -53,8 +53,8 @@
        - link: ./3.png
        - anchor: -
 
-     ⛀  File does not exist:
-        3.png
+     File does not exist:
+       3.png
 
   ➥  In file check-images.md
      bad reference (relative) at src:21:1-33:
@@ -62,7 +62,7 @@
        - link: ./4.png
        - anchor: -
 
-     ⛀  File does not exist:
-        4.png
+     File does not exist:
+       4.png
 
 Invalid references dumped, 4 in total.

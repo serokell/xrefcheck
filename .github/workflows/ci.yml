@@ -1,0 +1,81 @@
+# SPDX-FileCopyrightText: 2020 Kowainik
+# SPDX-FileCopyrightText: 2022 Serokell <https://serokell.io/>
+#
+# SPDX-License-Identifier: MPL-2.0
+
+# Sources:
+# • https://github.com/kowainik/validation-selective/blob/5b46cd4810bbaa09b704062ebbfa2bb47137425d/.github/workflows/ci.yml
+# • https://kodimensional.dev/github-actions
+# •  https://github.com/serokell/tztime/blob/336f585c2c7125a8ba58ffbf3dbea4f36a7c40e7/.github/workflows/ci.yml
+
+name: CI
+
+on: [push]
+
+jobs:
+  xrefcheck-build-and-test:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        stack: ["2.7.5"]
+        ghc: ["9.0.2"]
+        include:
+          - ghc: "9.0.2"
+            stackyaml: stack.yaml
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: 'true'
+
+    - uses: haskell/actions/setup@v2.0.1
+      id: setup-haskell-stack
+      name: Setup Haskell Stack
+      with:
+        ghc-version: ${{ matrix.ghc }}
+        stack-version: ${{ matrix.stack }}
+
+    - uses: actions/cache@v3
+      name: Cache stack root
+      with:
+        path: ~/AppData/Roaming/stack
+        key: ${{ runner.os }}-${{ matrix.ghc }}-stack
+
+    - uses: actions/cache@v3
+      name: Cache AppData/Local/Programs/stack
+      with:
+        path: ~/AppData/Local/Programs/stack
+        key: ${{ runner.os }}-${{ matrix.ghc }}-appdata-stack
+
+
+# When editing this action, make sure it can run without using cached folders.
+# Yes, it tries to install mingw-w64-x86_64-pcre twice
+    - name: install pacman dependencies
+      run: |
+        stack --system-ghc exec -- pacman -S --needed --noconfirm pkgconf;
+        stack --system-ghc exec -- pacman -S --needed --noconfirm msys2-keyring;
+        stack --system-ghc exec -- pacman --noconfirm -Syuu;
+        stack --system-ghc exec -- pacman -S --needed --noconfirm mingw-w64-x86_64-pcre;
+        stack --system-ghc exec -- pacman --noconfirm -Syuu;
+        stack --system-ghc exec -- pacman -S --needed --noconfirm mingw-w64-x86_64-pcre;
+        stack --system-ghc exec -- pacman -S --needed --noconfirm pcre-devel;
+
+    - name: Build
+      run: |
+        stack build --system-ghc --stack-yaml ${{ matrix.stackyaml }} --test --bench --no-run-tests --no-run-benchmarks --ghc-options '-Werror'
+
+    - name: stack test xrefcheck:xrefcheck-tests
+      run: |
+        stack test --system-ghc --stack-yaml ${{ matrix.stackyaml }} xrefcheck:xrefcheck-tests
+
+    - name: install xrefcheck to use with golden tests
+      run: |
+        stack --system-ghc --stack-yaml ${{ matrix.stackyaml }} install;
+
+    - uses: mig4/setup-bats@v1
+      name: Setup bats
+
+    - name: Golden tests
+      run: |
+        export PATH=$PATH:/c/Users/runneradmin/AppData/Roaming/local/bin;
+        bats ./tests/golden/**
+      shell: bash

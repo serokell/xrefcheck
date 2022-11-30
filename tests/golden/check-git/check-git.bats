@@ -31,11 +31,9 @@ load '../helpers'
   assert_output --partial "All repository links are valid."
 
   # this is printed to stderr
-  assert_output --partial - <<EOF
-Those files are not added by Git, so we're not scanning them:
-- git.md
-Please run "git add" before running xrefcheck or enable --include-untracked CLI option to check these files.
-EOF
+  assert_output --partial "Those files are not added by Git, so we're not scanning them:"
+  assert_output --partial "- git.md"
+  assert_output --partial "Please run \"git add\" before running xrefcheck or enable --include-untracked CLI option to check these files."
 }
 
 @test "Git: bad file not tracked, --include-untracked enabled, check failure" {

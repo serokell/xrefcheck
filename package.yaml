@@ -127,6 +127,7 @@ executables:
       - xrefcheck
       - universum
       - with-utf8
+      - code-page
 
 tests:
   xrefcheck-tests:

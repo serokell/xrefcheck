@@ -67,5 +67,6 @@ assert_diff() {
   : "{output_file?}"
 
   diff $output_file $1 \
-    --ignore-tab-expansion
+    --ignore-tab-expansion \
+    --strip-trailing-cr
 }

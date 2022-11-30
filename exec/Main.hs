@@ -8,13 +8,14 @@ module Main where
 import Universum
 
 import Main.Utf8 (withUtf8)
+import System.IO.CodePage (withCP65001)
 
 import Xrefcheck.CLI (Command (..), getCommand)
 import Xrefcheck.Command (defaultAction)
 import Xrefcheck.Config (defConfigText)
 
 main :: IO ()
-main = withUtf8 $ do
+main = withUtf8 $ withCP65001 $ do
   command <- getCommand
   case command of
     DefaultCommand options ->

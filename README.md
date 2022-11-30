@@ -98,6 +98,16 @@ This file should be committed to your repository.
 Run `stack install` to build everything and install the executable.
 If you wish to use `cabal`, you need to run [`stack2cabal`](https://hackage.haskell.org/package/stack2cabal) first!
 
+### Run on Windows [↑](#xrefcheck)
+On Windows, executable requires some dynamic libraries (DLLs).
+They are shipped together with executable in [releases page](https://github.com/serokell/xrefcheck/releases).
+If you have built executable from source using `stack install`,
+those DLLs are downloaded by stack to a location that is not on `%PATH%` by default.
+There are several ways to fix this:
+- Add `%LocalAppData%\Programs\stack\x86_64-windows\msys2-<...>\mingw64\bin` to your PATH
+- run `stack exec xrefcheck.exe -- <args>` instead of `xrefcheck.exe <args>`
+- add DLLs from archive from releases page to a folder containing `xrefcheck.exe`
+
 ## FAQ [↑](#xrefcheck)
 
 1. How do I ignore specific files?
@@ -138,7 +148,6 @@ If you wish to use `cabal`, you need to run [`stack2cabal`](https://hackage.hask
 
 ## Further work [↑](#xrefcheck)
 
-- [ ] Support for non-Unix systems.
 - [ ] Support link detection in different languages, not only Markdown.
   - [ ] Haskell Haddock is first in turn.
 

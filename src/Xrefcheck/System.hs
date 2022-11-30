@@ -21,9 +21,8 @@ import Data.Coerce (coerce)
 import GHC.IO.Unsafe (unsafePerformIO)
 import System.Directory (canonicalizePath)
 import System.Environment (lookupEnv)
-import System.FilePath (isRelative, (</>))
-import System.FilePath.Glob (CompOptions (errorRecovery))
 import System.FilePath.Glob qualified as Glob
+import System.FilePath.Posix (isRelative, (</>))
 import Text.Interpolation.Nyan
 
 import Xrefcheck.Util (normaliseWithNoTrailing)
@@ -89,4 +88,4 @@ instance FromJSON RelGlobPattern where
 
 -- | Glob compilation options we use.
 globCompileOptions :: Glob.CompOptions
-globCompileOptions = Glob.compDefault{errorRecovery = False}
+globCompileOptions = Glob.compDefault{Glob.errorRecovery = False}

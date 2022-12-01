@@ -6,7 +6,7 @@
        - link: -
        - anchor: bad
 
-     ⛀  Anchor 'bad' is not present
+     Anchor 'bad' is not present
 
   ➥  In file dir1/dir2/d2f1.md
      bad reference (relative) at src:27:1-43:
@@ -14,8 +14,8 @@
        - link: ../a/b/c/unexisting-file.md
        - anchor: -
 
-     ⛀  File does not exist:
-        dir1/dir2/../a/b/c/unexisting-file.md
+     File does not exist:
+       dir1/dir2/../a/b/c/unexisting-file.md
 
   ➥  In file dir1/dir2/d2f1.md
      bad reference (relative) at src:28:1-31:
@@ -23,8 +23,8 @@
        - link: D2F2.md/
        - anchor: -
 
-     ⛀  File does not exist:
-        dir1/dir2/D2F2.md/
+     File does not exist:
+       dir1/dir2/D2F2.md/
 
   ➥  In file dir1/dir2/d2f1.md
      bad reference (relative) at src:29:1-32:
@@ -32,8 +32,8 @@
        - link: ../DIR2
        - anchor: -
 
-     ⛀  File does not exist:
-        dir1/dir2/../DIR2
+     File does not exist:
+       dir1/dir2/../DIR2
 
   ➥  In file dir1/dir2/d2f1.md
      bad reference (relative) at src:31:1-38:
@@ -41,7 +41,7 @@
        - link: d2f2.md
        - anchor: bad-anchor
 
-     ⛀  Anchor 'bad-anchor' is not present
+     Anchor 'bad-anchor' is not present
 
   ➥  In file dir1/dir2/d2f1.md
      bad reference (relative) at src:32:1-49:
@@ -49,8 +49,8 @@
        - link: unexisting-file.md
        - anchor: bad-anchor
 
-     ⛀  File does not exist:
-        dir1/dir2/unexisting-file.md
+     File does not exist:
+       dir1/dir2/unexisting-file.md
 
   ➥  In file dir1/dir2/d2f1.md
      bad reference (absolute) at src:42:1-22:
@@ -58,8 +58,8 @@
        - link: /d1f1.md
        - anchor: -
 
-     ⛀  File does not exist:
-        ./d1f1.md
+     File does not exist:
+       ./d1f1.md
 
   ➥  In file dir1/dir2/d2f1.md
      bad reference (absolute) at src:43:1-27:
@@ -67,8 +67,8 @@
        - link: /dir2/d2f2.md
        - anchor: -
 
-     ⛀  File does not exist:
-        ./dir2/d2f2.md
+     File does not exist:
+       ./dir2/d2f2.md
 
   ➥  In file dir1/dir2/d2f1.md
      bad reference (absolute) at src:44:1-32:
@@ -76,8 +76,8 @@
        - link: /./dir2/../d1f1.md
        - anchor: -
 
-     ⛀  File does not exist:
-        ././dir2/../d1f1.md
+     File does not exist:
+       ././dir2/../d1f1.md
 
   ➥  In file dir1/dir2/d2f1.md
      bad reference (absolute) at src:45:1-37:
@@ -85,8 +85,8 @@
        - link: /./dir2/../d1f1.md/
        - anchor: -
 
-     ⛀  File does not exist:
-        ././dir2/../d1f1.md/
+     File does not exist:
+       ././dir2/../d1f1.md/
 
   ➥  In file dir1/dir2/d2f1.md
      bad reference (absolute) at src:46:1-55:
@@ -94,8 +94,8 @@
        - link: /./dir2/../d1f1.md
        - anchor: existing-anchor-d1f1
 
-     ⛀  File does not exist:
-        ././dir2/../d1f1.md
+     File does not exist:
+       ././dir2/../d1f1.md
 
   ➥  In file dir1/dir2/d2f1.md
      bad reference (absolute) at src:57:1-16:
@@ -103,8 +103,8 @@
        - link: /../../a.md
        - anchor: -
 
-     ⛀  Link targets a local file outside repository:
-        ./../../a.md
+     Link targets a local file outside repository:
+       ./../../a.md
 
   ➥  In file dir1/dir2/d2f1.md
      bad reference (absolute) at src:58:1-18:
@@ -112,7 +112,7 @@
        - link: /b/../../b.md
        - anchor: -
 
-     ⛀  Link targets a local file outside repository:
-        ./b/../../b.md
+     Link targets a local file outside repository:
+       ./b/../../b.md
 
 Invalid references dumped, 13 in total.

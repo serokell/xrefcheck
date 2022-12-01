@@ -100,7 +100,7 @@ instance Given ColorMode => Buildable ScanError where
     In file #{styleIfNeeded Faint (styleIfNeeded Bold seFile)}
     scan error #{sePosition}:
 
-    ⛀  #{seDescription}
+    #{seDescription}
 
     |]
 

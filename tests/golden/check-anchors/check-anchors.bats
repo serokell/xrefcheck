@@ -20,7 +20,7 @@ assert_diff - <<EOF
        - link: -
        - anchor: some-text
 
-     ⛀  Ambiguous reference to anchor 'some-text'
+     Ambiguous reference to anchor 'some-text'
        In file ambiguous-anchors/a.md
        It could refer to either:
          - some-text (header I) at src:6:1-11
@@ -35,7 +35,7 @@ assert_diff - <<EOF
        - link: a.md
        - anchor: some-text
 
-     ⛀  Ambiguous reference to anchor 'some-text'
+     Ambiguous reference to anchor 'some-text'
        In file ambiguous-anchors/a.md
        It could refer to either:
          - some-text (header I) at src:6:1-11
@@ -59,7 +59,7 @@ assert_diff - <<EOF
        - link: -
        - anchor: h3
 
-     ⛀  Anchor 'h3' is not present, did you mean:
+     Anchor 'h3' is not present, did you mean:
          - h1 (header I) at src:6:1-4
          - h2 (header II) at src:8:1-5
 
@@ -69,7 +69,7 @@ assert_diff - <<EOF
        - link: -
        - anchor: heading
 
-     ⛀  Anchor 'heading' is not present, did you mean:
+     Anchor 'heading' is not present, did you mean:
          - the-heading (header I) at src:10:1-13
 
   ➥  In file non-existing-anchors/a.md
@@ -78,7 +78,7 @@ assert_diff - <<EOF
        - link: -
        - anchor: really-unique-anchor
 
-     ⛀  Anchor 'really-unique-anchor' is not present
+     Anchor 'really-unique-anchor' is not present
 
 Invalid references dumped, 3 in total.
 EOF

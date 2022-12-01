@@ -6,7 +6,7 @@
        - link: https://localhost:20000/web-site
        - anchor: -
 
-     ⛂  InternalException (HostCannotConnect "localhost" [Network.Socket.connect: <socket: N>: failed (Connection refused (WSAECONNREFUSED)),Network.Socket.connect: <socket: N>: failed (Connection refused (WSAECONNREFUSED))])
+     InternalException (HostCannotConnect "localhost" [Network.Socket.connect: <socket: N>: failed (Connection refused (WSAECONNREFUSED)),Network.Socket.connect: <socket: N>: failed (Connection refused (WSAECONNREFUSED))])
 
   ➥  In file check-ignoreExternalRefsTo.md
      bad reference (external) at src:9:10-45:
@@ -14,7 +14,7 @@
        - link: https://127.0.0.1:20000/team
        - anchor: -
 
-     ⛂  InternalException (HostCannotConnect "127.0.0.1" [Network.Socket.connect: <socket: N>: failed (Connection refused (WSAECONNREFUSED))])
+     InternalException (HostCannotConnect "127.0.0.1" [Network.Socket.connect: <socket: N>: failed (Connection refused (WSAECONNREFUSED))])
 
   ➥  In file check-ignoreExternalRefsTo.md
      bad reference (external) at src:11:10-44:
@@ -22,7 +22,7 @@
        - link: http://localhost:20000/blog
        - anchor: -
 
-     ⛂  ConnectionFailure Network.Socket.connect: <socket: N>: failed (Connection refused (WSAECONNREFUSED))
+     ConnectionFailure Network.Socket.connect: <socket: N>: failed (Connection refused (WSAECONNREFUSED))
 
   ➥  In file check-ignoreExternalRefsTo.md
      bad reference (external) at src:13:10-44:
@@ -30,6 +30,6 @@
        - link: http://127.0.0.1:20000/labs
        - anchor: -
 
-     ⛂  ConnectionFailure Network.Socket.connect: <socket: N>: failed (Connection refused (WSAECONNREFUSED))
+     ConnectionFailure Network.Socket.connect: <socket: N>: failed (Connection refused (WSAECONNREFUSED))
 
 Invalid references dumped, 4 in total.

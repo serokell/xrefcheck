@@ -43,7 +43,7 @@ load '../helpers'
   ➥  In file to-ignore/inner-directory/broken_annotation.md
      scan error at src:9:1-29:
 
-     ⛀  Annotation "ignore all" must be at the top of markdown or right after comments at the top
+     Annotation "ignore all" must be at the top of markdown or right after comments at the top
 
 Scan errors dumped, 1 in total.
 EOF
@@ -58,7 +58,7 @@ EOF
   ➥  In file to-ignore/inner-directory/broken_annotation.md
      scan error at src:9:1-29:
 
-     ⛀  Annotation "ignore all" must be at the top of markdown or right after comments at the top
+     Annotation "ignore all" must be at the top of markdown or right after comments at the top
 
 Scan errors dumped, 1 in total.
 
@@ -70,8 +70,8 @@ Scan errors dumped, 1 in total.
        - link: /referenced-file.md
        - anchor: -
 
-     ⛀  File does not exist:
-        ./referenced-file.md
+     File does not exist:
+       ./referenced-file.md
 
 Invalid references dumped, 1 in total.
 EOF

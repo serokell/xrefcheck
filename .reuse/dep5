@@ -15,3 +15,7 @@ License: Unlicense
 Files: tests/golden/**/*.gold
 Copyright: 2022 Serokell <https://serokell.io>
 License: Unlicense
+
+Files: docs/**/*.png
+Copyright: 2022 Serokell <https://serokell.io>
+License: Unlicense

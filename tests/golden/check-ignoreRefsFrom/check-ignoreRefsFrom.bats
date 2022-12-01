@@ -40,8 +40,8 @@ load '../helpers'
        - link: /no-file.md
        - anchor: -
 
-     ⛀  File does not exist:
-        ./no-file.md
+     File does not exist:
+       ./no-file.md
 
 Invalid references dumped, 1 in total.
 EOF

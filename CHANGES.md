@@ -32,7 +32,7 @@ Unreleased
   + Use utf-8 compatible codepage on Windows
 * [#224](https://github.com/serokell/xrefcheck/pull/224)
   + Now the program output does not contain unicode characters that are not widely supported.
-* [#226](https://github.com/serokell/xrefcheck/pull/226)
+* [#229](https://github.com/serokell/xrefcheck/pull/229)
   + Now we call references to anchors in current file (e.g. `[a](#b)`) as
   `file-local` references instead of calling them `current file` (which was ambiguous).
 

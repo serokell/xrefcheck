@@ -9,7 +9,7 @@ Unreleased
 
 * [#176](https://github.com/serokell/xrefcheck/pull/176)
   + Enabled `autolink` extension for `cmark-gfm`, so now we're finding strings
-  like `www.google.com` or `https://google.com`, threating them as links
+  like `www.google.com` or `https://google.com`, treating them as links
   and checking.
 * [#175](https://github.com/serokell/xrefcheck/pull/175)
   + Reorganize top-level config keys.
@@ -32,6 +32,9 @@ Unreleased
   + Use utf-8 compatible codepage on Windows
 * [#224](https://github.com/serokell/xrefcheck/pull/224)
   + Now the program output does not contain unicode characters that are not widely supported.
+* [#226](https://github.com/serokell/xrefcheck/pull/226)
+  + Now we call references to anchors in current file (e.g. `[a](#b)`) as
+  `file-local` references instead of calling them `current file` (which was ambiguous).
 
 0.2.2
 ==========
@@ -46,7 +49,7 @@ Unreleased
   + Make `flavor` a required parameter.
 * [#182](https://github.com/serokell/xrefcheck/pull/182)
   + Now we call references to anchors in current file (e.g. `[a](#b)`) as
-  `current file` references instead of calling them `local` (which was ambigious).
+  `current file` references instead of calling them `local` (which was ambiguous).
 * [#188](https://github.com/serokell/xrefcheck/pull/188)
   + Added CLI option `--no-colors` that disables ANSI colors in output.
   + Automatically disable coloring if it is not supported

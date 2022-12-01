@@ -225,7 +225,7 @@ pattern PathSep <- (isPathSeparator -> True)
 
 -- | Type of reference.
 data LocationType
-  = CurrentFileLoc
+  = FileLocalLoc
     -- ^ Reference to this file, e.g. @[a](#header)@
   | RelativeLoc
     -- ^ Reference to a file relative to given one, e.g. @[b](folder/file#header)@
@@ -239,7 +239,7 @@ data LocationType
 
 instance Given ColorMode => Buildable LocationType where
   build = \case
-    CurrentFileLoc -> colorIfNeeded Green "current file"
+    FileLocalLoc   -> colorIfNeeded Green "file-local"
     RelativeLoc    -> colorIfNeeded Yellow "relative"
     AbsoluteLoc    -> colorIfNeeded Blue "absolute"
     ExternalLoc    -> colorIfNeeded Red "external"
@@ -254,7 +254,7 @@ isExternal = \case
 -- | Whether this is a link to repo-local resource.
 isLocal :: LocationType -> Bool
 isLocal = \case
-  CurrentFileLoc -> True
+  FileLocalLoc   -> True
   RelativeLoc    -> True
   AbsoluteLoc    -> True
   ExternalLoc    -> False
@@ -263,7 +263,7 @@ isLocal = \case
 -- | Get type of reference.
 locationType :: Text -> LocationType
 locationType location = case toString location of
-  []                      -> CurrentFileLoc
+  []                      -> FileLocalLoc
   PathSep : _             -> AbsoluteLoc
   '.' : PathSep : _       -> RelativeLoc
   '.' : '.' : PathSep : _ -> RelativeLoc

@@ -420,7 +420,7 @@ verifyReference
         let locType = locationType rLink
         if shouldCheckLocType mode locType
         then case locType of
-          CurrentFileLoc    -> checkRef rAnchor fileWithReference
+          FileLocalLoc      -> checkRef rAnchor fileWithReference
           RelativeLoc       -> checkRef rAnchor
                                 (normalise $ takeDirectory fileWithReference
                                   </> toString (canonizeLocalRef rLink))

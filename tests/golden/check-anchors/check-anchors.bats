@@ -15,7 +15,7 @@ assert_diff - <<EOF
 === Invalid references found ===
 
   ➥  In file ambiguous-anchors/a.md
-     bad reference (current file) at src:16:1-43:
+     bad reference (file-local) at src:16:1-43:
        - text: "ambiguous anchor in this file"
        - link: -
        - anchor: some-text
@@ -54,7 +54,7 @@ assert_diff - <<EOF
 === Invalid references found ===
 
   ➥  In file non-existing-anchors/a.md
-     bad reference (current file) at src:12:1-13:
+     bad reference (file-local) at src:12:1-13:
        - text: "broken"
        - link: -
        - anchor: h3
@@ -64,7 +64,7 @@ assert_diff - <<EOF
          - h2 (header II) at src:8:1-5
 
   ➥  In file non-existing-anchors/a.md
-     bad reference (current file) at src:14:1-18:
+     bad reference (file-local) at src:14:1-18:
        - text: "broken"
        - link: -
        - anchor: heading
@@ -73,7 +73,7 @@ assert_diff - <<EOF
          - the-heading (header I) at src:10:1-13
 
   ➥  In file non-existing-anchors/a.md
-     bad reference (current file) at src:16:1-31:
+     bad reference (file-local) at src:16:1-31:
        - text: "broken"
        - link: -
        - anchor: really-unique-anchor

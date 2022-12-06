@@ -1,0 +1,13 @@
+# SPDX-FileCopyrightText: 2018-2021 Serokell <https://serokell.io>
+#
+# SPDX-License-Identifier: MPL-2.0
+
+exclusions:
+  ignore:
+    - tests/markdowns/**/*
+    - tests/golden/**/*
+    - docs/output-sample/**/*
+
+scanners:
+  markdown:
+    flavor: GitHub

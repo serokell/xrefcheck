@@ -85,6 +85,8 @@ xrefcheck --help
 
 To configure `xrefcheck`, run:
 
+<a name="UPPERCASE-NAME">Custom header</>
+
 ```sh
 xrefcheck dump-config --type GitHub
 ```
@@ -160,18 +162,26 @@ If you wish to use `cabal`, you need to run [`stack2cabal`](https://hackage.hask
 
 At the moment of writing, the listed solutions don't support ftp/ftps links.
 
-## Issue tracker [↑](#xrefcheck)
+## Issue tracker [↑](#Xrefcheck)
 
 We use GitHub issues as our issue tracker.
 You can login using your GitHub account to leave a comment or create a new issue.
 
-## For Contributors [↑](#xrefcheck)
+## For Contributors [↑](#Xrefcheck)
 
 Please see [CONTRIBUTING.md](/.github/CONTRIBUTING.md) for more information.
 
-## About Serokell [↑](#xrefcheck)
+## About Serokell [↑](#Xrefcheck)
 
 Xrefcheck is maintained and funded with ❤️ by [Serokell](https://serokell.io/).
 The names and logo for Serokell are trademark of Serokell OÜ.
 
 We love open source software! See [our other projects](https://serokell.io/community?utm_source=github) or [hire us](https://serokell.io/hire-us?utm_source=github) to design, develop and grow your idea!
+
+[FAQ](#FaQ-)
+
+[kek1](#UPPERCASE-NAME)
+
+[kek2](#UPPERCASE-NAMe)
+
+[kek3](#uppercase-name)

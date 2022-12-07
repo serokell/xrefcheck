@@ -27,6 +27,19 @@ assert_diff - <<EOF
     - anchors:
         none
 
-All repository links are valid.
+=== Invalid references found ===
+
+  ➥  In file file-with-autolinks.md
+     bad reference (external) at src:8:0-18:
+       - text: "www.commonmark.org"
+       - link: http://www.commonmark.org
+       - anchor: -
+
+     Permanent redirect found. Perhaps you want to replace the link:
+       http://www.commonmark.org
+     by:
+       https://commonmark.org/
+
+Invalid references dumped, 1 in total.
 EOF
 }

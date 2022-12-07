@@ -52,8 +52,9 @@ import Network.FTP.Client
 import Network.HTTP.Client
   (HttpException (..), HttpExceptionContent (..), Response, responseHeaders, responseStatus)
 import Network.HTTP.Req
-  (AllowsBody, CanHaveBody (NoBody), GET (..), HEAD (..), HttpBodyAllowed, HttpException (..),
-  HttpMethod, NoReqBody (..), defaultHttpConfig, ignoreResponse, req, runReq, useURI)
+  (AllowsBody, CanHaveBody (NoBody), GET (..), HEAD (..), HttpBodyAllowed,
+  HttpConfig (httpConfigRedirectCount), HttpException (..), HttpMethod, NoReqBody (..),
+  defaultHttpConfig, ignoreResponse, req, runReq, useURI)
 import Network.HTTP.Types.Header (hRetryAfter)
 import Network.HTTP.Types.Status (Status, statusCode, statusMessage)
 import System.FilePath.Posix
@@ -67,6 +68,7 @@ import URI.ByteString qualified as URIBS
 
 import Control.Exception.Safe (handleAsync, handleJust)
 import Data.Bits (toIntegralSized)
+import Data.List (lookup)
 import Xrefcheck.Config
 import Xrefcheck.Core
 import Xrefcheck.Orphans ()
@@ -133,6 +135,7 @@ data VerifyError
   | ExternalFtpException FTPException
   | FtpEntryDoesNotExist FilePath
   | ExternalResourceSomeError Text
+  | PermanentRedirectError Text (Maybe Text)
   deriving stock (Show, Eq)
 
 instance Given ColorMode => Buildable VerifyError where
@@ -234,6 +237,20 @@ instance Given ColorMode => Buildable VerifyError where
     ExternalResourceSomeError err ->
       [int||
       #{err}
+      |]
+
+    PermanentRedirectError url Nothing ->
+      [int||
+      Permanent redirect found:
+      #{url}
+      |]
+
+    PermanentRedirectError url (Just redirectedUrl) ->
+      [int||
+      Permanent redirect found. Perhaps you want to replace the link:
+        #{url}
+      by:
+        #{redirectedUrl}
       |]
 
 reportVerifyErrs
@@ -670,6 +687,9 @@ checkExternalResource Config{..} link
       e | isFixable e -> throwError e
       _ -> makeHttpRequest uri GET 0.7
 
+    httpConfig :: HttpConfig
+    httpConfig = defaultHttpConfig { httpConfigRedirectCount = 0 }
+
     makeHttpRequest
       :: (HttpMethod method, HttpBodyAllowed (AllowsBody method) 'NoBody)
       => URI
@@ -685,11 +705,11 @@ checkExternalResource Config{..} link
         Just u -> pure u
       let reqLink = case parsedUrl of
             Left (url, option) ->
-              runReq defaultHttpConfig $
-              req method url NoReqBody ignoreResponse option
+              runReq httpConfig $
+                req method url NoReqBody ignoreResponse option
             Right (url, option) ->
-              runReq defaultHttpConfig $
-              req method url NoReqBody ignoreResponse option
+              runReq httpConfig $
+                req method url NoReqBody ignoreResponse option
 
       let maxTime = Time @Second $ unTime ncExternalRefCheckTimeout * timeoutFrac
 
@@ -697,6 +717,13 @@ checkExternalResource Config{..} link
         (either throwError (\() -> return (Just ())) . interpretErrors)
       maybe (throwError $ ExternalResourceSomeError "Response timeout") pure mres
 
+    isTemporaryRedirectCode :: Int -> Bool
+    isTemporaryRedirectCode = flip elem [302, 303, 307]
+
+    isPermanentRedirectCode :: Int -> Bool
+    isPermanentRedirectCode = flip elem [301, 308]
+
+    isAllowedErrorCode :: Int -> Bool
     isAllowedErrorCode = or . sequence
       -- We have to stay conservative - if some URL can be accessed under
       -- some circumstances, we should do our best to report it as fine.
@@ -712,10 +739,18 @@ checkExternalResource Config{..} link
         InvalidUrlException{} -> error "External link URL invalid exception"
         HttpExceptionRequest _ exc -> case exc of
           StatusCodeException resp _
-            | isAllowedErrorCode (statusCode $ responseStatus resp) -> Right ()
+            | isPermanentRedirectCode code -> Left
+              . PermanentRedirectError link
+              . fmap decodeUtf8
+              . lookup "Location"
+              $ responseHeaders resp
+            | isTemporaryRedirectCode code -> Right ()
+            | isAllowedErrorCode code -> Right ()
             | otherwise -> case statusCode (responseStatus resp) of
               429 -> Left . ExternalHttpTooManyRequests $ retryAfterInfo resp
               _ -> Left . ExternalHttpResourceUnavailable $ responseStatus resp
+            where
+              code = statusCode $ responseStatus resp
           other -> Left . ExternalResourceSomeError $ show other
       where
         retryAfterInfo :: Response a -> Maybe RetryAfter

@@ -140,7 +140,8 @@ There are several ways to fix this:
     * This behavior can be disabled by setting `ignoreAuthFailures: false` in the config file.
 
 1. How does `xrefcheck` handle redirects?
-    * `xrefcheck` follows up to 10 HTTP redirects.
+    * Permanent redirects (i.e. 301 and 308) are reported as errors.
+    * Temporary redirects (i.e. 302, 303 and 307) are assumed to be valid.
 
 1. How does `xrefcheck` handle localhost links?
     * By default, `xrefcheck` will ignore links to localhost.

@@ -54,6 +54,30 @@ data NetworkingConfig' f = NetworkingConfig
   , ncMaxRetries                :: Field f Int
     -- ^ How many attempts to retry an external link after getting
     -- a "429 Too Many Requests" response.
+    -- Timeouts may also be accounted here, see the description
+    -- of `maxTimeoutRetries` field.
+    --
+    -- If a site once responded with 429 error code, subsequent
+    -- request timeouts will also be treated as hitting the site's
+    -- rate limiter and result in retry attempts, unless the
+    -- maximum retries number has been reached.
+    --
+    -- On other errors xrefcheck fails immediately, without retrying.
+  , ncMaxTimeoutRetries         :: Field f Int
+    -- ^ Querying a given domain that ever returned 429 before,
+    -- this defines how many timeouts are allowed during retries.
+    --
+    -- For such domains, timeouts likely mean hitting the rate limiter,
+    -- and so xrefcheck considers timeouts in the same way as 429 errors.
+    --
+    -- For other domains, a timeout results in a respective error, no retry
+    -- attempts will be performed. Use `externalRefCheckTimeout` option
+    -- to increase the time after which timeout is declared.
+    --
+    -- This option is similar to `maxRetries`, the difference is that
+    -- this `maxTimeoutRetries` option limits only the number of retries
+    -- caused by timeouts, and `maxRetries` limits the number of retries
+    -- caused both by 429s and timeouts.
   } deriving stock (Generic)
 
 -- | Type alias for ScannersConfig' with all required fields.
@@ -113,6 +137,7 @@ overrideConfig config
         , ncIgnoreAuthFailures        = overrideField ncIgnoreAuthFailures
         , ncDefaultRetryAfter         = overrideField ncDefaultRetryAfter
         , ncMaxRetries                = overrideField ncMaxRetries
+        , ncMaxTimeoutRetries         = overrideField ncMaxTimeoutRetries
         }
       where
         overrideField :: (forall f. NetworkingConfig' f -> Field f a) -> a

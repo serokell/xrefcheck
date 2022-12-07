@@ -18,8 +18,7 @@ import Test.Tasty.Options as Tasty (IsOption (..), OptionDescription (Option), s
 import Xrefcheck.Config (Config, cExclusionsL, defConfig)
 import Xrefcheck.Core (Flavor (GitHub))
 import Xrefcheck.Scan (ecIgnoreExternalRefsToL)
-import Xrefcheck.Verify
-  (VerifyError (..), VerifyResult (VerifyResult), checkExternalResource, verifyErrors)
+import Xrefcheck.Verify (VerifyError (..), checkExternalResource)
 
 -- | A list with all the options needed to configure FTP links tests.
 ftpOptions :: [OptionDescription]
@@ -49,36 +48,34 @@ test_FtpLinks = askOption $ \(FtpHostOpt host) -> do
   testGroup "Ftp links handler"
     [ testCase "handles correct link to file" $ do
         let link = host <> "/pub/file_exists.txt"
-        result <- checkExternalResource config link
-        result @?= VerifyResult []
+        result <- runExceptT $ checkExternalResource config link
+        result @?= Right ()
 
     , testCase "handles empty link (host only)" $ do
         let link = host
-        result <- checkExternalResource config link
-        result @?= VerifyResult []
+        result <- runExceptT $ checkExternalResource config link
+        result @?= Right ()
 
     , testCase "handles correct link to non empty directory" $ do
         let link = host <> "/pub/"
-        result <- checkExternalResource config link
-        result @?= VerifyResult []
+        result <- runExceptT $ checkExternalResource config link
+        result @?= Right ()
 
     , testCase "handles correct link to empty directory" $ do
         let link = host <> "/empty/"
-        result <- checkExternalResource config link
-        result @?= VerifyResult []
+        result <- runExceptT $ checkExternalResource config link
+        result @?= Right ()
 
     , testCase "throws exception when file not found" $ do
         let link = host <> "/pub/file_does_not_exists.txt"
-        result <- checkExternalResource config link
-        case verifyErrors result of
-          Nothing ->
+        result <- runExceptT $ checkExternalResource config link
+        case result of
+          Right () ->
             assertFailure "No exception was raised, FtpEntryDoesNotExist expected"
-          Just errors ->
-            assertBool "Expected FtpEntryDoesNotExist, got other exceptions"
-            (any (
-              \case
+          Left err ->
+            assertBool "Expected FtpEntryDoesNotExist, got other exceptions" $
+              case err of
                 FtpEntryDoesNotExist _ -> True
                 ExternalFtpException _ -> True
                 _ -> False
-            ) $ toList errors)
     ]

@@ -12,7 +12,6 @@
 - ignore: { name: Redundant do }
 - ignore: { name: Redundant bracket }
 - ignore: { name: Redundant lambda }
-- ignore: { name: Redundant $ }
 - ignore: { name: Redundant flip }
 - ignore: { name: Move brackets to avoid $ }
 - ignore: { name: Avoid lambda using `infix` }

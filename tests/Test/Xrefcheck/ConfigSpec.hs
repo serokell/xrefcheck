@@ -17,12 +17,11 @@ import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertFailure, testCase, (@?=))
 import Test.Tasty.QuickCheck (ioProperty, testProperty)
 
-
 import Xrefcheck.Config
   (Config, cExclusionsL, cNetworkingL, defConfig, defConfigText, ncIgnoreAuthFailuresL)
 import Xrefcheck.Core (Flavor (GitHub), allFlavors)
 import Xrefcheck.Scan (ecIgnoreExternalRefsToL)
-import Xrefcheck.Verify (VerifyError (..), VerifyResult (..), checkExternalResource)
+import Xrefcheck.Verify (VerifyError (..), checkExternalResource)
 
 import Test.Xrefcheck.Util (mockServer)
 
@@ -53,25 +52,23 @@ test_config =
           config & cNetworkingL . ncIgnoreAuthFailuresL .~ value
     in [ testCase "when True - assume 401 status is valid" $
           checkLinkWithServer (setIgnoreAuthFailures True)
-            "http://127.0.0.1:3000/401" $ VerifyResult []
+            "http://127.0.0.1:3000/401" $ Right ()
 
        , testCase "when False - assume 401 status is invalid" $
           checkLinkWithServer (setIgnoreAuthFailures False)
-            "http://127.0.0.1:3000/401" $ VerifyResult
-              [ ExternalHttpResourceUnavailable $
+            "http://127.0.0.1:3000/401" $
+                Left $ ExternalHttpResourceUnavailable $
                   Status { statusCode = 401, statusMessage = "Unauthorized" }
-              ]
 
        , testCase "when True - assume 403 status is valid" $
           checkLinkWithServer (setIgnoreAuthFailures True)
-            "http://127.0.0.1:3000/403" $ VerifyResult []
+            "http://127.0.0.1:3000/403" $ Right ()
 
        , testCase "when False - assume 403 status is invalid" $
           checkLinkWithServer (setIgnoreAuthFailures False)
-            "http://127.0.0.1:3000/403" $ VerifyResult
-              [ ExternalHttpResourceUnavailable $
+            "http://127.0.0.1:3000/403" $
+                Left $ ExternalHttpResourceUnavailable $
                   Status { statusCode = 403, statusMessage = "Forbidden" }
-              ]
        ]
   , testGroup "Config parser reject input with unknown fields"
       [ testCase "throws error with useful messages" $ do
@@ -84,11 +81,8 @@ test_config =
       ]
   ]
 
-
-
-
   where
     checkLinkWithServer config link expectation =
       E.bracket (forkIO mockServer) killThread $ \_ -> do
-        result <- checkExternalResource config link
+        result <- runExceptT $ checkExternalResource config link
         result @?= expectation

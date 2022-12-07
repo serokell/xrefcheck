@@ -11,6 +11,7 @@ import Control.Concurrent (forkIO, killThread)
 import Control.Exception qualified as E
 import Data.CaseInsensitive qualified as CI
 import Data.Map qualified as M
+import Data.Set qualified as S
 import Data.Time (addUTCTime, defaultTimeLocale, formatTime, getCurrentTime, rfc822DateFormat)
 import Data.Time.Clock.POSIX (getPOSIXTime)
 import Network.HTTP.Types (Status (..), ok200, serviceUnavailable503, tooManyRequests429)
@@ -29,22 +30,24 @@ import Xrefcheck.Verify
 test_tooManyRequests :: TestTree
 test_tooManyRequests = testGroup "429 response tests"
   [ testCase "Returns 200 eventually" $ do
+      setRef <- newIORef S.empty
       let prog = Progress{ pTotal = 1
                           , pCurrent = 1
                           , pErrorsUnfixable = 0
                           , pErrorsFixable = 0
                           , pTaskTimestamp = Nothing
                           }
-      checkLinkAndProgressWithServer (mock429 "1" ok200)
+      checkLinkAndProgressWithServerDefault setRef (mock429 "1" ok200)
         "http://127.0.0.1:5000/429" prog $ VerifyResult []
   , testCase "Returns 503 eventually" $ do
+      setRef <- newIORef S.empty
       let prog = Progress{ pTotal = 1
                          , pCurrent = 1
                          , pErrorsUnfixable = 1
                          , pErrorsFixable = 0
                          , pTaskTimestamp = Nothing
                          }
-      checkLinkAndProgressWithServer (mock429 "1" serviceUnavailable503)
+      checkLinkAndProgressWithServerDefault setRef (mock429 "1" serviceUnavailable503)
         "http://127.0.0.1:5000/429" prog $ VerifyResult
           [ ExternalHttpResourceUnavailable $
               Status { statusCode = 503, statusMessage = "Service Unavailable"}
@@ -52,6 +55,7 @@ test_tooManyRequests = testGroup "429 response tests"
   , testCase "Successfully updates the new retry-after value (as seconds)" $ do
       E.bracket (forkIO $ mock429 "2" ok200) killThread $ \_ -> do
         now <- getPOSIXTime <&> posixTimeToTimeSecond
+        setRef <- newIORef S.empty
         progressRef <- newIORef VerifyProgress
               { vrLocal = initProgress 0
               , vrExternal = Progress
@@ -62,8 +66,9 @@ test_tooManyRequests = testGroup "429 response tests"
                   , pTaskTimestamp = Just (TaskTimestamp (sec 3) (now -:- sec 1.5))
                   }
               }
-        _ <- verifyReferenceWithProgress
+        _ <- verifyReferenceWithProgressDefault
           (Reference "" "http://127.0.0.1:5000/429" Nothing (Position Nothing) RIExternal)
+          setRef
           progressRef
         Progress{..} <- vrExternal <$> readIORef progressRef
         let ttc = ttTimeToCompletion <$> pTaskTimestamp
@@ -77,6 +82,7 @@ test_tooManyRequests = testGroup "429 response tests"
         retryAfter = formatTime defaultTimeLocale rfc822DateFormat (addUTCTime 4 utctime)
         now = utcTimeToTimeSecond utctime
       E.bracket (forkIO $ mock429 (fromString retryAfter) ok200) killThread $ \_ -> do
+        setRef <- newIORef S.empty
         progressRef <- newIORef VerifyProgress
               { vrLocal = initProgress 0
               , vrExternal = Progress
@@ -87,8 +93,9 @@ test_tooManyRequests = testGroup "429 response tests"
                   , pTaskTimestamp = Just (TaskTimestamp (sec 2) (now -:- sec 1.5))
                   }
               }
-        _ <- verifyReferenceWithProgress
+        _ <- verifyReferenceWithProgressDefault
           (Reference "" "http://127.0.0.1:5000/429" Nothing (Position Nothing) RIExternal)
+          setRef
           progressRef
         Progress{..} <- vrExternal <$> readIORef progressRef
         let ttc = fromMaybe (sec 0) $ ttTimeToCompletion <$> pTaskTimestamp
@@ -103,6 +110,7 @@ test_tooManyRequests = testGroup "429 response tests"
         retryAfter = formatTime defaultTimeLocale rfc822DateFormat (addUTCTime (-4) utctime)
         now = utcTimeToTimeSecond utctime
       E.bracket (forkIO $ mock429 (fromString retryAfter) ok200) killThread $ \_ -> do
+        setRef <- newIORef S.empty
         progressRef <- newIORef VerifyProgress
               { vrLocal = initProgress 0
               , vrExternal = Progress
@@ -113,8 +121,9 @@ test_tooManyRequests = testGroup "429 response tests"
                   , pTaskTimestamp = Just (TaskTimestamp (sec 1) (now -:- sec 1.5))
                   }
               }
-        _ <- verifyReferenceWithProgress
+        _ <- verifyReferenceWithProgressDefault
           (Reference "" "http://127.0.0.1:5000/429" Nothing (Position Nothing) RIExternal)
+          setRef
           progressRef
         Progress{..} <- vrExternal <$> readIORef progressRef
         let ttc = ttTimeToCompletion <$> pTaskTimestamp
@@ -147,8 +156,9 @@ test_tooManyRequests = testGroup "429 response tests"
                     )
                 | otherwise -> toResponse ("" :: Text, serviceUnavailable503)
       infoReverseAccumulatorRef <- newIORef []
+      setRef <- newIORef S.empty
       E.bracket (forkIO $ mock429WithGlobalIORef infoReverseAccumulatorRef) killThread $ \_ -> do
-        _ <- verifyLink "http://127.0.0.1:5000/429grandfinale"
+        _ <- verifyLinkDefault setRef "http://127.0.0.1:5000/429grandfinale"
         infoReverseAccumulator <- readIORef infoReverseAccumulatorRef
         reverse infoReverseAccumulator @?=
           [ ("HEAD", tooManyRequests429)

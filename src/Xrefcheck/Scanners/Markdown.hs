@@ -12,6 +12,7 @@ module Xrefcheck.Scanners.Markdown
 
   , defGithubMdConfig
   , markdownScanner
+  , markdownParallelScanner
   , markdownSupport
   , parseFileInfo
   , makeError
@@ -35,6 +36,7 @@ import Text.Interpolation.Nyan
 import Xrefcheck.Core
 import Xrefcheck.Scan
 import Xrefcheck.Util
+import Control.Parallel.Strategies
 
 data MarkdownConfig = MarkdownConfig
   { mcFlavor :: Flavor
@@ -415,5 +417,10 @@ parseFileInfo config fp input
 markdownScanner :: MarkdownConfig -> ScanAction
 markdownScanner config path = parseFileInfo config path . decodeUtf8 <$> BS.readFile path
 
+markdownParallelScanner :: MarkdownConfig -> ScanAction
+markdownParallelScanner config path = do
+  resThunk <- parseFileInfo config path . decodeUtf8 <$> BS.readFile path
+  resThunk `usingIO` rparWith rdeepseq
+
 markdownSupport :: MarkdownConfig -> ([Extension], ScanAction)
-markdownSupport config = ([".md"], markdownScanner config)
+markdownSupport config = ([".md"], markdownParallelScanner config)

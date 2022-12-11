@@ -2,7 +2,7 @@
  -
  - SPDX-License-Identifier: MPL-2.0
  -}
-
+{-# LANGUAGE DeriveAnyClass #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 -- | Generalised repo scanner and analyser.
@@ -93,7 +93,8 @@ data ScanError = ScanError
   { sePosition    :: Position
   , seFile        :: FilePath
   , seDescription :: ScanErrorDescription
-  } deriving stock (Show, Eq)
+  } deriving stock (Show, Eq, Generic)
+    deriving anyclass NFData
 
 instance Given ColorMode => Buildable ScanError where
   build ScanError{..} = [int||
@@ -118,7 +119,8 @@ data ScanErrorDescription
   | FileErr
   | ParagraphErr Text
   | UnrecognisedErr Text
-  deriving stock (Show, Eq)
+  deriving stock (Show, Eq, Generic)
+  deriving anyclass (NFData)
 
 instance Buildable ScanErrorDescription where
   build = \case

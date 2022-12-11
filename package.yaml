@@ -111,6 +111,7 @@ library:
     - reflection
     - nyan-interpolation
     - safe-exceptions
+    - parallel
 
 executables:
   xrefcheck:

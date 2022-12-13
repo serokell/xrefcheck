@@ -34,7 +34,7 @@ test_ignoreAnnotations =
       , testCase "Check if broken unrecognised annotation produce error" do
           let file = "tests/markdowns/with-annotations/unrecognised_option.md"
           errs <- getErrs file
-          errs @?= makeError (Just $ PosInfo 7 1 7 46) file (UnrecognisedErr "unrecognised-option")
+          errs @?= makeError (Just $ PosInfo 7 1 7 46) file (UnrecognisedErr "ignore unrecognised-option")
       ]
   , testGroup "\"ignore link\" mode"
       [ testCase "Check \"ignore link\" performance" $ do

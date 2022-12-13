@@ -102,26 +102,24 @@ data IgnoreLinkState
   -- and we should change `IgnoreLinkState`, because it's not a problem if
   -- our node's first child doesn't contain a link. So this status means that
   -- we won't throw errors if we don't find a link for now
-  deriving stock (Eq)
+  deriving stock (Eq, Show)
 
 data IgnoreModeState
   = IMSLink IgnoreLinkState
   | IMSParagraph
-  | IMSAll
-  deriving stock (Eq)
+  deriving stock (Eq, Show)
 
 -- | Bind `IgnoreMode` to its `PosInfo` so that we can tell where the
 -- corresponding annotation was declared.
 data Ignore = Ignore
   { _ignoreMode :: IgnoreModeState
   , _ignorePos :: Maybe PosInfo
-  }
+  } deriving stock (Show)
 makeLensesFor [("_ignoreMode", "ignoreMode")] 'Ignore
 
-data GetIgnoreMode
-  = NotAnAnnotation
-  | ValidMode IgnoreMode
-  | InvalidMode Text
+data GetAnnotation
+  = IgnoreAnnotation IgnoreMode
+  | InvalidAnnotation Text
   deriving stock (Eq)
 
 
@@ -167,48 +165,43 @@ removeIgnored fp = withIgnoreMode . cataNodeWithParentNodeInfo remove
       -> ScannerM Node
     remove pos ty subs = do
       let node = Node pos ty []
-      scan <- use ssIgnore >>= \case
+      scan <- use ssIgnore >>= \e -> do
         -- When no `Ignore` state is set check next node for annotation,
         -- if found then set it as new `IgnoreMode` otherwise skip node.
-        Nothing                    -> handleIgnoreMode pos ty subs $ getIgnoreMode node
-        Just (Ignore mode modePos) ->
-          case (mode, ty) of
-            -- We expect to find a paragraph immediately after the
-            -- `ignore paragraph` annotanion. If the paragraph is not
-            -- found we should report an error.
-            (IMSParagraph, PARAGRAPH)    -> (ssIgnore .= Nothing) $> defNode
-            (IMSParagraph, x)            -> do
-              lift . tell . makeError modePos fp . ParagraphErr $ prettyType x
-              ssIgnore .= Nothing
-              Node pos ty <$> sequence subs
-
-            -- We don't expect to find an `ignore all` annotation here,
-            -- since that annotation should be at the top of the file and
-            -- the file should already be ignored when `checkIgnoreFile` is called.
-            -- We should report an error if we find it anyway.
-            (IMSAll, _)                 -> do
-              lift . tell $ makeError modePos fp FileErr
-              ssIgnore .= Nothing
-              Node pos ty <$> sequence subs
-
-            (IMSLink _, LINK {})         -> do
-              ssIgnore .= Nothing
-              return defNode
-            (IMSLink _, IMAGE {})        -> do
-              ssIgnore .= Nothing
-              return defNode
-            (IMSLink ignoreLinkState, _) -> do
-              when (ignoreLinkState == ExpectingLinkInSubnodes) $
-                ssIgnore . _Just . ignoreMode .=  IMSLink ParentExpectsLink
-              node' <- Node pos ty <$> sequence subs
-              when (ignoreLinkState == ExpectingLinkInSubnodes) $ do
-                currentIgnore <- use ssIgnore
-                case currentIgnore of
-                  Just (Ignore {_ignoreMode = IMSLink ParentExpectsLink}) -> do
-                    lift $ tell $ makeError modePos fp LinkErr
+        let mbAnnotation = getAnnotation node
+        case mbAnnotation of
+          Just ann -> handleAnnotation pos ty ann
+          Nothing -> case e of
+            Nothing                    -> Node pos ty <$> sequence subs
+            Just (Ignore mode modePos) ->
+                case (mode, ty) of
+                  -- We expect to find a paragraph immediately after the
+                  -- `ignore paragraph` annotanion. If the paragraph is not
+                  -- found we should report an error.
+                  (IMSParagraph, PARAGRAPH)    -> (ssIgnore .= Nothing) $> defNode
+                  (IMSParagraph, x)            -> do
+                    lift . tell . makeError modePos fp . ParagraphErr $ prettyType x
                     ssIgnore .= Nothing
-                  _ -> pass
-              return node'
+                    Node pos ty <$> sequence subs
+
+                  (IMSLink _, LINK {})         -> do
+                    ssIgnore .= Nothing
+                    return defNode
+                  (IMSLink _, IMAGE {})        -> do
+                    ssIgnore .= Nothing
+                    return defNode
+                  (IMSLink ignoreLinkState, _) -> do
+                    when (ignoreLinkState == ExpectingLinkInSubnodes) $
+                      ssIgnore . _Just . ignoreMode .=  IMSLink ParentExpectsLink
+                    node' <- Node pos ty <$> sequence subs
+                    when (ignoreLinkState == ExpectingLinkInSubnodes) $ do
+                      currentIgnore <- use ssIgnore
+                      case currentIgnore of
+                        Just (Ignore {_ignoreMode = IMSLink ParentExpectsLink}) -> do
+                          lift $ tell $ makeError modePos fp LinkErr
+                          ssIgnore .= Nothing
+                        _ -> pass
+                    return node'
 
       when (ty == PARAGRAPH) $ use ssIgnore >>= \case
         Just (Ignore (IMSLink ExpectingLinkInParagraph) pragmaPos) ->
@@ -217,28 +210,47 @@ removeIgnored fp = withIgnoreMode . cataNodeWithParentNodeInfo remove
 
       return scan
 
-    handleIgnoreMode
+    handleAnnotation
       :: Maybe PosInfo
       -> NodeType
-      -> [ScannerM Node]
-      -> GetIgnoreMode
+      -> GetAnnotation
       -> ScannerM Node
-    handleIgnoreMode pos nodeType subs = \case
-      ValidMode mode  -> do
-        ignoreModeState <- case mode of
-          IMLink -> use ssParentNodeType <&> IMSLink . \case
-             Just PARAGRAPH -> ExpectingLinkInParagraph
-             _ -> ExpectingLinkInSubnodes
+    handleAnnotation pos nodeType = \case
+      IgnoreAnnotation mode  -> do
+        let reportIfThereWasAnnotation :: ScannerM ()
+            reportIfThereWasAnnotation = do
+              curIgnore <- use ssIgnore
+              whenJust curIgnore $ \case
+                Ignore IMSParagraph prevPos ->
+                  lift . tell . makeError prevPos fp . ParagraphErr $ prettyType nodeType
+                Ignore (IMSLink _) prevPos ->
+                  lift $ tell $ makeError prevPos fp LinkErr
 
-          IMParagraph -> pure IMSParagraph
+        mbIgnoreModeState <- case mode of
+          IMLink -> do
+            reportIfThereWasAnnotation
+            use ssParentNodeType <&> Just . IMSLink . \case
+              Just PARAGRAPH -> ExpectingLinkInParagraph
+              _ -> ExpectingLinkInSubnodes
 
-          IMAll -> pure IMSAll
+          IMParagraph -> do
+            reportIfThereWasAnnotation
+            pure $ Just IMSParagraph
 
-        (ssIgnore .= Just (Ignore ignoreModeState correctPos)) $> defNode
-      InvalidMode msg -> do
+          -- We don't expect to find an `ignore all` annotation here,
+          -- since that annotation should be at the top of the file and
+          -- the file should already be ignored when `checkIgnoreFile` is called.
+          -- We should report an error if we find it anyway.
+          IMAll -> do
+            lift . tell $ makeError correctPos fp FileErr
+            pure Nothing
+
+        whenJust mbIgnoreModeState $ \ignoreModeState ->
+          (ssIgnore .= Just (Ignore ignoreModeState correctPos))
+        pure defNode
+      InvalidAnnotation msg -> do
         lift . tell $ makeError correctPos fp $ UnrecognisedErr msg
-        (ssIgnore .= Nothing) $> defNode
-      NotAnAnnotation -> Node pos nodeType <$> sequence subs
+        pure defNode
       where
         correctPos = getPosition $ Node pos nodeType []
 
@@ -260,9 +272,6 @@ removeIgnored fp = withIgnoreMode . cataNodeWithParentNodeInfo remove
             pure node
         IMSLink _ -> do
             tell $ makeError pos fp LinkErr
-            pure node
-        IMSAll -> do
-            tell $ makeError pos fp FileErr
             pure node
       (node, _) -> pure node
 
@@ -354,7 +363,7 @@ checkIgnoreAllFile nodes =
     isComment = isJust . getCommentContent
 
     isIgnoreFile :: Node -> Bool
-    isIgnoreFile = (ValidMode IMAll ==) . getIgnoreMode
+    isIgnoreFile = (Just (IgnoreAnnotation IMAll) ==) . getAnnotation
 
 defNode :: Node
 defNode = Node Nothing DOCUMENT [] -- hard-coded default Node
@@ -395,16 +404,23 @@ getPosition node@(Node pos _ _) = do
   pure $ PosInfo sl sc sl (sc + annLength - 1)
 
 -- | Extract `IgnoreMode` if current node is xrefcheck annotation.
-getIgnoreMode :: Node -> GetIgnoreMode
-getIgnoreMode node = maybe NotAnAnnotation (textToMode . words) (getXrefcheckContent node)
+getAnnotation :: Node -> Maybe GetAnnotation
+getAnnotation node = getXrefcheckContent node <&> textToMode
 
-textToMode :: [Text] -> GetIgnoreMode
-textToMode ("ignore" : [x])
-  | x == "link"      = ValidMode IMLink
-  | x == "paragraph" = ValidMode IMParagraph
-  | x == "all"      = ValidMode IMAll
-  | otherwise        = InvalidMode x
-textToMode _         = NotAnAnnotation
+textToMode :: Text -> GetAnnotation
+textToMode annText = case wordsList of
+  ("ignore" : [x])
+    | Just ignMode <- getIgnoreMode x -> IgnoreAnnotation ignMode
+  _ -> InvalidAnnotation annText
+  where
+    wordsList = words annText
+
+getIgnoreMode :: Text -> Maybe IgnoreMode
+getIgnoreMode = \case
+  "link" -> Just IMLink
+  "paragraph" -> Just IMParagraph
+  "all" -> Just IMAll
+  _ -> Nothing
 
 parseFileInfo :: MarkdownConfig -> FilePath -> LT.Text -> (FileInfo, [ScanError])
 parseFileInfo config fp input

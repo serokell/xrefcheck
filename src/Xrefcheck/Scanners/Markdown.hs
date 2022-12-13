@@ -69,7 +69,7 @@ instance Buildable (Node a) where
 type NodeCPC = Node CopyPasteCheck
 
 newtype CopyPasteCheck = CopyPasteCheck
-  { shouldCheck :: Bool
+  { cpcShouldCheck :: Bool
   } deriving stock (Show, Eq, Generic)
 
 toPosition :: Maybe PosInfo -> Position
@@ -267,7 +267,7 @@ processAnnotations globalCpcCheckEnabled fp = withIgnoreMode . cataNodeWithParen
         _ -> pass
       use ssIgnoreCopyPasteCheck >>= \case
         Just (Ignore (IMSLink ExpectingLinkInParagraph) pragmaPos) -> do
-          lift $ tell $ makeError pragmaPos fp LinkErr -- TODO: different error type
+          lift $ tell $ makeError pragmaPos fp LinkErrCpc
           ssIgnoreCopyPasteCheck .= Nothing
         _ -> pass
 
@@ -315,7 +315,7 @@ processAnnotations globalCpcCheckEnabled fp = withIgnoreMode . cataNodeWithParen
       use ssIgnoreCopyPasteCheck >>= \case
         Just (Ignore IMSParagraph modePos) ->
           whenM (use ssParagraphExpectedAfterCpcAnnotation) $ do
-            reportExpectedParagraphAfterIgnoreAnnotation modePos ty
+            lift . tell . makeError modePos fp . ParagraphErrCpc $ prettyType ty
             ssParagraphExpectedAfterCpcAnnotation .= False
             ssIgnoreCopyPasteCheck .= Nothing
         _ -> pass
@@ -351,7 +351,7 @@ processAnnotations globalCpcCheckEnabled fp = withIgnoreMode . cataNodeWithParen
           currentIgnore <- use ssIgnoreCopyPasteCheck
           case currentIgnore of
             Just (Ignore {_ignoreMode = IMSLink ParentExpectsLink}) -> do
-              lift $ tell $ makeError modePos fp LinkErr -- TODO: different error type
+              lift $ tell $ makeError modePos fp LinkErrCpc
               ssIgnoreCopyPasteCheck .= Nothing
             _ -> pass
           return node'
@@ -410,7 +410,7 @@ processAnnotations globalCpcCheckEnabled fp = withIgnoreMode . cataNodeWithParen
           -- any correct annotations should be handled in `checkGlobalAnnotations`
           -- function.
           IMAll -> do
-            lift . tell $ makeError correctPos fp FileErr -- TODO: different error type
+            lift . tell $ makeError correctPos fp FileErrCpc
             pure Nothing
 
         whenJust mbIgnoreModeState $ \ignoreModeState -> do
@@ -419,11 +419,11 @@ processAnnotations globalCpcCheckEnabled fp = withIgnoreMode . cataNodeWithParen
             Nothing -> setupNewCpcState
             Just (Ignore curIgn prevPos)
               | IMSLink _ <- curIgn -> do
-              lift $ tell $ makeError prevPos fp LinkErr -- TODO: different error type
+              lift $ tell $ makeError prevPos fp LinkErrCpc
               setupNewCpcState
               | IMSParagraph <- curIgn -> case ignoreModeState of
                   IMSParagraph -> do
-                    lift . tell . makeError prevPos fp . ParagraphErr $ prettyType nodeType -- TODO: different error type
+                    lift . tell . makeError prevPos fp . ParagraphErrCpc $ prettyType nodeType
                     setupNewCpcState
                   -- It's OK to have link annotation when paragraph is ignored
                   -- because in this case all links and all annotations are ignored.
@@ -482,7 +482,7 @@ nodeExtractInfo fp (C.Node nPos nTy nSubs) = do
 
   where
     extractor :: NodeCPC -> ExtractorM FileInfoDiff
-    extractor node@(Node pos ty _info _) =
+    extractor node@(Node pos ty info _) =
       case ty of
         HTML_BLOCK _ -> do
           return mempty
@@ -532,7 +532,8 @@ nodeExtractInfo fp (C.Node nPos nTy nSubs) = do
                  t : ts -> (t, Just $ T.intercalate "#" ts)
                  []     -> error "impossible"
          return $ FileInfoDiff
-           (DList.singleton $ Reference {rName, rPos, rLink, rAnchor})
+           (DList.singleton $
+              Reference {rName, rPos, rLink, rAnchor, rCheckCopyPaste = cpcShouldCheck info})
            DList.empty
 
 -- | Check for global annotations, ignoring simple comments if there are any.

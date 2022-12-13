@@ -12,6 +12,7 @@ module Xrefcheck.Core where
 import Universum
 
 import Control.Lens (makeLenses)
+import Control.Lens.Combinators (makeLensesWith)
 import Data.Aeson (FromJSON (..), withText)
 import Data.Char (isAlphaNum)
 import Data.Char qualified as C
@@ -70,14 +71,17 @@ instance Given ColorMode => Buildable Position where
 
 -- | Full info about a reference.
 data Reference = Reference
-  { rName   :: Text
+  { rName           :: Text
     -- ^ Text displayed as reference.
-  , rLink   :: Text
+  , rLink           :: Text
     -- ^ File or site reference points to.
-  , rAnchor :: Maybe Text
+  , rAnchor         :: Maybe Text
     -- ^ Section or custom anchor tag.
-  , rPos    :: Position
+  , rPos            :: Position
+    -- ^ Whether to check bad copy/paste for this link
+  , rCheckCopyPaste :: Bool
   } deriving stock (Show, Generic)
+makeLensesWith postfixFields ''Reference
 
 -- | Context of anchor.
 data AnchorType

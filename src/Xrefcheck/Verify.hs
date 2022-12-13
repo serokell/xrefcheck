@@ -28,7 +28,10 @@ module Xrefcheck.Verify
 
     -- * URI parsing
   , parseUri
+
+    -- * Reporting errors
   , reportVerifyErrs
+  , reportCopyPasteErrors
   ) where
 
 import Universum
@@ -37,9 +40,11 @@ import Control.Concurrent.Async (Async, async, cancel, poll, wait, withAsync)
 import Control.Exception (AsyncException (..), throwIO)
 import Control.Monad.Except (MonadError (..))
 import Data.ByteString qualified as BS
+import Data.Char (isAlphaNum)
 import Data.List qualified as L
 import Data.Map qualified as M
 import Data.Reflection (Given)
+import Data.Text qualified as T
 import Data.Text.Metrics (damerauLevenshteinNorm)
 import Data.Time (UTCTime, defaultTimeLocale, formatTime, readPTime, rfc822DateFormat)
 import Data.Time.Clock.POSIX (getPOSIXTime)
@@ -255,6 +260,21 @@ instance Given ColorMode => Buildable VerifyError where
         #{redirectedUrl}
       |]
 
+data CopyPasteCheckResult = CopyPasteCheckResult
+  { crFile :: FilePath,
+    crOriginalRef :: Reference,
+    crCopiedRef :: Reference
+  }
+
+instance (Given ColorMode) => Buildable CopyPasteCheckResult where
+  build CopyPasteCheckResult {..} =
+    [int||
+    In file #{styleIfNeeded Faint (styleIfNeeded Bold crFile)}
+    #{crCopiedRef}\
+    is possibly a bad copy paste of
+    #{crOriginalRef}
+    |]
+
 reportVerifyErrs
   :: Given ColorMode => NonEmpty (WithReferenceLoc VerifyError) -> IO ()
 reportVerifyErrs errs = fmt
@@ -264,6 +284,17 @@ reportVerifyErrs errs = fmt
   #{interpolateIndentF 2 (interpolateBlockListF' "➥ " build errs)}
   Invalid references dumped, #{length errs} in total.
   |]
+
+reportCopyPasteErrors
+  :: Given ColorMode => NonEmpty CopyPasteCheckResult -> IO ()
+reportCopyPasteErrors errs = fmt
+  [int||
+  === Possible copy/paste errors ===
+
+  #{interpolateIndentF 2 (interpolateBlockListF' "➥ " build errs)}
+  Possible copy/paste errors dumped, #{length errs} in total.
+  |]
+
 
 
 data RetryAfter = Date UTCTime | Seconds (Time Second)
@@ -355,7 +386,7 @@ verifyRepo
   -> VerifyMode
   -> FilePath
   -> RepoInfo
-  -> IO (VerifyResult $ WithReferenceLoc VerifyError)
+  -> IO (VerifyResult $ WithReferenceLoc VerifyError, [CopyPasteCheckResult])
 verifyRepo
   rw
   config@Config{..}
@@ -363,24 +394,29 @@ verifyRepo
   root
   repoInfo'@(RepoInfo files _)
     = do
-  let toScan = do
-        (file, fileInfo) <- M.toList files
+
+  let filesToScan = flip mapMaybe (M.toList files) $ \(file, fileInfo) -> do
         guard . not $ matchesGlobPatterns root (ecIgnoreRefsFrom cExclusions) file
         case fileInfo of
           Scanned fi -> do
-            ref <- _fiReferences fi
-            return (file, ref)
-          NotScannable -> empty -- No support for such file, can do nothing.
-          NotAddedToGit -> empty -- If this file is scannable, we've notified
+            Just (file, _fiReferences fi)
+          NotScannable -> Nothing -- No support for such file, can do nothing.
+          NotAddedToGit -> Nothing -- If this file is scannable, we've notified
                                  -- user that we are scanning only files
                                  -- added to Git while gathering RepoInfo.
+
+      shouldCheckCopyPaste _ = True
+      toCheckCopyPaste = filter (\(file, _refs) -> shouldCheckCopyPaste file) filesToScan
+      toScan = concatMap (\(file, refs) -> map (file,) refs) filesToScan
+      copyPasteErrors = [ res
+                        | (file, refs) <- toCheckCopyPaste, res <- checkCopyPaste file refs]
 
   progressRef <- newIORef $ initVerifyProgress (map snd toScan)
 
   accumulated <- loopAsyncUntil (printer progressRef) do
     forConcurrentlyCaching toScan ifExternalThenCache $ \(file, ref) ->
       verifyReference config mode progressRef repoInfo' root file ref
-  case accumulated of
+  (, copyPasteErrors) <$> case accumulated of
     Right res -> return $ fold res
     Left (exception, partialRes) -> do
       -- The user has hit Ctrl+C; display any verification errors we managed to find and exit.
@@ -411,6 +447,41 @@ verifyRepo
     ifExternalThenCache (_, Reference{..}) = case locationType rLink of
       ExternalLoc -> CacheUnderKey rLink
       _           -> NoCaching
+
+checkCopyPaste :: FilePath -> [Reference] -> [CopyPasteCheckResult]
+checkCopyPaste file refs = do
+  let groupedRefs =
+          L.groupBy ((==) `on` rLink) $
+          sortBy (compare `on` rLink) $
+          filter rCheckCopyPaste refs
+  concatMap checkGroup groupedRefs
+  where
+    checkGroup :: [Reference] -> [CopyPasteCheckResult]
+    checkGroup refsInGroup = do
+      let refsInGroup' = flip map refsInGroup $ \ref ->
+            (ref, (prepareRefName (rName ref), prepareRefLink (rLink ref)))
+      let mbSubstrRef = fst <$> find (textIsLinkSubstr . snd) refsInGroup'
+          others = fst <$> filter (not . textIsLinkSubstr . snd) refsInGroup'
+      maybe [] (\substrRef -> map (CopyPasteCheckResult file substrRef) others) mbSubstrRef
+
+    textIsLinkSubstr :: (Text, Text) -> Bool
+    textIsLinkSubstr (prepName, prepLink) = prepName `isSubSeq` prepLink
+
+
+prepareRefName :: Text -> Text
+prepareRefName = T.toLower . T.filter isAlphaNum
+
+prepareRefLink :: Text -> Text
+prepareRefLink = T.toLower
+
+isSubSeq :: Text -> Text -> Bool
+isSubSeq "" _str = True
+isSubSeq _que "" = False
+isSubSeq que str
+  | qhead == shead = isSubSeq qtail stail
+  | otherwise      = isSubSeq que stail
+  where (qhead, qtail) = T.splitAt 1 que
+        (shead, stail) = T.splitAt 1 str
 
 shouldCheckLocType :: VerifyMode -> LocationType -> Bool
 shouldCheckLocType mode locType

@@ -1,0 +1,61 @@
+=== Scan errors found ===
+
+  ➥  In file second-file.md
+     scan error at src:12:1-25:
+
+     Unrecognised option "no dh", perhaps you meant
+     <"ignore link"|"ignore paragraph"|"ignore all">
+     or "no duplication check in <link|paragraph|file>"?
+
+  ➥  In file second-file.md
+     scan error at src:15:1-53:
+
+     Expected a PARAGRAPH after "no duplication check in paragraph" annotation, but found HEADING
+
+  ➥  In file second-file.md
+     scan error at src:20:1-48:
+
+     Expected a LINK after "no duplication check in link" annotation
+
+  ➥  In file second-file.md
+     scan error at src:25:1-48:
+
+     Annotation "no duplication check in file" must be at the top of markdown or right after comments at the top
+
+Scan errors dumped, 4 in total.
+=== Possible copy/paste errors ===
+
+  ➥  In file second-file.md
+     reference (relative) at src:38:1-28:
+       - text: "Link 5"
+       - link: ./first-file.md
+       - anchor: -
+     is possibly a bad copy paste of
+     reference (relative) at src:7:1-34:
+       - text: "First   file"
+       - link: ./first-file.md
+       - anchor: -
+
+  ➥  In file second-file.md
+     reference (relative) at src:39:1-29:
+       - text: "Lol Kek"
+       - link: ./first-file.md
+       - anchor: -
+     is possibly a bad copy paste of
+     reference (relative) at src:7:1-34:
+       - text: "First   file"
+       - link: ./first-file.md
+       - anchor: -
+
+  ➥  In file second-file.md
+     reference (external) at src:44:1-28:
+       - text: "gitlab"
+       - link: https://github.com
+       - anchor: -
+     is possibly a bad copy paste of
+     reference (external) at src:43:1-28:
+       - text: "github"
+       - link: https://github.com
+       - anchor: -
+
+Possible copy/paste errors dumped, 3 in total.

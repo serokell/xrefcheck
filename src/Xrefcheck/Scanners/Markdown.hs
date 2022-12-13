@@ -19,14 +19,15 @@ module Xrefcheck.Scanners.Markdown
 
 import Universum
 
-import CMarkGFM
-  (Node (..), NodeType (..), PosInfo (..), commonmarkToNode, extAutolink, optFootnotes)
+import CMarkGFM (NodeType (..), PosInfo (..), commonmarkToNode, extAutolink, optFootnotes)
+import CMarkGFM qualified as C
 import Control.Lens (_Just, makeLenses, makeLensesFor, (.=))
 import Control.Monad.Trans.Writer.CPS (Writer, runWriter, tell)
 import Data.Aeson (FromJSON (..), genericParseJSON)
 import Data.ByteString.Lazy qualified as BSL
 import Data.DList qualified as DList
 import Data.Default (def)
+import Data.List (span)
 import Data.Text qualified as T
 import Data.Text.Lazy qualified as LT
 import Fmt (Buildable (..), nameF)
@@ -49,8 +50,8 @@ defGithubMdConfig = MarkdownConfig
   { mcFlavor = GitHub
   }
 
-instance Buildable Node where
-  build (Node _mpos ty mSubs) = nameF (show ty) $
+instance Buildable C.Node where
+  build (C.Node _mpos ty mSubs) = nameF (show ty) $
     maybe "[]" interpolateBlockListF (nonEmpty mSubs)
 
 toPosition :: Maybe PosInfo -> Position
@@ -67,7 +68,7 @@ toPosition = Position . \case
         |]
 
 -- | Extract text from the topmost node.
-nodeExtractText :: Node -> Text
+nodeExtractText :: (C.Node) -> Text
 nodeExtractText = T.strip . mconcat . map extractText . nodeFlatten
   where
     extractText = \case
@@ -75,8 +76,8 @@ nodeExtractText = T.strip . mconcat . map extractText . nodeFlatten
       CODE t -> t
       _ -> ""
 
-    nodeFlatten :: Node -> [NodeType]
-    nodeFlatten (Node _pos ty subs) = ty : concatMap nodeFlatten subs
+    nodeFlatten :: (C.Node) -> [NodeType]
+    nodeFlatten (C.Node _pos ty subs) = ty : concatMap nodeFlatten subs
 
 
 data IgnoreMode
@@ -140,13 +141,13 @@ initialScannerState = ScannerState
 type ScannerM a = StateT ScannerState (Writer [ScanError]) a
 
 -- | A fold over a `Node`.
-cataNode :: (Maybe PosInfo -> NodeType -> [c] -> c) -> Node -> c
-cataNode f (Node pos ty subs) = f pos ty (cataNode f <$> subs)
+cataNode :: (Maybe PosInfo -> NodeType -> [c] -> c) -> C.Node -> c
+cataNode f (C.Node pos ty subs) = f pos ty (cataNode f <$> subs)
 
--- | Sets correct @_ssParentNodeType@ before running scanner on each node
+-- | Sets correct @_ssParentNodeType@ before running scanner on each node.
 cataNodeWithParentNodeInfo
   :: (Maybe PosInfo -> NodeType -> [ScannerM a] -> ScannerM a)
-  -> Node
+  -> C.Node
   -> ScannerM a
 cataNodeWithParentNodeInfo f node = cataNode f' node
   where
@@ -154,67 +155,118 @@ cataNodeWithParentNodeInfo f node = cataNode f' node
       map (ssParentNodeType .= Just ty >>) childScanners
 
 -- | Find ignore annotations (ignore paragraph and ignore link)
--- and remove nodes that should be ignored
-removeIgnored :: FilePath -> Node -> Writer [ScanError] Node
-removeIgnored fp = withIgnoreMode . cataNodeWithParentNodeInfo remove
+-- and remove nodes that should be ignored.
+processAnnotations :: FilePath -> C.Node -> Writer [ScanError] C.Node
+processAnnotations fp = withIgnoreMode . cataNodeWithParentNodeInfo process
   where
-    remove
+    process
       :: Maybe PosInfo
       -> NodeType
-      -> [ScannerM Node]
-      -> ScannerM Node
-    remove pos ty subs = do
-      let node = Node pos ty []
-      scan <- use ssIgnore >>= \e -> do
+      -> [ScannerM C.Node]
+      -> ScannerM C.Node
+    process pos ty subs = do
+      let node = C.Node pos ty []
+      use ssIgnore >>= \ign -> do
         -- When no `Ignore` state is set check next node for annotation,
         -- if found then set it as new `IgnoreMode` otherwise skip node.
         let mbAnnotation = getAnnotation node
         case mbAnnotation of
           Just ann -> handleAnnotation pos ty ann
-          Nothing -> case e of
-            Nothing                    -> Node pos ty <$> sequence subs
-            Just (Ignore mode modePos) ->
-                case (mode, ty) of
-                  -- We expect to find a paragraph immediately after the
-                  -- `ignore paragraph` annotanion. If the paragraph is not
-                  -- found we should report an error.
-                  (IMSParagraph, PARAGRAPH)    -> (ssIgnore .= Nothing) $> defNode
-                  (IMSParagraph, x)            -> do
-                    lift . tell . makeError modePos fp . ParagraphErr $ prettyType x
-                    ssIgnore .= Nothing
-                    Node pos ty <$> sequence subs
+          Nothing -> do
+            case ty of
+              PARAGRAPH -> handleParagraph ign pos ty subs
+              LINK {}   -> handleLink      ign pos ty subs
+              IMAGE {}  -> handleLink      ign pos ty subs
+              _         -> handleOther     ign pos ty subs
 
-                  (IMSLink _, LINK {})         -> do
-                    ssIgnore .= Nothing
-                    return defNode
-                  (IMSLink _, IMAGE {})        -> do
-                    ssIgnore .= Nothing
-                    return defNode
-                  (IMSLink ignoreLinkState, _) -> do
-                    when (ignoreLinkState == ExpectingLinkInSubnodes) $
-                      ssIgnore . _Just . ignoreMode .=  IMSLink ParentExpectsLink
-                    node' <- Node pos ty <$> sequence subs
-                    when (ignoreLinkState == ExpectingLinkInSubnodes) $ do
-                      currentIgnore <- use ssIgnore
-                      case currentIgnore of
-                        Just (Ignore {_ignoreMode = IMSLink ParentExpectsLink}) -> do
-                          lift $ tell $ makeError modePos fp LinkErr
-                          ssIgnore .= Nothing
-                        _ -> pass
-                    return node'
+    handleLink ::
+      Maybe Ignore ->
+      Maybe PosInfo ->
+      NodeType ->
+      [ScannerM C.Node] ->
+      ScannerM C.Node
+    handleLink ign pos ty subs = do
+      let traverseChildren = C.Node pos ty <$> sequence subs
+      -- It can be checked that it's correct for all the cases
+      ssIgnore .= Nothing
 
-      when (ty == PARAGRAPH) $ use ssIgnore >>= \case
+      case ign of
+        Nothing -> traverseChildren
+        Just (Ignore IMSParagraph modePos) -> do
+          reportExpectedParagraphAfterIgnoreAnnotation modePos ty
+          traverseChildren
+        Just (Ignore (IMSLink _) _) -> do
+          pure defNode
+
+    handleParagraph ::
+      Maybe Ignore ->
+      Maybe PosInfo ->
+      NodeType ->
+      [ScannerM C.Node] ->
+      ScannerM C.Node
+    handleParagraph ign pos ty subs = do
+      let traverseChildren = C.Node pos ty <$> sequence subs
+      node <- case ign of
+        Nothing -> traverseChildren
+        Just (Ignore IMSParagraph _) -> do
+          ssIgnore .= Nothing
+          pure defNode
+        Just (Ignore (IMSLink ignoreLinkState) modePos) ->
+          traverseNodeWithLinkExpected ignoreLinkState modePos pos ty subs
+
+      use ssIgnore >>= \case
         Just (Ignore (IMSLink ExpectingLinkInParagraph) pragmaPos) ->
           lift $ tell $ makeError pragmaPos fp LinkErr
         _ -> pass
+      pure node
 
-      return scan
+    handleOther ::
+      Maybe Ignore ->
+      Maybe PosInfo ->
+      NodeType ->
+      [ScannerM C.Node] ->
+      ScannerM C.Node
+    handleOther ign pos ty subs = do
+      let traverseChildren = C.Node pos ty <$> sequence subs
+
+      case ign of
+        Nothing -> traverseChildren
+        Just (Ignore IMSParagraph modePos) -> do
+          reportExpectedParagraphAfterIgnoreAnnotation modePos ty
+          ssIgnore .= Nothing
+          traverseChildren
+        Just (Ignore (IMSLink ignoreLinkState) modePos) -> do
+          traverseNodeWithLinkExpected ignoreLinkState modePos pos ty subs
+
+    reportExpectedParagraphAfterIgnoreAnnotation :: Maybe PosInfo -> NodeType -> ScannerM ()
+    reportExpectedParagraphAfterIgnoreAnnotation modePos ty =
+      lift . tell . makeError modePos fp . ParagraphErr $ prettyType ty
+
+    traverseNodeWithLinkExpected ::
+      IgnoreLinkState ->
+      Maybe PosInfo ->
+      Maybe PosInfo ->
+      NodeType ->
+      [ScannerM C.Node] ->
+      ScannerM C.Node
+    traverseNodeWithLinkExpected ignoreLinkState modePos pos ty subs = do
+      when (ignoreLinkState == ExpectingLinkInSubnodes) $
+        ssIgnore . _Just . ignoreMode .=  IMSLink ParentExpectsLink
+      node' <- C.Node pos ty <$> sequence subs
+      when (ignoreLinkState == ExpectingLinkInSubnodes) $ do
+        currentIgnore <- use ssIgnore
+        case currentIgnore of
+          Just (Ignore {_ignoreMode = IMSLink ParentExpectsLink}) -> do
+            lift $ tell $ makeError modePos fp LinkErr
+            ssIgnore .= Nothing
+          _ -> pass
+      return node'
 
     handleAnnotation
       :: Maybe PosInfo
       -> NodeType
       -> GetAnnotation
-      -> ScannerM Node
+      -> ScannerM C.Node
     handleAnnotation pos nodeType = \case
       IgnoreAnnotation mode  -> do
         let reportIfThereWasAnnotation :: ScannerM ()
@@ -252,7 +304,7 @@ removeIgnored fp = withIgnoreMode . cataNodeWithParentNodeInfo remove
         lift . tell $ makeError correctPos fp $ UnrecognisedErr msg
         pure defNode
       where
-        correctPos = getPosition $ Node pos nodeType []
+        correctPos = getPosition $ C.Node pos nodeType []
 
     prettyType :: NodeType -> Text
     prettyType ty =
@@ -260,8 +312,8 @@ removeIgnored fp = withIgnoreMode . cataNodeWithParentNodeInfo remove
       in fromMaybe "" mType
 
     withIgnoreMode
-      :: ScannerM Node
-      -> Writer [ScanError] Node
+      :: ScannerM C.Node
+      -> Writer [ScanError] C.Node
     withIgnoreMode action = action `runStateT` initialScannerState >>= \case
       -- We expect `Ignore` state to be `Nothing` when we reach EOF,
       -- otherwise that means there was an annotation that didn't match
@@ -276,8 +328,8 @@ removeIgnored fp = withIgnoreMode . cataNodeWithParentNodeInfo remove
       (node, _) -> pure node
 
 -- | Custom `foldMap` for source tree.
-foldNode :: (Monoid a, Monad m) => (Node -> m a) -> Node -> m a
-foldNode action node@(Node _ _ subs) = do
+foldNode :: (Monoid a, Monad m) => (C.Node -> m a) -> C.Node -> m a
+foldNode action node@(C.Node _ _ subs) = do
   a <- action node
   b <- concatForM subs (foldNode action)
   return (a <> b)
@@ -287,16 +339,19 @@ type ExtractorM a = ReaderT MarkdownConfig (Writer [ScanError]) a
 -- | Extract information from source tree.
 nodeExtractInfo
   :: FilePath
-  -> Node
+  -> C.Node
   -> ExtractorM FileInfo
-nodeExtractInfo fp input@(Node _ _ nSubs) = do
-  if checkIgnoreAllFile nSubs
+nodeExtractInfo fp (C.Node nPos nTy nSubs) = do
+  let (ignoreFile, contentNodes) = checkGlobalAnnotations nSubs
+  if ignoreFile
   then return def
-  else diffToFileInfo <$> (foldNode extractor =<< lift (removeIgnored fp input))
+  else diffToFileInfo <$>
+       (lift (processAnnotations fp $ C.Node nPos nTy contentNodes)
+         >>= foldNode extractor)
 
   where
-    extractor :: Node -> ExtractorM FileInfoDiff
-    extractor node@(Node pos ty _) =
+    extractor :: C.Node -> ExtractorM FileInfoDiff
+    extractor node@(C.Node pos ty _) =
       case ty of
         HTML_BLOCK _ -> do
           return mempty
@@ -349,24 +404,31 @@ nodeExtractInfo fp input@(Node _ _ nSubs) = do
            (DList.singleton $ Reference {rName, rPos, rLink, rAnchor})
            DList.empty
 
--- | Check if there is `ignore all` at the beginning of the file,
--- ignoring preceding comments if there are any.
-checkIgnoreAllFile :: [Node] -> Bool
-checkIgnoreAllFile nodes =
-  let isSimpleComment :: Node -> Bool
-      isSimpleComment node = isComment node && not (isIgnoreFile node)
-
-      mIgnoreFile = safeHead $ dropWhile isSimpleComment nodes
-  in maybe False isIgnoreFile mIgnoreFile
+-- | Check for global annotations, ignoring simple comments if there are any.
+checkGlobalAnnotations :: [C.Node] -> (Bool, [C.Node])
+checkGlobalAnnotations nodes = do
+  let (headerNodes, contentsNodes) = span isHeaderNode nodes
+      ignoreFile = any isIgnoreFile headerNodes
+  (ignoreFile, contentsNodes)
   where
-    isComment :: Node -> Bool
-    isComment = isJust . getCommentContent
+    isSimpleComment :: C.Node -> Bool
+    isSimpleComment node = do
+      let isComment = isJust $ getCommentContent node
+          isNotXrefcheckAnnotation = isNothing $ getXrefcheckContent node
+      isComment && isNotXrefcheckAnnotation
 
-    isIgnoreFile :: Node -> Bool
+    isIgnoreFile :: C.Node -> Bool
     isIgnoreFile = (Just (IgnoreAnnotation IMAll) ==) . getAnnotation
 
-defNode :: Node
-defNode = Node Nothing DOCUMENT [] -- hard-coded default Node
+    isHeaderNode :: C.Node -> Bool
+    isHeaderNode node =
+      any ($ node)
+        [ isSimpleComment
+        , isIgnoreFile
+        ]
+
+defNode :: C.Node
+defNode = C.Node Nothing DOCUMENT [] -- hard-coded default Node
 
 makeError
   :: Maybe PosInfo
@@ -375,17 +437,17 @@ makeError
   -> [ScanError]
 makeError pos fp errDescription = one $ ScanError (toPosition pos) fp errDescription
 
-getCommentContent :: Node -> Maybe Text
+getCommentContent :: C.Node -> Maybe Text
 getCommentContent node = do
   txt <- getHTMLText node
   T.stripSuffix "-->" =<< T.stripPrefix "<!--" (T.strip txt)
 
-getHTMLText :: Node -> Maybe Text
-getHTMLText (Node _ (HTML_BLOCK txt) _) = Just txt
-getHTMLText (Node _ (HTML_INLINE txt) _) = Just txt
+getHTMLText :: C.Node -> Maybe Text
+getHTMLText (C.Node _ (HTML_BLOCK txt) _) = Just txt
+getHTMLText (C.Node _ (HTML_INLINE txt) _) = Just txt
 getHTMLText _ = Nothing
 
-getXrefcheckContent :: Node -> Maybe Text
+getXrefcheckContent :: C.Node -> Maybe Text
 getXrefcheckContent node =
   let notStripped = T.stripPrefix "xrefcheck:" . T.strip =<<
         getCommentContent node
@@ -397,14 +459,14 @@ getXrefcheckContent node =
 -- As our annotations are always oneliners, we can fix this by simply setting
 -- end line equals to start line and calculating end column from start column
 -- and annotation length.
-getPosition :: Node -> Maybe PosInfo
-getPosition node@(Node pos _ _) = do
+getPosition :: C.Node -> Maybe PosInfo
+getPosition node@(C.Node pos _ _) = do
   annLength <- length . T.strip <$> getHTMLText node
   PosInfo sl sc _ _ <- pos
   pure $ PosInfo sl sc sl (sc + annLength - 1)
 
 -- | Extract `IgnoreMode` if current node is xrefcheck annotation.
-getAnnotation :: Node -> Maybe GetAnnotation
+getAnnotation :: C.Node -> Maybe GetAnnotation
 getAnnotation node = getXrefcheckContent node <&> textToMode
 
 textToMode :: Text -> GetAnnotation

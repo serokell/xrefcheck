@@ -1,0 +1,30 @@
+=== Invalid references found ===
+
+  ➥  In file a.md
+     bad reference (file-local) at src:18:1-36:
+       - text: "Mixing case reference"
+       - link: -
+       - anchor: SomE-HEADr
+
+     Anchor 'SomE-HEADr' is not present, did you mean:
+         - some-header (header I) at src:6:1-13
+         - another-header (header I) at src:10:1-16
+         - custom-header (header I) at src:12:1-43
+         - Another-header (hand made) at src:12:3-27
+         - custom-header (header I) at src:14:1-43
+
+  ➥  In file a.md
+     bad reference (file-local) at src:24:1-44:
+       - text: "Maybe ambiguous reference"
+       - link: -
+       - anchor: another-header
+
+     Ambiguous reference to anchor 'another-header'
+       In file a.md
+       It could refer to either:
+         - another-header (header I) at src:10:1-16
+         - Another-header (hand made) at src:12:3-27
+       Use of ambiguous anchors is discouraged because the target
+       can change silently while the document containing it evolves.
+
+Invalid references dumped, 2 in total.

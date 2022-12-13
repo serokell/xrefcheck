@@ -1,0 +1,38 @@
+=== Invalid references found ===
+
+  ➥  In file a.md
+     bad reference (file-local) at src:16:1-37:
+       - text: "Mixing case reference"
+       - link: -
+       - anchor: SomE-HEADer
+
+     Anchor 'SomE-HEADer' is not present, did you mean:
+         - some-header (header I) at src:6:1-13
+         - another-header (header I) at src:10:1-16
+         - custom-header (header I) at src:12:1-43
+         - Another-header (hand made) at src:12:3-27
+         - custom-header (header I) at src:14:1-43
+
+  ➥  In file a.md
+     bad reference (file-local) at src:18:1-36:
+       - text: "Mixing case reference"
+       - link: -
+       - anchor: SomE-HEADr
+
+     Anchor 'SomE-HEADr' is not present, did you mean:
+         - some-header (header I) at src:6:1-13
+         - another-header (header I) at src:10:1-16
+         - custom-header (header I) at src:12:1-43
+         - Another-header (hand made) at src:12:3-27
+         - custom-header (header I) at src:14:1-43
+
+  ➥  In file a.md
+     bad reference (file-local) at src:22:1-36:
+       - text: "Reference lowered"
+       - link: -
+       - anchor: uppercase-name
+
+     Anchor 'uppercase-name' is not present, did you mean:
+         - UPPERCASE-NAME (hand made) at src:14:3-27
+
+Invalid references dumped, 3 in total.

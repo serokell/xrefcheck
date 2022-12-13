@@ -99,6 +99,7 @@ Run `stack install` to build everything and install the executable.
 If you wish to use `cabal`, you need to run [`stack2cabal`](https://hackage.haskell.org/package/stack2cabal) first!
 
 ### Run on Windows [↑](#xrefcheck)
+
 On Windows, executable requires some dynamic libraries (DLLs).
 They are shipped together with executable in [releases page](https://github.com/serokell/xrefcheck/releases).
 If you have built executable from source using `stack install`,
@@ -135,7 +136,7 @@ There are several ways to fix this:
     * If you wish to ignore all http/ftp links, you can use `--mode local-only`.
 
 1. How does `xrefcheck` handle links that require authentication?
-    * It's common for projects to contains links to protected resources.
+    * It's common for projects to contain links to protected resources.
       By default, when `xrefcheck` attempts to verify a link and is faced with a `403 Forbidden` or a `401 Unauthorized`, it assumes the link is valid.
     * This behavior can be disabled by setting `ignoreAuthFailures: false` in the config file.
 
@@ -160,7 +161,7 @@ There are several ways to fix this:
   Its features include duplicated URLs detection, specifying allowed HTTP error codes and reporting generation.
   At the moment of writing, it scans only external references and checking anchors is not possible.
 * [remark-validate-links](https://github.com/remarkjs/remark-validate-links) and [remark-lint-no-dead-urls](https://github.com/davidtheclark/remark-lint-no-dead-urls) - highly configurable JavaScript solution for checking local and external links respectively.
-  It is able to check multiple repositores at once if they are gathered in one folder.
+  It is able to check multiple repositories at once if they are gathered in one folder.
   Doesn't handle "429 Too Many Requests", so false positives are likely when you have many links to the same domain.
 * [markdown-link-check](https://github.com/tcort/markdown-link-check) - another checker written in JavaScript, scans one specific file at a time.
   Supports `mailto:` link resolution.

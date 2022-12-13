@@ -69,11 +69,13 @@ import URI.ByteString qualified as URIBS
 import Control.Exception.Safe (handleAsync, handleJust)
 import Data.Bits (toIntegralSized)
 import Data.List (lookup)
+import Data.Text (toCaseFold)
 import Xrefcheck.Config
 import Xrefcheck.Core
 import Xrefcheck.Orphans ()
 import Xrefcheck.Progress
 import Xrefcheck.Scan
+import Xrefcheck.Scanners.Markdown (MarkdownConfig (mcFlavor))
 import Xrefcheck.System
 import Xrefcheck.Util
 
@@ -596,12 +598,17 @@ verifyReference
       checkDeduplicatedAnchorReference file fileAnchors anchor
       checkAnchorExists fileAnchors anchor
 
+    anchorNameEq =
+      if caseInsensitiveAnchors . mcFlavor . scMarkdown $ cScanners
+      then (==) `on` toCaseFold
+      else (==)
+
     -- Detect a case when original file contains two identical anchors, github
     -- has added a suffix to the duplicate, and now the original is referrenced -
     -- such links are pretty fragile and we discourage their use despite
     -- they are in fact unambiguous.
     checkAnchorReferenceAmbiguity file fileAnchors anchor = do
-      let similarAnchors = filter ((== anchor) . aName) fileAnchors
+      let similarAnchors = filter (anchorNameEq anchor . aName) fileAnchors
       when (length similarAnchors > 1) $
         throwError $ AmbiguousAnchorRef file anchor (Exts.fromList similarAnchors)
 
@@ -612,13 +619,16 @@ verifyReference
         checkAnchorReferenceAmbiguity file fileAnchors origAnchor
 
     checkAnchorExists givenAnchors anchor =
-      case find ((== anchor) . aName) givenAnchors of
+      case find (anchorNameEq anchor . aName) givenAnchors of
         Just _ -> pass
         Nothing ->
           let isSimilar = (>= scAnchorSimilarityThreshold cScanners)
-              similarAnchors =
-                filter (isSimilar . realToFrac . damerauLevenshteinNorm anchor . aName)
-                givenAnchors
+              distance = damerauLevenshteinNorm `on` toCaseFold
+              similarAnchors = flip filter givenAnchors
+                $ isSimilar
+                . realToFrac
+                . distance anchor
+                . aName
           in throwError $ AnchorDoesNotExist anchor similarAnchors
 
 -- | Parse URI according to RFC 3986 extended by allowing non-encoded

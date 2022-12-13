@@ -15,9 +15,9 @@ import Control.Lens (makeLenses)
 import Data.Aeson (FromJSON (..), withText)
 import Data.Char (isAlphaNum)
 import Data.Char qualified as C
+import Data.Default (Default (..))
 import Data.DList (DList)
 import Data.DList qualified as DList
-import Data.Default (Default (..))
 import Data.List qualified as L
 import Data.Reflection (Given)
 import Data.Text qualified as T
@@ -40,15 +40,15 @@ import Xrefcheck.Util
 data Flavor
   = GitHub
   | GitLab
-  deriving stock (Show)
+  deriving stock (Show, Enum, Bounded)
 
 allFlavors :: [Flavor]
-allFlavors = [GitHub, GitLab]
-  where
-    _exhaustivenessCheck = \case
-      GitHub -> ()
-      GitLab -> ()
-      -- if you update this, also update the list above
+allFlavors = [minBound .. maxBound]
+
+-- | Whether anchors are case-sensitive for a given Markdown flavour or not.
+caseInsensitiveAnchors :: Flavor -> Bool
+caseInsensitiveAnchors GitHub = True
+caseInsensitiveAnchors GitLab = False
 
 instance FromJSON Flavor where
   parseJSON = withText "flavor" $ \txt ->

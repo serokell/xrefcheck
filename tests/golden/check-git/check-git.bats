@@ -12,6 +12,7 @@ load '../helpers'
 @test "Git: not a repo" {
   cd $TEST_TEMP_DIR
 
+  export LANG=en_US
   run xrefcheck
 
   assert_output --partial "fatal: not a git repository"

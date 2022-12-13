@@ -38,6 +38,9 @@ Unreleased
 * [#233](https://github.com/serokell/xrefcheck/pull/233)
   + Now xrefxcheck does not follow redirect links by default. It fails for permanent
     redirect responses (i.e. 301 and 308) and passes for temporary ones (i.e. 302, 303, 307).
+* [#231](https://github.com/serokell/xrefcheck/pull/231)
+  + Anchor analysis takes now into account the appropriate case-sensitivity depending on
+  the configured Markdown flavour.
 
 0.2.2
 ==========

@@ -137,7 +137,7 @@ showProgress name width col posixTime Progress{..} = mconcat
   , status
   ]
   where
-    -- | Each of the following values represents the number of the progress bar cells
+    -- Each of the following values represents the number of the progress bar cells
     -- corresponding to the respective "class" of processed references: the valid ones,
     -- the ones containing an unfixable error (a.k.a. the invalid ones), and the ones
     -- containing a fixable error.
@@ -145,10 +145,10 @@ showProgress name width col posixTime Progress{..} = mconcat
     -- The current overall number of proccessed errors.
     done = floor $ (pCurrent % pTotal) * fromIntegral @Int @(Ratio Int) width
 
-    -- | The current number of the invalid references.
+    -- The current number of the invalid references.
     errsU = ceiling $ (pErrorsUnfixable % pTotal) * fromIntegral @Int @(Ratio Int) width
 
-    -- | The current number of (fixable) errors that may be eliminated during further
+    -- The current number of (fixable) errors that may be eliminated during further
     -- verification.
     -- Notice!
     --   1. Both this and the previous values use @ceiling@ as the rounding function.
@@ -160,13 +160,13 @@ showProgress name width col posixTime Progress{..} = mconcat
     errsF = min (width - errsU) . ceiling $ (pErrorsFixable % pTotal) *
       fromIntegral @Int @(Ratio Int) width
 
-    -- | The number of valid references.
+    -- The number of valid references.
     -- The value is bounded from below by 0 to ensure the number never gets negative.
     -- This situation is plausible due to the different rounding functions used for each value:
     -- @floor@ for the minuend @done@, @ceiling@ for the two subtrahends @errsU@ & @errsF@.
     successful = max 0 $ done - errsU - errsF
 
-    -- | The remaining number of references to be verified.
+    -- The remaining number of references to be verified.
     remaining = width - successful - errsU - errsF
 
     bar
@@ -237,7 +237,7 @@ putTextRewrite (Rewrite RewriteCtx{..}) msg = do
   atomicModifyIORef' rMaxPrintedSize $ \maxPrinted ->
     (max maxPrinted (length msg), ())
   where
-    -- | The maximum possible difference between two progress text representations,
+    -- The maximum possible difference between two progress text representations,
     -- including the timer & the status, is 9 characters. This is a temporary
     -- solution to the problem of re-printing a smaller string on top of another
     -- that'll leave some of the trailing characters in the original string

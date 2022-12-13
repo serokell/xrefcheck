@@ -66,6 +66,11 @@ ghc-options:
   - -Wno-prepositive-qualified-module
   - -Wno-monomorphism-restriction
 
+  # This option avoids a warning on case-insensitive systems:
+  # https://github.com/haskell/cabal/issues/4739
+  # https://github.com/commercialhaskell/stack/issues/3918
+  - -optP-Wno-nonportable-include-path
+
 dependencies:
   - base >=4.14.3.0 && <5
 

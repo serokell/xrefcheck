@@ -26,20 +26,33 @@ module Xrefcheck.Verify
   , verifyReference
   , checkExternalResource
 
+    -- * Copypaste check
+  , checkCopyPaste
+  , CopyPasteCheckResult (..)
+
     -- * URI parsing
   , parseUri
+
+    -- * Reporting errors
   , reportVerifyErrs
+  , reportCopyPasteErrors
   ) where
 
 import Universum
 
 import Control.Concurrent.Async (Async, async, cancel, poll, wait, withAsync)
 import Control.Exception (AsyncException (..), throwIO)
+import Control.Exception.Safe (handleAsync, handleJust)
 import Control.Monad.Except (MonadError (..))
+import Data.Bits (toIntegralSized)
 import Data.ByteString qualified as BS
+import Data.Char (isAlphaNum)
+import Data.List (lookup)
 import Data.List qualified as L
 import Data.Map qualified as M
 import Data.Reflection (Given)
+import Data.Text (toCaseFold)
+import Data.Text qualified as T
 import Data.Text.Metrics (damerauLevenshteinNorm)
 import Data.Time (UTCTime, defaultTimeLocale, formatTime, readPTime, rfc822DateFormat)
 import Data.Time.Clock.POSIX (getPOSIXTime)
@@ -66,10 +79,6 @@ import Text.URI (Authority (..), ParseExceptionBs, URI (..), mkURIBs)
 import Time (RatioNat, Second, Time (..), ms, sec, threadDelay, timeout, (+:+), (-:-))
 import URI.ByteString qualified as URIBS
 
-import Control.Exception.Safe (handleAsync, handleJust)
-import Data.Bits (toIntegralSized)
-import Data.List (lookup)
-import Data.Text (toCaseFold)
 import Xrefcheck.Config
 import Xrefcheck.Core
 import Xrefcheck.Orphans ()
@@ -255,6 +264,21 @@ instance Given ColorMode => Buildable VerifyError where
         #{redirectedUrl}
       |]
 
+data CopyPasteCheckResult = CopyPasteCheckResult
+  { crFile :: FilePath,
+    crOriginalRef :: Reference,
+    crCopiedRef :: Reference
+  } deriving stock (Show, Eq, Ord)
+
+instance (Given ColorMode) => Buildable CopyPasteCheckResult where
+  build CopyPasteCheckResult {..} =
+    [int||
+    In file #{styleIfNeeded Faint (styleIfNeeded Bold crFile)}
+    #{crCopiedRef}\
+    is possibly a bad copy paste of
+    #{crOriginalRef}
+    |]
+
 reportVerifyErrs
   :: Given ColorMode => NonEmpty (WithReferenceLoc VerifyError) -> IO ()
 reportVerifyErrs errs = fmt
@@ -264,6 +288,17 @@ reportVerifyErrs errs = fmt
   #{interpolateIndentF 2 (interpolateBlockListF' "➥ " build errs)}
   Invalid references dumped, #{length errs} in total.
   |]
+
+reportCopyPasteErrors
+  :: Given ColorMode => NonEmpty CopyPasteCheckResult -> IO ()
+reportCopyPasteErrors errs = fmt
+  [int||
+  === Possible copy/paste errors ===
+
+  #{interpolateIndentF 2 (interpolateBlockListF' "➥ " build errs)}
+  Possible copy/paste errors dumped, #{length errs} in total.
+  |]
+
 
 
 data RetryAfter = Date UTCTime | Seconds (Time Second)
@@ -355,7 +390,7 @@ verifyRepo
   -> VerifyMode
   -> FilePath
   -> RepoInfo
-  -> IO (VerifyResult $ WithReferenceLoc VerifyError)
+  -> IO (VerifyResult $ WithReferenceLoc VerifyError, [CopyPasteCheckResult])
 verifyRepo
   rw
   config@Config{..}
@@ -363,24 +398,32 @@ verifyRepo
   root
   repoInfo'@(RepoInfo files _)
     = do
-  let toScan = do
-        (file, fileInfo) <- M.toList files
+
+  let filesToScan = flip mapMaybe (M.toList files) $ \(file, fileInfo) -> do
         guard . not $ matchesGlobPatterns root (ecIgnoreRefsFrom cExclusions) file
         case fileInfo of
           Scanned fi -> do
-            ref <- _fiReferences fi
-            return (file, ref)
-          NotScannable -> empty -- No support for such file, can do nothing.
-          NotAddedToGit -> empty -- If this file is scannable, we've notified
+            Just (file, fi)
+          NotScannable -> Nothing -- No support for such file, can do nothing.
+          NotAddedToGit -> Nothing -- If this file is scannable, we've notified
                                  -- user that we are scanning only files
                                  -- added to Git while gathering RepoInfo.
+
+      toCheckCopyPaste = map (second _fiReferences) filesToScan
+      toScan = concatMap (\(file, fileInfo) -> map (file,) $ _fiReferences fileInfo) filesToScan
+      copyPasteErrors = if scCopyPasteCheckEnabled cScanners
+                        then [ res
+                             | (file, refs) <- toCheckCopyPaste,
+                               res <- checkCopyPaste file refs
+                             ]
+                        else []
 
   progressRef <- newIORef $ initVerifyProgress (map snd toScan)
 
   accumulated <- loopAsyncUntil (printer progressRef) do
     forConcurrentlyCaching toScan ifExternalThenCache $ \(file, ref) ->
       verifyReference config mode progressRef repoInfo' root file ref
-  case accumulated of
+  (, copyPasteErrors) <$> case accumulated of
     Right res -> return $ fold res
     Left (exception, partialRes) -> do
       -- The user has hit Ctrl+C; display any verification errors we managed to find and exit.
@@ -411,6 +454,41 @@ verifyRepo
     ifExternalThenCache (_, Reference{..}) = case locationType rLink of
       ExternalLoc -> CacheUnderKey rLink
       _           -> NoCaching
+
+checkCopyPaste :: FilePath -> [Reference] -> [CopyPasteCheckResult]
+checkCopyPaste file refs = do
+  let getLinkAndAnchor x = (rLink x, rAnchor x)
+      groupedRefs =
+          L.groupBy ((==) `on` getLinkAndAnchor) $
+          sortBy (compare `on` getLinkAndAnchor) refs
+  concatMap checkGroup groupedRefs
+  where
+    checkGroup :: [Reference] -> [CopyPasteCheckResult]
+    checkGroup refsInGroup = do
+      let mergeLinkAndAnchor ref = maybe (rLink ref) (rLink ref <>) $ rAnchor ref
+      let refsInGroup' = flip map refsInGroup $ \ref ->
+            (ref, (prepareNameForCheck $ rName ref,
+                   prepareNameForCheck $ mergeLinkAndAnchor ref))
+      -- Most of time this will be Nothing and we won't need `others`.
+      -- The first matching link will be shown as original.
+      let mbSubstrRef = fst <$> find (textIsLinkSubstr . snd) refsInGroup'
+          others = fst <$> filter (not . textIsLinkSubstr . snd) refsInGroup'
+      maybe [] (\substrRef -> map (CopyPasteCheckResult file substrRef) others) mbSubstrRef
+
+    textIsLinkSubstr :: (Text, Text) -> Bool
+    textIsLinkSubstr (prepName, prepLink) = prepName `isSubSeq` prepLink
+
+    prepareNameForCheck :: Text -> Text
+    prepareNameForCheck = T.toLower . T.filter isAlphaNum
+
+    isSubSeq :: Text -> Text -> Bool
+    isSubSeq "" _str = True
+    isSubSeq _que "" = False
+    isSubSeq que str
+      | qhead == shead = isSubSeq qtail stail
+      | otherwise      = isSubSeq que stail
+      where (qhead, qtail) = T.splitAt 1 que
+            (shead, stail) = T.splitAt 1 str
 
 shouldCheckLocType :: VerifyMode -> LocationType -> Bool
 shouldCheckLocType mode locType

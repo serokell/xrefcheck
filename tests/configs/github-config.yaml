@@ -56,3 +56,6 @@ scanners:
     #
     # This affects which anchors are generated for headers.
     flavor: GitHub
+
+  # Whether copy-paste check is enabled globally.
+  copyPasteCheckEnabled: True

@@ -67,6 +67,9 @@ scanners:
     #
     # This affects which anchors are generated for headers.
     flavor: #s{flavor}
+
+  # Whether copy-paste check is enabled globally.
+  copyPasteCheckEnabled: True
 |]
   where
     ignoreLocalRefsFrom :: NonEmpty Text

@@ -61,7 +61,7 @@ instance FromJSON Flavor where
 -- We keep this in text because scanners for different formats use different
 -- representation of this thing, and it actually appears in reports only.
 newtype Position = Position (Maybe Text)
-  deriving stock (Show, Eq, Generic)
+  deriving stock (Show, Eq, Generic, Ord)
 
 instance Given ColorMode => Buildable Position where
   build (Position pos) = case pos of
@@ -77,7 +77,7 @@ data Reference = Reference
   , rAnchor :: Maybe Text
     -- ^ Section or custom anchor tag.
   , rPos    :: Position
-  } deriving stock (Show, Generic)
+  } deriving stock (Show, Generic, Eq, Ord)
 
 -- | Context of anchor.
 data AnchorType

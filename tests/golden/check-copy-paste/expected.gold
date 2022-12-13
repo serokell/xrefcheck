@@ -1,0 +1,48 @@
+=== Possible copy/paste errors ===
+
+  ➥  In file second-file.md
+     reference (relative) at src:13:1-29:
+       - text: "Lol Kek"
+       - link: ./first-file.md
+       - anchor: -
+     is possibly a bad copy paste of
+     reference (relative) at src:7:1-34:
+       - text: "First   file"
+       - link: ./first-file.md
+       - anchor: -
+
+  ➥  In file second-file.md
+     reference (relative) at src:14:1-30:
+       - text: "Baz quux"
+       - link: ./first-file.md
+       - anchor: -
+     is possibly a bad copy paste of
+     reference (relative) at src:7:1-34:
+       - text: "First   file"
+       - link: ./first-file.md
+       - anchor: -
+
+  ➥  In file second-file.md
+     reference (relative) at src:24:1-29:
+       - text: "fdw"
+       - link: ./first-file.md
+       - anchor: chor
+     is possibly a bad copy paste of
+     reference (relative) at src:23:1-32:
+       - text: "ff-cho"
+       - link: ./first-file.md
+       - anchor: chor
+
+  ➥  In file second-file.md
+     reference (external) at src:29:1-28:
+       - text: "gitlab"
+       - link: https://github.com
+       - anchor: -
+     is possibly a bad copy paste of
+     reference (external) at src:28:1-28:
+       - text: "github"
+       - link: https://github.com
+       - anchor: -
+
+Possible copy/paste errors dumped, 4 in total.
+All repository links are valid.

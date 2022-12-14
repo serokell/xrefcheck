@@ -73,6 +73,8 @@ data ScannersConfig' f = ScannersConfig
   , scAnchorSimilarityThreshold :: Field f Double
     -- ^ On 'anchor not found' error, how much similar anchors should be displayed as
     -- hint. Number should be between 0 and 1, larger value means stricter filter.
+  , scCopyPasteCheckEnabled :: Field f Bool
+    -- ^ Whether copy-paste check is enabled globally.
   } deriving stock (Generic)
 
 makeLensesWith postfixFields ''Config'
@@ -94,6 +96,9 @@ overrideConfig config
                   , scAnchorSimilarityThreshold =
                     fromMaybe (scAnchorSimilarityThreshold defScanners)
                     $ scAnchorSimilarityThreshold (cScanners config)
+                  , scCopyPasteCheckEnabled =
+                    fromMaybe (scCopyPasteCheckEnabled defScanners)
+                    $ scCopyPasteCheckEnabled (cScanners config)
                   }
     }
   where

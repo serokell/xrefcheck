@@ -399,17 +399,20 @@ verifyRepo
         guard . not $ matchesGlobPatterns root (ecIgnoreRefsFrom cExclusions) file
         case fileInfo of
           Scanned fi -> do
-            Just (file, _fiReferences fi)
+            Just (file, fi)
           NotScannable -> Nothing -- No support for such file, can do nothing.
           NotAddedToGit -> Nothing -- If this file is scannable, we've notified
                                  -- user that we are scanning only files
                                  -- added to Git while gathering RepoInfo.
 
-      shouldCheckCopyPaste _ = True
-      toCheckCopyPaste = filter (\(file, _refs) -> shouldCheckCopyPaste file) filesToScan
-      toScan = concatMap (\(file, refs) -> map (file,) refs) filesToScan
-      copyPasteErrors = [ res
-                        | (file, refs) <- toCheckCopyPaste, res <- checkCopyPaste file refs]
+      toCheckCopyPaste = map (second _fiReferences) $ filter (_fiCopyPasteCheck . snd) filesToScan
+      toScan = concatMap (\(file, fileInfo) -> map (file,) $ _fiReferences fileInfo) filesToScan
+      copyPasteErrors = if scCopyPasteCheckEnabled cScanners
+                        then [ res
+                             | (file, refs) <- toCheckCopyPaste,
+                               res <- checkCopyPaste file refs
+                             ]
+                        else []
 
   progressRef <- newIORef $ initVerifyProgress (map snd toScan)
 

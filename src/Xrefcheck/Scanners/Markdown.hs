@@ -182,12 +182,9 @@ cataNodeWithParentNodeInfo f node = cataNode f' node
 -- find copy/paste check annotations (ignore for paragraph and for link)
 -- and label nodes with a boolean meaning whether they should be
 -- copy/paste checked.
-processAnnotations :: Bool -> FilePath -> C.Node -> Writer [ScanError] NodeCPC
-processAnnotations globalCpcCheckEnabled fp = withIgnoreMode . cataNodeWithParentNodeInfo process
+processAnnotations :: FilePath -> C.Node -> Writer [ScanError] NodeCPC
+processAnnotations fp = withIgnoreMode . cataNodeWithParentNodeInfo process
   where
-    withGlobalCPC :: Bool -> CopyPasteCheck
-    withGlobalCPC localEnabled = CopyPasteCheck $ globalCpcCheckEnabled && localEnabled
-
     process
       :: Maybe PosInfo
       -> NodeType
@@ -216,7 +213,7 @@ processAnnotations globalCpcCheckEnabled fp = withIgnoreMode . cataNodeWithParen
       [ScannerM NodeCPC] ->
       ScannerM NodeCPC
     handleLink ign ignCPC pos ty subs = do
-      let shouldCheckCPC = withGlobalCPC $ isNothing ignCPC
+      let shouldCheckCPC = CopyPasteCheck $ isNothing ignCPC
       let traverseChildren = Node pos ty shouldCheckCPC <$> sequence subs
       -- It's common for all ignore states
       ssIgnore .= Nothing
@@ -243,7 +240,7 @@ processAnnotations globalCpcCheckEnabled fp = withIgnoreMode . cataNodeWithParen
       [ScannerM NodeCPC] ->
       ScannerM NodeCPC
     handleParagraph ign ignCPC pos ty subs = do
-      let shouldCheckCPC = withGlobalCPC $ isNothing ignCPC
+      let shouldCheckCPC = CopyPasteCheck $ isNothing ignCPC
       let traverseChildren = Node pos ty shouldCheckCPC <$> sequence subs
       -- If a new paragraph was expected (this stands for True), now we
       -- don't expect paragraphs any more.
@@ -281,7 +278,7 @@ processAnnotations globalCpcCheckEnabled fp = withIgnoreMode . cataNodeWithParen
       [ScannerM NodeCPC] ->
       ScannerM NodeCPC
     handleOther ign ignCPC pos ty subs = do
-      let shouldCheckCPC = withGlobalCPC $ isNothing ignCPC
+      let shouldCheckCPC = CopyPasteCheck $ isNothing ignCPC
       let traverseChildren = Node pos ty shouldCheckCPC <$> sequence subs
       -- If right now there was a copy/paste ignore annotation for paragraph,
       -- emit an error and reset these states.
@@ -473,11 +470,10 @@ nodeExtractInfo
   -> ExtractorM FileInfo
 nodeExtractInfo fp (C.Node nPos nTy nSubs) = do
   let (ignoreFile, ignoreCpcInFile, contentNodes) = checkGlobalAnnotations nSubs
-      cpCheckEnabledGlobally = not ignoreCpcInFile
   if ignoreFile
   then return def
-  else diffToFileInfo <$>
-       (lift (processAnnotations cpCheckEnabledGlobally fp $ C.Node nPos nTy contentNodes)
+  else diffToFileInfo (not ignoreCpcInFile) <$>
+       (lift (processAnnotations fp $ C.Node nPos nTy contentNodes)
          >>= foldNode extractor)
 
   where

@@ -1,48 +1,111 @@
+<<<<<<< HEAD
 === Possible copy/paste errors ===
 
   ➥  In file second-file.md
      reference (relative) at src:13:1-29:
+=======
+=== Scan errors found ===
+
+  ➥  In file second-file.md
+     scan error at src:35:1-25:
+
+     Unrecognised option "no dh", perhaps you meant
+     <"ignore link"|"ignore paragraph"|"ignore all">
+     or "no duplication check in <link|paragraph|file>"?
+
+  ➥  In file second-file.md
+     scan error at src:40:1-53:
+
+     Expected a PARAGRAPH after "no duplication check in paragraph" annotation, but found HEADING
+
+  ➥  In file second-file.md
+     scan error at src:46:1-48:
+
+     Expected a LINK after "no duplication check in link" annotation
+
+  ➥  In file second-file.md
+     scan error at src:51:1-48:
+
+     Annotation "no duplication check in file" must be at the top of markdown or right after comments at the top
+
+Scan errors dumped, 4 in total.
+=== Possible copy/paste errors ===
+
+  ➥  In file second-file.md
+     reference (relative) at src:20:1-29:
+>>>>>>> 26d87b9... [#64] Implement copy/paste protection checks
        - text: "Lol Kek"
        - link: ./first-file.md
        - anchor: -
      is possibly a bad copy paste of
+<<<<<<< HEAD
      reference (relative) at src:7:1-34:
+=======
+     reference (relative) at src:10:1-34:
+>>>>>>> 26d87b9... [#64] Implement copy/paste protection checks
        - text: "First   file"
        - link: ./first-file.md
        - anchor: -
 
   ➥  In file second-file.md
+<<<<<<< HEAD
      reference (relative) at src:14:1-30:
+=======
+     reference (relative) at src:21:1-30:
+>>>>>>> 26d87b9... [#64] Implement copy/paste protection checks
        - text: "Baz quux"
        - link: ./first-file.md
        - anchor: -
      is possibly a bad copy paste of
+<<<<<<< HEAD
      reference (relative) at src:7:1-34:
+=======
+     reference (relative) at src:10:1-34:
+>>>>>>> 26d87b9... [#64] Implement copy/paste protection checks
        - text: "First   file"
        - link: ./first-file.md
        - anchor: -
 
   ➥  In file second-file.md
+<<<<<<< HEAD
      reference (relative) at src:24:1-29:
+=======
+     reference (relative) at src:31:1-29:
+>>>>>>> 26d87b9... [#64] Implement copy/paste protection checks
        - text: "fdw"
        - link: ./first-file.md
        - anchor: chor
      is possibly a bad copy paste of
+<<<<<<< HEAD
      reference (relative) at src:23:1-32:
+=======
+     reference (relative) at src:30:1-32:
+>>>>>>> 26d87b9... [#64] Implement copy/paste protection checks
        - text: "ff-cho"
        - link: ./first-file.md
        - anchor: chor
 
   ➥  In file second-file.md
+<<<<<<< HEAD
      reference (external) at src:29:1-28:
+=======
+     reference (external) at src:70:1-28:
+>>>>>>> 26d87b9... [#64] Implement copy/paste protection checks
        - text: "gitlab"
        - link: https://github.com
        - anchor: -
      is possibly a bad copy paste of
+<<<<<<< HEAD
      reference (external) at src:28:1-28:
+=======
+     reference (external) at src:69:1-28:
+>>>>>>> 26d87b9... [#64] Implement copy/paste protection checks
        - text: "github"
        - link: https://github.com
        - anchor: -
 
 Possible copy/paste errors dumped, 4 in total.
+<<<<<<< HEAD
 All repository links are valid.
+=======
+>>>>>>> 26d87b9... [#64] Implement copy/paste protection checks

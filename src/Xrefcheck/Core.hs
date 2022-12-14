@@ -12,6 +12,7 @@ module Xrefcheck.Core where
 import Universum
 
 import Control.Lens (makeLenses)
+import Control.Lens.Combinators (makeLensesWith)
 import Data.Aeson (FromJSON (..), withText)
 import Data.Char (isAlphaNum)
 import Data.Char qualified as C
@@ -70,14 +71,17 @@ instance Given ColorMode => Buildable Position where
 
 -- | Full info about a reference.
 data Reference = Reference
-  { rName   :: Text
+  { rName           :: Text
     -- ^ Text displayed as reference.
-  , rLink   :: Text
+  , rLink           :: Text
     -- ^ File or site reference points to.
-  , rAnchor :: Maybe Text
+  , rAnchor         :: Maybe Text
     -- ^ Section or custom anchor tag.
-  , rPos    :: Position
+  , rPos            :: Position
+  , rCheckCopyPaste :: Bool
+    -- ^ Whether to check bad copy/paste for this link
   } deriving stock (Show, Generic, Eq, Ord)
+makeLensesWith postfixFields ''Reference
 
 -- | Context of anchor.
 data AnchorType
@@ -102,9 +106,9 @@ data FileInfoDiff = FileInfoDiff
   }
 makeLenses ''FileInfoDiff
 
-diffToFileInfo :: FileInfoDiff -> FileInfo
-diffToFileInfo (FileInfoDiff refs anchors) =
-    FileInfo (DList.toList refs) (DList.toList anchors)
+diffToFileInfo :: Bool -> FileInfoDiff -> FileInfo
+diffToFileInfo ignoreCpcInFile (FileInfoDiff refs anchors) =
+    FileInfo (DList.toList refs) (DList.toList anchors) ignoreCpcInFile
 
 instance Semigroup FileInfoDiff where
   FileInfoDiff a b <> FileInfoDiff c d = FileInfoDiff (a <> c) (b <> d)
@@ -114,13 +118,14 @@ instance Monoid FileInfoDiff where
 
 -- | All information regarding a single file we care about.
 data FileInfo = FileInfo
-  { _fiReferences :: [Reference]
-  , _fiAnchors    :: [Anchor]
+  { _fiReferences     :: [Reference]
+  , _fiAnchors        :: [Anchor]
+  , _fiCopyPasteCheck :: Bool
   } deriving stock (Show, Generic)
 makeLenses ''FileInfo
 
 instance Default FileInfo where
-  def = diffToFileInfo mempty
+  def = diffToFileInfo True mempty
 
 data ScanPolicy
   = OnlyTracked

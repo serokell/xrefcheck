@@ -409,7 +409,7 @@ verifyRepo
                                  -- user that we are scanning only files
                                  -- added to Git while gathering RepoInfo.
 
-      toCheckCopyPaste = map (second _fiReferences) filesToScan
+      toCheckCopyPaste = map (second _fiReferences) $ filter (_fiCopyPasteCheck . snd) filesToScan
       toScan = concatMap (\(file, fileInfo) -> map (file,) $ _fiReferences fileInfo) filesToScan
       copyPasteErrors = if scCopyPasteCheckEnabled cScanners
                         then [ res
@@ -460,7 +460,8 @@ checkCopyPaste file refs = do
   let getLinkAndAnchor x = (rLink x, rAnchor x)
       groupedRefs =
           L.groupBy ((==) `on` getLinkAndAnchor) $
-          sortBy (compare `on` getLinkAndAnchor) refs
+          sortBy (compare `on` getLinkAndAnchor) $
+          filter rCheckCopyPaste refs
   concatMap checkGroup groupedRefs
   where
     checkGroup :: [Reference] -> [CopyPasteCheckResult]

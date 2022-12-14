@@ -118,7 +118,7 @@ data Ignore = Ignore
   } deriving stock (Show)
 makeLensesFor [("_ignoreMode", "ignoreMode")] 'Ignore
 
-data GetAnnotation
+data Annotation
   = IgnoreAnnotation IgnoreMode
   | InvalidAnnotation Text
   deriving stock (Eq)
@@ -251,7 +251,7 @@ processAnnotations fp = withIgnoreMode . cataNodeWithParentNodeInfo process
       ScannerM C.Node
     traverseNodeWithLinkExpected ignoreLinkState modePos pos ty subs = do
       when (ignoreLinkState == ExpectingLinkInSubnodes) $
-        ssIgnore . _Just . ignoreMode .=  IMSLink ParentExpectsLink
+        ssIgnore . _Just . ignoreMode .= IMSLink ParentExpectsLink
       node' <- C.Node pos ty <$> sequence subs
       when (ignoreLinkState == ExpectingLinkInSubnodes) $ do
         currentIgnore <- use ssIgnore
@@ -265,10 +265,10 @@ processAnnotations fp = withIgnoreMode . cataNodeWithParentNodeInfo process
     handleAnnotation
       :: Maybe PosInfo
       -> NodeType
-      -> GetAnnotation
+      -> Annotation
       -> ScannerM C.Node
     handleAnnotation pos nodeType = \case
-      IgnoreAnnotation mode  -> do
+      IgnoreAnnotation mode -> do
         let reportIfThereWasAnnotation :: ScannerM ()
             reportIfThereWasAnnotation = do
               curIgnore <- use ssIgnore
@@ -465,11 +465,11 @@ getPosition node@(C.Node pos _ _) = do
   PosInfo sl sc _ _ <- pos
   pure $ PosInfo sl sc sl (sc + annLength - 1)
 
--- | Extract `IgnoreMode` if current node is xrefcheck annotation.
-getAnnotation :: C.Node -> Maybe GetAnnotation
+-- | Extract `Annotation` if current node is xrefcheck annotation.
+getAnnotation :: C.Node -> Maybe Annotation
 getAnnotation node = getXrefcheckContent node <&> textToMode
 
-textToMode :: Text -> GetAnnotation
+textToMode :: Text -> Annotation
 textToMode annText = case wordsList of
   ("ignore" : [x])
     | Just ignMode <- getIgnoreMode x -> IgnoreAnnotation ignMode

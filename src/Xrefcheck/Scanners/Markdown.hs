@@ -196,25 +196,23 @@ processAnnotations fp = withIgnoreMode . cataNodeWithParentNodeInfo process
         use ssIgnoreCopyPasteCheck >>= \ignCPC -> do
         -- When no `Ignore` state is set check next node for annotation,
         -- if found then set it as new `IgnoreMode` otherwise skip node.
+        let shouldCheckCPC = CopyPasteCheck $ isNothing ignCPC
+        let traverseChildren = Node pos ty shouldCheckCPC <$> sequence subs
         case getAnnotation node of
           Just ann -> handleAnnotation pos ty ann
           Nothing -> do
             case ty of
-              PARAGRAPH -> handleParagraph ign ignCPC pos ty subs
-              LINK {}   -> handleLink      ign ignCPC pos ty subs
-              IMAGE {}  -> handleLink      ign ignCPC pos ty subs
-              _         -> handleOther     ign ignCPC pos ty subs
+              PARAGRAPH -> handleParagraph ign    traverseChildren
+              LINK {}   -> handleLink      ign ty traverseChildren
+              IMAGE {}  -> handleLink      ign ty traverseChildren
+              _         -> handleOther     ign ty traverseChildren
 
     handleLink ::
       Maybe Ignore ->
-      Maybe Ignore ->
-      Maybe PosInfo ->
       NodeType ->
-      [ScannerM NodeCPC] ->
+      ScannerM NodeCPC ->
       ScannerM NodeCPC
-    handleLink ign ignCPC pos ty subs = do
-      let shouldCheckCPC = CopyPasteCheck $ isNothing ignCPC
-      let traverseChildren = Node pos ty shouldCheckCPC <$> sequence subs
+    handleLink ign ty traverseChildren = do
       -- It's common for all ignore states
       ssIgnore .= Nothing
       -- If there was a copy/paste ignore annotation that expected link,
@@ -234,14 +232,9 @@ processAnnotations fp = withIgnoreMode . cataNodeWithParentNodeInfo process
 
     handleParagraph ::
       Maybe Ignore ->
-      Maybe Ignore ->
-      Maybe PosInfo ->
-      NodeType ->
-      [ScannerM NodeCPC] ->
+      ScannerM NodeCPC ->
       ScannerM NodeCPC
-    handleParagraph ign ignCPC pos ty subs = do
-      let shouldCheckCPC = CopyPasteCheck $ isNothing ignCPC
-      let traverseChildren = Node pos ty shouldCheckCPC <$> sequence subs
+    handleParagraph ign traverseChildren = do
       -- If a new paragraph was expected (this stands for True), now we
       -- don't expect paragraphs any more.
       ssParagraphExpectedAfterCpcAnnotation .= False
@@ -272,14 +265,10 @@ processAnnotations fp = withIgnoreMode . cataNodeWithParentNodeInfo process
 
     handleOther ::
       Maybe Ignore ->
-      Maybe Ignore ->
-      Maybe PosInfo ->
       NodeType ->
-      [ScannerM NodeCPC] ->
+      ScannerM NodeCPC ->
       ScannerM NodeCPC
-    handleOther ign ignCPC pos ty subs = do
-      let shouldCheckCPC = CopyPasteCheck $ isNothing ignCPC
-      let traverseChildren = Node pos ty shouldCheckCPC <$> sequence subs
+    handleOther ign ty traverseChildren = do
       -- If right now there was a copy/paste ignore annotation for paragraph,
       -- emit an error and reset these states.
       reportExpectedParagraphAfterIgnoreCpcAnnotation ty

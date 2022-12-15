@@ -36,11 +36,13 @@ Unreleased
   + Now we call references to anchors in current file (e.g. `[a](#b)`) as
   `file-local` references instead of calling them `current file` (which was ambiguous).
 * [#233](https://github.com/serokell/xrefcheck/pull/233)
-  + Now xrefxcheck does not follow redirect links by default. It fails for permanent
+  + Now xrefcheck does not follow redirect links by default. It fails for permanent
     redirect responses (i.e. 301 and 308) and passes for temporary ones (i.e. 302, 303, 307).
 * [#231](https://github.com/serokell/xrefcheck/pull/231)
   + Anchor analysis takes now into account the appropriate case-sensitivity depending on
   the configured Markdown flavour.
+* [240](https://github.com/serokell/xrefcheck/pull/240)
+  + Now xrefcheck is able to detect possible copy-pastes relying on links and their names.
 
 0.2.2
 ==========

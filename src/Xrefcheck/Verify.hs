@@ -453,16 +453,20 @@ verifyRepo
 
 checkCopyPaste :: FilePath -> [Reference] -> [CopyPasteCheckResult]
 checkCopyPaste file refs = do
-  let groupedRefs =
-          L.groupBy ((==) `on` rLink) $
-          sortBy (compare `on` rLink) $
+  let getLinkAndAnchor x = (rLink x, rAnchor x)
+      groupedRefs =
+          L.groupBy ((==) `on` getLinkAndAnchor) $
+          sortBy (compare `on` getLinkAndAnchor) $
           filter rCheckCopyPaste refs
   concatMap checkGroup groupedRefs
   where
     checkGroup :: [Reference] -> [CopyPasteCheckResult]
     checkGroup refsInGroup = do
+      let mergeLinkAndAnchor ref = maybe (rLink ref) (rLink ref <>) $ rAnchor ref
       let refsInGroup' = flip map refsInGroup $ \ref ->
-            (ref, (prepareRefName (rName ref), prepareRefLink (rLink ref)))
+            (ref, (prepareNameForCheck $ rName ref,
+                   prepareNameForCheck $ mergeLinkAndAnchor ref))
+      -- most of time this will be Nothing and we won't need `others`
       let mbSubstrRef = fst <$> find (textIsLinkSubstr . snd) refsInGroup'
           others = fst <$> filter (not . textIsLinkSubstr . snd) refsInGroup'
       maybe [] (\substrRef -> map (CopyPasteCheckResult file substrRef) others) mbSubstrRef
@@ -470,21 +474,17 @@ checkCopyPaste file refs = do
     textIsLinkSubstr :: (Text, Text) -> Bool
     textIsLinkSubstr (prepName, prepLink) = prepName `isSubSeq` prepLink
 
+    prepareNameForCheck :: Text -> Text
+    prepareNameForCheck = T.toLower . T.filter isAlphaNum
 
-prepareRefName :: Text -> Text
-prepareRefName = T.toLower . T.filter isAlphaNum
-
-prepareRefLink :: Text -> Text
-prepareRefLink = T.toLower
-
-isSubSeq :: Text -> Text -> Bool
-isSubSeq "" _str = True
-isSubSeq _que "" = False
-isSubSeq que str
-  | qhead == shead = isSubSeq qtail stail
-  | otherwise      = isSubSeq que stail
-  where (qhead, qtail) = T.splitAt 1 que
-        (shead, stail) = T.splitAt 1 str
+    isSubSeq :: Text -> Text -> Bool
+    isSubSeq "" _str = True
+    isSubSeq _que "" = False
+    isSubSeq que str
+      | qhead == shead = isSubSeq qtail stail
+      | otherwise      = isSubSeq que stail
+      where (qhead, qtail) = T.splitAt 1 que
+            (shead, stail) = T.splitAt 1 str
 
 shouldCheckLocType :: VerifyMode -> LocationType -> Bool
 shouldCheckLocType mode locType

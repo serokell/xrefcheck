@@ -185,3 +185,25 @@ We love open source software! See [our other projects](https://serokell.io/commu
 [kek2](#UPPERCASE-NAMe)
 
 [kek3](#uppercase-name)
+
+[Makefile 1](/make/Makefile)
+[Makefile 2](/make\Makefile)
+[Makefile 3](/make\\Makefile)
+[Makefile 4](/make//Makefile)
+[Makefile 5](/make///Makefile)
+[Makefile 6](/make////Makefile)
+
+[Makefile 1](make/Makefile)
+[Makefile 2](make\Makefile)
+[Makefile 3](make\\Makefile)
+[Makefile 4](make//Makefile)
+
+[Makefile 1](\make/Makefile)
+[Makefile 2](\make\Makefile)
+[Makefile 3](\make\\Makefile)
+[Makefile 4](\make//Makefile)
+
+[Makefile 1](\\make/Makefile)
+[Makefile 2](\\make\Makefile)
+[Makefile 3](\\make\\Makefile)
+[Makefile 4](\\make//Makefile)

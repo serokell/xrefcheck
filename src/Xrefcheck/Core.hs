@@ -21,7 +21,7 @@ import Data.DList qualified as DList
 import Data.List qualified as L
 import Data.Reflection (Given)
 import Data.Text qualified as T
-import Fmt (Buildable (..), Builder)
+import Fmt (Buildable (..))
 import System.FilePath.Posix (isPathSeparator)
 import Text.Interpolation.Nyan
 import Time (Second, Time)
@@ -146,14 +146,6 @@ data DirectoryStatus
   | UntrackedDirectory
   deriving stock (Show)
 
--- | All tracked files and directories.
-data RepoInfo = RepoInfo
- { riFiles       :: Map FilePath FileStatus
-   -- ^ Files from the repo with `FileInfo` attached to files that we've scanned.
- , riDirectories :: Map FilePath DirectoryStatus
-   -- ^ Directories containing those files.
- } deriving stock (Show)
-
 -----------------------------------------------------------
 -- Instances
 -----------------------------------------------------------
@@ -202,19 +194,6 @@ instance Given ColorMode => Buildable FileInfo where
     - anchors:
     #{ interpolateIndentF 4 $ maybe "none" interpolateBlockListF (nonEmpty _fiAnchors) }
     |]
-
-instance Given ColorMode => Buildable RepoInfo where
-  build (RepoInfo m _)
-    | Just scanned <- nonEmpty [(name, info) | (name, Scanned info) <- toPairs m]
-    = interpolateUnlinesF $ buildFileReport <$> scanned
-    where
-      buildFileReport :: ([Char], FileInfo) -> Builder
-      buildFileReport (name, info) =
-        [int||
-        #{ colorIfNeeded Cyan $ name }:
-        #{ interpolateIndentF 2 $ build info }
-        |]
-  build _ = "No scannable files found."
 
 -----------------------------------------------------------
 -- Analysing

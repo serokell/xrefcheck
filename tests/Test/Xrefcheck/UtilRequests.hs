@@ -12,7 +12,6 @@ module Test.Xrefcheck.UtilRequests
 import Universum
 
 import Control.Exception qualified as E
-import Data.Map qualified as M
 import Text.Interpolation.Nyan
 
 import Control.Concurrent (forkIO, killThread)
@@ -20,6 +19,7 @@ import Test.Tasty.HUnit (assertBool)
 import Xrefcheck.Config
 import Xrefcheck.Core
 import Xrefcheck.Progress
+import Xrefcheck.RepoInfo
 import Xrefcheck.Scan
 import Xrefcheck.Util
 import Xrefcheck.Verify
@@ -72,4 +72,4 @@ verifyReferenceWithProgress :: Reference -> IORef VerifyProgress -> IO (VerifyRe
 verifyReferenceWithProgress reference progRef = do
   fmap wrlItem <$> verifyReference
     (defConfig GitHub & cExclusionsL . ecIgnoreExternalRefsToL .~ []) FullMode
-    progRef (RepoInfo M.empty mempty) "." "" reference
+    progRef (mkRepoInfo GitHub mempty mempty) "." "" reference

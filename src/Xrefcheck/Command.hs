@@ -25,7 +25,7 @@ import Xrefcheck.Progress (allowRewrite)
 import Xrefcheck.Scan
   (FormatsSupport, ScanError (..), ScanResult (..), reportScanErrs, scanRepo,
   specificFormatsSupport)
-import Xrefcheck.Scanners.Markdown (markdownSupport)
+import Xrefcheck.Scanners.Markdown (MarkdownConfig (mcFlavor), markdownSupport)
 import Xrefcheck.System (askWithinCI)
 import Xrefcheck.Util
 import Xrefcheck.Verify (reportVerifyErrs, verifyErrors, verifyRepo)
@@ -70,7 +70,9 @@ defaultAction Options{..} = do
 
     (ScanResult scanErrs repoInfo) <- allowRewrite showProgressBar $ \rw -> do
       let fullConfig = addExclusionOptions (cExclusions config) oExclusionOptions
-      scanRepo oScanPolicy rw (formats $ cScanners config) fullConfig oRoot
+          formatsSupport = formats $ cScanners config
+          flavor = mcFlavor $ scMarkdown $ cScanners config
+      scanRepo oScanPolicy rw formatsSupport fullConfig flavor oRoot
 
     when oVerbose $
       fmt [int||

@@ -39,7 +39,7 @@ test_ignoreRegex = give WithoutColors $
   in testGroup "Regular expressions performance"
     [ testCase "Check that only not matched links are verified" $ do
       scanResult <- allowRewrite showProgressBar $ \rw ->
-        scanRepo OnlyTracked rw formats (config ^. cExclusionsL) root
+        scanRepo OnlyTracked rw formats (config ^. cExclusionsL) GitHub root
 
       verifyRes <- allowRewrite showProgressBar $ \rw ->
         verifyRepo rw config verifyMode root $ srRepoInfo scanResult

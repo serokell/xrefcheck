@@ -13,7 +13,6 @@ module Xrefcheck.Scan
   , Extension
   , ScanAction
   , FormatsSupport
-  , RepoInfo (..)
   , ReadDirectoryMode(..)
   , ScanError (..)
   , ScanErrorDescription (..)
@@ -47,6 +46,7 @@ import Text.Regex.TDFA.Text qualified as R
 
 import Xrefcheck.Core
 import Xrefcheck.Progress
+import Xrefcheck.RepoInfo
 import Xrefcheck.System (RelGlobPattern, matchesGlobPatterns, normaliseGlobPattern, readingSystem)
 import Xrefcheck.Util
 
@@ -87,7 +87,7 @@ type FormatsSupport = Extension -> Maybe ScanAction
 data ScanResult = ScanResult
   { srScanErrors :: [ScanError]
   , srRepoInfo   :: RepoInfo
-  } deriving stock (Show)
+  }
 
 data ScanError = ScanError
   { sePosition    :: Position
@@ -189,8 +189,8 @@ readDirectoryWith mode config scanner root =
 
 scanRepo
   :: MonadIO m
-  => ScanPolicy -> Rewrite -> FormatsSupport -> ExclusionConfig -> FilePath -> m ScanResult
-scanRepo scanMode rw formatsSupport config root = do
+  => ScanPolicy -> Rewrite -> FormatsSupport -> ExclusionConfig -> Flavor -> FilePath -> m ScanResult
+scanRepo scanMode rw formatsSupport config flavor root = do
   putTextRewrite rw "Scanning repository..."
 
   when (not $ isDirectory root) $
@@ -221,12 +221,10 @@ scanRepo scanMode rw formatsSupport config root = do
 
   let trackedDirs = foldMap (getDirs . fst) processedFiles
       untrackedDirs = foldMap (getDirs . fst) notProcessedFiles
-  return . ScanResult errs $ RepoInfo
-    { riFiles = M.fromList $ processedFiles <> notProcessedFiles
-    , riDirectories = M.fromList
-                      $ map (, TrackedDirectory) trackedDirs
-                      <> map (, UntrackedDirectory) untrackedDirs
-    }
+  return . ScanResult errs $ mkRepoInfo
+    flavor
+    (processedFiles <> notProcessedFiles)
+    (map (, TrackedDirectory) trackedDirs <> map (, UntrackedDirectory) untrackedDirs)
   where
     mscanner :: FilePath -> Maybe ScanAction
     mscanner = formatsSupport . takeExtension

@@ -78,8 +78,8 @@ data Reference = Reference
   , rAnchor         :: Maybe Text
     -- ^ Section or custom anchor tag.
   , rPos            :: Position
-    -- ^ Whether to check bad copy/paste for this link
   , rCheckCopyPaste :: Bool
+    -- ^ Whether to check bad copy/paste for this link
   } deriving stock (Show, Generic)
 makeLensesWith postfixFields ''Reference
 

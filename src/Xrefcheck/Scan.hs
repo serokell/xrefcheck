@@ -32,7 +32,7 @@ module Xrefcheck.Scan
 import Universum
 
 import Control.Lens (makeLensesWith)
-import Control.Parallel.Strategies
+--import Control.Parallel.Strategies
 import Data.Aeson (FromJSON (..), genericParseJSON, withText)
 import Data.ByteString qualified as BS
 import Data.List qualified as L
@@ -51,6 +51,7 @@ import Xrefcheck.Core
 import Xrefcheck.Progress
 import Xrefcheck.System (RelGlobPattern, matchesGlobPatterns, normaliseGlobPattern, readingSystem)
 import Xrefcheck.Util
+import Control.Concurrent.Async (mapConcurrently)
 
 -- | Type alias for ExclusionConfig' with all required fields.
 type ExclusionConfig = ExclusionConfig' Identity
@@ -207,8 +208,8 @@ scanRepo scanMode rw formatsSupport config root = do
         IncludeUntracked -> RdmBothTrackedAndUtracked
   rawFiles <- liftIO $ readDirectoryWith mode config BS.readFile root >>= evaluateNF
 
-  coupledResults <- liftIO $
-    ((map (\(f, info) -> (f, processFile f info)) rawFiles) `usingIO` parList rdeepseq)
+  coupledResults <- liftIO $ mapConcurrently
+    (\(f, info) -> evaluateNF (f, processFile f info)) rawFiles
 
   let (errs, processedFiles) = (gatherScanErrs &&& gatherFileStatuses) coupledResults
 

@@ -45,6 +45,7 @@ Comparing to alternative solutions, this tool tries to achieve the following poi
 * Supports external links (`http`, `https`, `ftp` and `ftps`).
 * Detects broken and ambiguous anchors in local links.
 * Integration with GitHub Actions.
+* Detects possible bad copy-pastes of links.
 
 ## Dependencies [↑](#xrefcheck)
 
@@ -147,6 +148,21 @@ There are several ways to fix this:
 1. How does `xrefcheck` handle localhost links?
     * By default, `xrefcheck` will ignore links to localhost.
     * This behavior can be disabled by removing the corresponding entry from the `ignoreExternalRefsTo` list in the config file.
+
+1. How do I disable copy-paste check for specific links?
+    * Add a `<!-- xrefcheck: no duplication check in link -->` annotation before the link:
+      ```md
+      <!-- xrefcheck: no duplication check in link -->
+      Links with bad copypaste:
+      [good link](https://good.link.uri/).
+      [copypasted link](https://good.link.uri/).
+      ```
+      ```md
+      A [good link](https://good.link.uri/)
+      followed by an <!-- xrefcheck: no duplication check in link --> [copypasted intentionally](https://good.link.uri/).
+      ```
+    * You can use a `<!-- xrefcheck: no duplication check in paragraph -->` annotation to disable copy-paste check in a paragraph.
+    * You can use a `<!-- xrefcheck: no duplication check in file -->` annotation at the top of the file to disable copy-paste check within an entire file.
 
 ## Further work [↑](#xrefcheck)
 

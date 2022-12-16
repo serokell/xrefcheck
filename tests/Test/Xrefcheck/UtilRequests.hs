@@ -62,7 +62,7 @@ checkLinkAndProgressWithServer mock link progress vrExpectation =
 
 verifyLink :: Text -> IO (VerifyResult VerifyError, Progress Int)
 verifyLink link = do
-  let reference = Reference "" link Nothing (Position Nothing)
+  let reference = Reference "" link Nothing (Position Nothing) False
   progRef <- newIORef $ initVerifyProgress [reference]
   result <- verifyReferenceWithProgress reference progRef
   p <- readIORef progRef

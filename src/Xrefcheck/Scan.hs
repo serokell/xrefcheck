@@ -117,18 +117,27 @@ data ScanErrorDescription
   = LinkErr
   | FileErr
   | ParagraphErr Text
+  | LinkErrCpc
+  | FileErrCpc
+  | ParagraphErrCpc Text
   | UnrecognisedErr Text
   deriving stock (Show, Eq)
 
 instance Buildable ScanErrorDescription where
   build = \case
     LinkErr -> [int||Expected a LINK after "ignore link" annotation|]
+    LinkErrCpc -> [int||Expected a LINK after "no duplication check in link" annotation|]
     FileErr -> [int||Annotation "ignore all" must be at the top of \
+                     markdown or right after comments at the top|]
+    FileErrCpc -> [int||Annotation "no duplication check in file" must be at the top of \
                      markdown or right after comments at the top|]
     ParagraphErr txt -> [int||Expected a PARAGRAPH after \
                               "ignore paragraph" annotation, but found #{txt}|]
-    UnrecognisedErr txt -> [int||Unrecognised option "#{txt}" perhaps you meant \
-                                 <"ignore link"|"ignore paragraph"|"ignore all">|]
+    ParagraphErrCpc txt -> [int||Expected a PARAGRAPH after \
+                              "no duplication check in paragraph" annotation, but found #{txt}|]
+    UnrecognisedErr txt -> [int||Unrecognised option "#{txt}", perhaps you meant
+                                 "ignore <link|paragraph|all>"
+                                 or "no duplication check in <link|paragraph|file>"?|]
 
 specificFormatsSupport :: [([Extension], ScanAction)] -> FormatsSupport
 specificFormatsSupport formats = \ext -> M.lookup ext formatsMap

@@ -54,6 +54,24 @@ instance Buildable C.Node where
   build (C.Node _mpos ty mSubs) = nameF (show ty) $
     maybe "[]" interpolateBlockListF (nonEmpty mSubs)
 
+data Node a = Node
+  { _ndPos :: Maybe PosInfo
+  , _ndType :: NodeType
+  , _ndInfo :: a
+  , _ndSubs :: [Node a]
+  }
+
+instance Buildable (Node a) where
+  build (Node _mpos ty _info mSubs) = nameF (show ty) $
+    maybe "[]" interpolateBlockListF (nonEmpty mSubs)
+
+-- Here and below CPC stands for "copy/paste check"
+type NodeCPC = Node CopyPasteCheck
+
+newtype CopyPasteCheck = CopyPasteCheck
+  { cpcShouldCheck :: Bool
+  } deriving stock (Show, Eq, Generic)
+
 toPosition :: Maybe PosInfo -> Position
 toPosition = Position . \case
   Nothing -> Nothing
@@ -68,7 +86,7 @@ toPosition = Position . \case
         |]
 
 -- | Extract text from the topmost node.
-nodeExtractText :: (C.Node) -> Text
+nodeExtractText :: Node info -> Text
 nodeExtractText = T.strip . mconcat . map extractText . nodeFlatten
   where
     extractText = \case
@@ -76,8 +94,8 @@ nodeExtractText = T.strip . mconcat . map extractText . nodeFlatten
       CODE t -> t
       _ -> ""
 
-    nodeFlatten :: (C.Node) -> [NodeType]
-    nodeFlatten (C.Node _pos ty subs) = ty : concatMap nodeFlatten subs
+    nodeFlatten :: Node info -> [NodeType]
+    nodeFlatten (Node _pos ty _info subs) = ty : concatMap nodeFlatten subs
 
 
 data IgnoreMode
@@ -120,6 +138,7 @@ makeLensesFor [("_ignoreMode", "ignoreMode")] 'Ignore
 
 data Annotation
   = IgnoreAnnotation IgnoreMode
+  | IgnoreCopyPasteCheck IgnoreMode
   | InvalidAnnotation Text
   deriving stock (Eq)
 
@@ -127,6 +146,8 @@ data Annotation
 
 data ScannerState = ScannerState
   { _ssIgnore :: Maybe Ignore
+  , _ssIgnoreCopyPasteCheck :: Maybe Ignore
+  , _ssParagraphExpectedAfterCpcAnnotation :: Bool
   , _ssParentNodeType :: Maybe NodeType
   -- ^ @cataNodeWithParentNodeInfo@ allows to get a @NodeType@ of parent node from this field
   }
@@ -135,7 +156,9 @@ makeLenses ''ScannerState
 initialScannerState :: ScannerState
 initialScannerState = ScannerState
   { _ssIgnore = Nothing
+  , _ssIgnoreCopyPasteCheck = Nothing
   , _ssParentNodeType = Nothing
+  , _ssParagraphExpectedAfterCpcAnnotation = False
   }
 
 type ScannerM a = StateT ScannerState (Writer [ScanError]) a
@@ -155,40 +178,49 @@ cataNodeWithParentNodeInfo f node = cataNode f' node
       map (ssParentNodeType .= Just ty >>) childScanners
 
 -- | Find ignore annotations (ignore paragraph and ignore link)
--- and remove nodes that should be ignored.
-processAnnotations :: FilePath -> C.Node -> Writer [ScanError] C.Node
+-- and remove nodes that should be ignored;
+-- find copy/paste check annotations (ignore for paragraph and for link)
+-- and label nodes with a boolean meaning whether they should be
+-- copy/paste checked.
+processAnnotations :: FilePath -> C.Node -> Writer [ScanError] NodeCPC
 processAnnotations fp = withIgnoreMode . cataNodeWithParentNodeInfo process
   where
     process
       :: Maybe PosInfo
       -> NodeType
-      -> [ScannerM C.Node]
-      -> ScannerM C.Node
+      -> [ScannerM NodeCPC]
+      -> ScannerM NodeCPC
     process pos ty subs = do
       let node = C.Node pos ty []
-      use ssIgnore >>= \ign -> do
+      use ssIgnore >>= \ign ->
+        use ssIgnoreCopyPasteCheck >>= \ignCPC -> do
         -- When no `Ignore` state is set check next node for annotation,
         -- if found then set it as new `IgnoreMode` otherwise skip node.
-        let mbAnnotation = getAnnotation node
-        case mbAnnotation of
+        let shouldCheckCPC = CopyPasteCheck $ isNothing ignCPC
+        let traverseChildren = Node pos ty shouldCheckCPC <$> sequence subs
+        case getAnnotation node of
           Just ann -> handleAnnotation pos ty ann
           Nothing -> do
             case ty of
-              PARAGRAPH -> handleParagraph ign pos ty subs
-              LINK {}   -> handleLink      ign pos ty subs
-              IMAGE {}  -> handleLink      ign pos ty subs
-              _         -> handleOther     ign pos ty subs
+              PARAGRAPH -> handleParagraph ign    traverseChildren
+              LINK {}   -> handleLink      ign ty traverseChildren
+              IMAGE {}  -> handleLink      ign ty traverseChildren
+              _         -> handleOther     ign ty traverseChildren
 
-    handleLink ::
-      Maybe Ignore ->
-      Maybe PosInfo ->
-      NodeType ->
-      [ScannerM C.Node] ->
-      ScannerM C.Node
-    handleLink ign pos ty subs = do
-      let traverseChildren = C.Node pos ty <$> sequence subs
-      -- It can be checked that it's correct for all the cases
+    handleLink
+      :: Maybe Ignore
+      -> NodeType
+      -> ScannerM NodeCPC
+      -> ScannerM NodeCPC
+    handleLink ign ty traverseChildren = do
+      -- It's common for all ignore states
       ssIgnore .= Nothing
+      -- If there was a copy/paste ignore annotation that expected link,
+      -- reset this state
+      resetCpcIgnoreIfLink
+      -- If right now there was a copy/paste ignore annotation for paragraph,
+      -- emit an error and reset these states.
+      reportExpectedParagraphAfterIgnoreCpcAnnotation ty
 
       case ign of
         Nothing -> traverseChildren
@@ -198,75 +230,125 @@ processAnnotations fp = withIgnoreMode . cataNodeWithParentNodeInfo process
         Just (Ignore (IMSLink _) _) -> do
           pure defNode
 
-    handleParagraph ::
-      Maybe Ignore ->
-      Maybe PosInfo ->
-      NodeType ->
-      [ScannerM C.Node] ->
-      ScannerM C.Node
-    handleParagraph ign pos ty subs = do
-      let traverseChildren = C.Node pos ty <$> sequence subs
+    handleParagraph
+      :: Maybe Ignore
+      -> ScannerM NodeCPC
+      -> ScannerM NodeCPC
+    handleParagraph ign traverseChildren = do
+      -- If a new paragraph was expected (this stands for True), now we
+      -- don't expect paragraphs any more.
+      ssParagraphExpectedAfterCpcAnnotation .= False
       node <- case ign of
-        Nothing -> traverseChildren
+        Nothing ->
+          wrapTraverseNodeWithLinkExpectedForCpc traverseChildren
         Just (Ignore IMSParagraph _) -> do
           ssIgnore .= Nothing
           pure defNode
         Just (Ignore (IMSLink ignoreLinkState) modePos) ->
-          traverseNodeWithLinkExpected ignoreLinkState modePos pos ty subs
+          wrapTraverseNodeWithLinkExpected ignoreLinkState modePos $
+          wrapTraverseNodeWithLinkExpectedForCpc traverseChildren
+
+      ssIgnoreCopyPasteCheck .= Nothing
 
       use ssIgnore >>= \case
-        Just (Ignore (IMSLink ExpectingLinkInParagraph) pragmaPos) ->
+        Just (Ignore (IMSLink ExpectingLinkInParagraph) pragmaPos) -> do
           lift $ tell $ makeError pragmaPos fp LinkErr
+          ssIgnore .= Nothing
         _ -> pass
+      use ssIgnoreCopyPasteCheck >>= \case
+        Just (Ignore (IMSLink ExpectingLinkInParagraph) pragmaPos) -> do
+          lift $ tell $ makeError pragmaPos fp LinkErrCpc
+          ssIgnoreCopyPasteCheck .= Nothing
+        _ -> pass
+
       pure node
 
-    handleOther ::
-      Maybe Ignore ->
-      Maybe PosInfo ->
-      NodeType ->
-      [ScannerM C.Node] ->
-      ScannerM C.Node
-    handleOther ign pos ty subs = do
-      let traverseChildren = C.Node pos ty <$> sequence subs
+    handleOther
+      :: Maybe Ignore
+      -> NodeType
+      -> ScannerM NodeCPC
+      -> ScannerM NodeCPC
+    handleOther ign ty traverseChildren = do
+      -- If right now there was a copy/paste ignore annotation for paragraph,
+      -- emit an error and reset these states.
+      reportExpectedParagraphAfterIgnoreCpcAnnotation ty
 
       case ign of
-        Nothing -> traverseChildren
+        Nothing ->
+          wrapTraverseNodeWithLinkExpectedForCpc traverseChildren
         Just (Ignore IMSParagraph modePos) -> do
           reportExpectedParagraphAfterIgnoreAnnotation modePos ty
           ssIgnore .= Nothing
-          traverseChildren
-        Just (Ignore (IMSLink ignoreLinkState) modePos) -> do
-          traverseNodeWithLinkExpected ignoreLinkState modePos pos ty subs
+          wrapTraverseNodeWithLinkExpectedForCpc traverseChildren
+        Just (Ignore (IMSLink ignoreLinkState) modePos) ->
+          wrapTraverseNodeWithLinkExpected ignoreLinkState modePos $
+          wrapTraverseNodeWithLinkExpectedForCpc traverseChildren
 
     reportExpectedParagraphAfterIgnoreAnnotation :: Maybe PosInfo -> NodeType -> ScannerM ()
     reportExpectedParagraphAfterIgnoreAnnotation modePos ty =
       lift . tell . makeError modePos fp . ParagraphErr $ prettyType ty
 
-    traverseNodeWithLinkExpected ::
-      IgnoreLinkState ->
-      Maybe PosInfo ->
-      Maybe PosInfo ->
-      NodeType ->
-      [ScannerM C.Node] ->
-      ScannerM C.Node
-    traverseNodeWithLinkExpected ignoreLinkState modePos pos ty subs = do
-      when (ignoreLinkState == ExpectingLinkInSubnodes) $
-        ssIgnore . _Just . ignoreMode .= IMSLink ParentExpectsLink
-      node' <- C.Node pos ty <$> sequence subs
-      when (ignoreLinkState == ExpectingLinkInSubnodes) $ do
+    resetCpcIgnoreIfLink :: ScannerM ()
+    resetCpcIgnoreIfLink = do
+      curCpcIgnore <- use ssIgnoreCopyPasteCheck
+      case _ignoreMode <$> curCpcIgnore of
+        Just (IMSLink _) -> ssIgnoreCopyPasteCheck .= Nothing
+        _ -> pass
+
+    reportExpectedParagraphAfterIgnoreCpcAnnotation
+      :: NodeType
+      -> ScannerM ()
+    reportExpectedParagraphAfterIgnoreCpcAnnotation ty =
+      use ssIgnoreCopyPasteCheck >>= \case
+        Just (Ignore IMSParagraph modePos) ->
+          whenM (use ssParagraphExpectedAfterCpcAnnotation) $ do
+            lift . tell . makeError modePos fp . ParagraphErrCpc $ prettyType ty
+            ssParagraphExpectedAfterCpcAnnotation .= False
+            ssIgnoreCopyPasteCheck .= Nothing
+        _ -> pass
+
+    wrapTraverseNodeWithLinkExpected
+      :: IgnoreLinkState
+      -> Maybe PosInfo
+      -> ScannerM NodeCPC
+      -> ScannerM NodeCPC
+    wrapTraverseNodeWithLinkExpected ignoreLinkState modePos =
+      if ignoreLinkState /= ExpectingLinkInSubnodes
+      then id
+      else \traverse' -> do
+        ssIgnore . _Just . ignoreMode .=  IMSLink ParentExpectsLink
+        node' <- traverse'
         currentIgnore <- use ssIgnore
         case currentIgnore of
           Just (Ignore {_ignoreMode = IMSLink ParentExpectsLink}) -> do
             lift $ tell $ makeError modePos fp LinkErr
             ssIgnore .= Nothing
           _ -> pass
-      return node'
+        return node'
+
+    wrapTraverseNodeWithLinkExpectedForCpc
+      :: ScannerM NodeCPC
+      -> ScannerM NodeCPC
+    wrapTraverseNodeWithLinkExpectedForCpc traverse' = do
+      ignoreCpc <- use ssIgnoreCopyPasteCheck
+      case ignoreCpc of
+        Just (Ignore (IMSLink ExpectingLinkInSubnodes) modePos) -> do
+          ssIgnoreCopyPasteCheck . _Just . ignoreMode .=  IMSLink ParentExpectsLink
+          node' <- traverse'
+          currentIgnore <- use ssIgnoreCopyPasteCheck
+          case currentIgnore of
+            Just (Ignore {_ignoreMode = IMSLink ParentExpectsLink}) -> do
+              lift $ tell $ makeError modePos fp LinkErrCpc
+              ssIgnoreCopyPasteCheck .= Nothing
+            _ -> pass
+          return node'
+        _ -> traverse'
 
     handleAnnotation
       :: Maybe PosInfo
       -> NodeType
       -> Annotation
-      -> ScannerM C.Node
+      -> ScannerM NodeCPC
     handleAnnotation pos nodeType = \case
       IgnoreAnnotation mode -> do
         let reportIfThereWasAnnotation :: ScannerM ()
@@ -300,6 +382,41 @@ processAnnotations fp = withIgnoreMode . cataNodeWithParentNodeInfo process
         whenJust mbIgnoreModeState $ \ignoreModeState ->
           (ssIgnore .= Just (Ignore ignoreModeState correctPos))
         pure defNode
+      IgnoreCopyPasteCheck mode -> do
+        mbIgnoreModeState <- case mode of
+          IMLink -> use ssParentNodeType <&> Just . IMSLink . \case
+             Just PARAGRAPH -> ExpectingLinkInParagraph
+             _ -> ExpectingLinkInSubnodes
+
+          IMParagraph -> do
+            ssParagraphExpectedAfterCpcAnnotation .= True
+            pure $ Just IMSParagraph
+
+          -- We don't expect to find an `ignore all` annotation here,
+          -- since that annotation should be at the top of the file and
+          -- any correct annotations should be handled in `checkGlobalAnnotations`
+          -- function.
+          IMAll -> do
+            lift . tell $ makeError correctPos fp FileErrCpc
+            pure Nothing
+
+        whenJust mbIgnoreModeState $ \ignoreModeState -> do
+          let setupNewCpcState = ssIgnoreCopyPasteCheck .= Just (Ignore ignoreModeState correctPos)
+          use ssIgnoreCopyPasteCheck >>= \case
+            Nothing -> setupNewCpcState
+            Just (Ignore curIgn prevPos)
+              | IMSLink _ <- curIgn -> do
+              lift $ tell $ makeError prevPos fp LinkErrCpc
+              setupNewCpcState
+              | IMSParagraph <- curIgn -> case ignoreModeState of
+                  IMSParagraph -> do
+                    lift . tell . makeError prevPos fp . ParagraphErrCpc $ prettyType nodeType
+                    setupNewCpcState
+                  -- It's OK to have link annotation when paragraph is ignored
+                  -- because in this case all links and all annotations are ignored.
+                  _ -> pass
+        pure defNode
+
       InvalidAnnotation msg -> do
         lift . tell $ makeError correctPos fp $ UnrecognisedErr msg
         pure defNode
@@ -312,8 +429,8 @@ processAnnotations fp = withIgnoreMode . cataNodeWithParentNodeInfo process
       in fromMaybe "" mType
 
     withIgnoreMode
-      :: ScannerM C.Node
-      -> Writer [ScanError] C.Node
+      :: ScannerM (Node info)
+      -> Writer [ScanError] (Node info)
     withIgnoreMode action = action `runStateT` initialScannerState >>= \case
       -- We expect `Ignore` state to be `Nothing` when we reach EOF,
       -- otherwise that means there was an annotation that didn't match
@@ -328,8 +445,8 @@ processAnnotations fp = withIgnoreMode . cataNodeWithParentNodeInfo process
       (node, _) -> pure node
 
 -- | Custom `foldMap` for source tree.
-foldNode :: (Monoid a, Monad m) => (C.Node -> m a) -> C.Node -> m a
-foldNode action node@(C.Node _ _ subs) = do
+foldNode :: (Monoid a, Monad m) => (Node info -> m a) -> Node info -> m a
+foldNode action node@(Node _ _ _ subs) = do
   a <- action node
   b <- concatForM subs (foldNode action)
   return (a <> b)
@@ -342,16 +459,16 @@ nodeExtractInfo
   -> C.Node
   -> ExtractorM FileInfo
 nodeExtractInfo fp (C.Node nPos nTy nSubs) = do
-  let (ignoreFile, contentNodes) = checkGlobalAnnotations nSubs
+  let (ignoreFile, ignoreCpcInFile, contentNodes) = checkGlobalAnnotations nSubs
   if ignoreFile
   then return def
-  else diffToFileInfo <$>
+  else diffToFileInfo (not ignoreCpcInFile) <$>
        (lift (processAnnotations fp $ C.Node nPos nTy contentNodes)
          >>= foldNode extractor)
 
   where
-    extractor :: C.Node -> ExtractorM FileInfoDiff
-    extractor node@(C.Node pos ty _) =
+    extractor :: NodeCPC -> ExtractorM FileInfoDiff
+    extractor node@(Node pos ty info _) =
       case ty of
         HTML_BLOCK _ -> do
           return mempty
@@ -401,15 +518,17 @@ nodeExtractInfo fp (C.Node nPos nTy nSubs) = do
                  t : ts -> (t, Just $ T.intercalate "#" ts)
                  []     -> error "impossible"
          return $ FileInfoDiff
-           (DList.singleton $ Reference {rName, rPos, rLink, rAnchor})
+           (DList.singleton $
+              Reference {rName, rPos, rLink, rAnchor, rCheckCopyPaste = cpcShouldCheck info})
            DList.empty
 
 -- | Check for global annotations, ignoring simple comments if there are any.
-checkGlobalAnnotations :: [C.Node] -> (Bool, [C.Node])
+checkGlobalAnnotations :: [C.Node] -> (Bool, Bool, [C.Node])
 checkGlobalAnnotations nodes = do
   let (headerNodes, contentsNodes) = span isHeaderNode nodes
       ignoreFile = any isIgnoreFile headerNodes
-  (ignoreFile, contentsNodes)
+      ignoreCpcInFile = any isIgnoreCpcWithinFile headerNodes
+  (ignoreFile, ignoreCpcInFile, contentsNodes)
   where
     isSimpleComment :: C.Node -> Bool
     isSimpleComment node = do
@@ -420,15 +539,20 @@ checkGlobalAnnotations nodes = do
     isIgnoreFile :: C.Node -> Bool
     isIgnoreFile = (Just (IgnoreAnnotation IMAll) ==) . getAnnotation
 
+    isIgnoreCpcWithinFile :: C.Node -> Bool
+    isIgnoreCpcWithinFile = (Just (IgnoreCopyPasteCheck IMAll) ==) . getAnnotation
+
     isHeaderNode :: C.Node -> Bool
     isHeaderNode node =
       any ($ node)
         [ isSimpleComment
         , isIgnoreFile
+        , isIgnoreCpcWithinFile
         ]
 
-defNode :: C.Node
-defNode = C.Node Nothing DOCUMENT [] -- hard-coded default Node
+-- | Hard-coded default Node
+defNode :: NodeCPC
+defNode = Node Nothing DOCUMENT (CopyPasteCheck False) []
 
 makeError
   :: Maybe PosInfo
@@ -473,6 +597,8 @@ textToMode :: Text -> Annotation
 textToMode annText = case wordsList of
   ("ignore" : [x])
     | Just ignMode <- getIgnoreMode x -> IgnoreAnnotation ignMode
+  ("no" : "duplication" : "check" : "in" : [x])
+    | Just ignMode <- getIgnoreMode x -> IgnoreCopyPasteCheck ignMode
   _ -> InvalidAnnotation annText
   where
     wordsList = words annText
@@ -482,6 +608,7 @@ getIgnoreMode = \case
   "link" -> Just IMLink
   "paragraph" -> Just IMParagraph
   "all" -> Just IMAll
+  "file" -> Just IMAll
   _ -> Nothing
 
 parseFileInfo :: MarkdownConfig -> FilePath -> LT.Text -> (FileInfo, [ScanError])

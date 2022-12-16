@@ -139,7 +139,7 @@ data FileStatus
   -- ^ We are not scanning files that are not added to git
   -- unless --include-untracked CLI option was enabled, but we're
   -- gathering information about them to improve reports.
-  deriving stock (Show)
+  deriving stock (Show, Generic)
 
 data DirectoryStatus
   = TrackedDirectory
@@ -163,6 +163,7 @@ instance NFData Reference
 instance NFData AnchorType
 instance NFData Anchor
 instance NFData FileInfo
+instance NFData FileStatus
 
 instance Given ColorMode => Buildable Reference where
   build Reference{..} =

@@ -32,6 +32,7 @@ module Xrefcheck.Scan
 import Universum
 
 import Control.Lens (makeLensesWith)
+import Control.Parallel.Strategies
 import Data.Aeson (FromJSON (..), genericParseJSON, withText)
 import Data.List qualified as L
 import Data.Map qualified as M
@@ -93,7 +94,8 @@ data ScanError = ScanError
   { sePosition    :: Position
   , seFile        :: FilePath
   , seDescription :: ScanErrorDescription
-  } deriving stock (Show, Eq)
+  } deriving stock (Show, Eq, Generic)
+
 
 instance Given ColorMode => Buildable ScanError where
   build ScanError{..} = [int||
@@ -103,6 +105,9 @@ instance Given ColorMode => Buildable ScanError where
     #{seDescription}
 
     |]
+
+instance NFData ScanError
+instance NFData ScanErrorDescription
 
 reportScanErrs :: Given ColorMode => NonEmpty ScanError -> IO ()
 reportScanErrs errs = fmt
@@ -118,7 +123,7 @@ data ScanErrorDescription
   | FileErr
   | ParagraphErr Text
   | UnrecognisedErr Text
-  deriving stock (Show, Eq)
+  deriving stock (Show, Eq, Generic)
 
 instance Buildable ScanErrorDescription where
   build = \case
@@ -196,13 +201,14 @@ scanRepo scanMode rw formatsSupport config root = do
   when (not $ isDirectory root) $
     die $ "Repository's root does not seem to be a directory: " <> root
 
-  (errs, processedFiles) <-
-    let mode = case scanMode of
-          OnlyTracked -> RdmTracked
-          IncludeUntracked -> RdmBothTrackedAndUtracked
-    in liftIO
-    $ (gatherScanErrs &&& gatherFileStatuses)
-    <$> readDirectoryWith mode config processFile root
+  let mode = case scanMode of
+        OnlyTracked -> RdmTracked
+        IncludeUntracked -> RdmBothTrackedAndUtracked
+  coupledResultsThunk <- liftIO $ readDirectoryWith mode config processFile root
+
+  coupledResults <- liftIO $ (coupledResultsThunk `usingIO` parList rdeepseq)
+
+  let (errs, processedFiles) = (gatherScanErrs &&& gatherFileStatuses) coupledResults
 
   notProcessedFiles <-  case scanMode of
     OnlyTracked -> liftIO $

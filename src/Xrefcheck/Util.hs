@@ -14,7 +14,7 @@ module Xrefcheck.Util
   , utcTimeToTimeSecond
   , module Xrefcheck.Util.Colorize
   , module Xrefcheck.Util.Interpolate
-  ) where
+  , printTimeSince, initialTime, printTimestamps) where
 
 import Universum
 
@@ -23,13 +23,15 @@ import Data.Aeson qualified as Aeson
 import Data.Aeson.Casing (aesonPrefix, camelCase)
 import Data.Fixed (Fixed (MkFixed), HasResolution (resolution))
 import Data.Ratio ((%))
-import Data.Time (UTCTime)
-import Data.Time.Clock (nominalDiffTimeToSeconds)
+import Data.Time (UTCTime, diffUTCTime, getCurrentTime, nominalDiffTimeToSeconds)
 import Data.Time.Clock.POSIX (POSIXTime, utcTimeToPOSIXSeconds)
 import Fmt (Builder)
 import System.FilePath.Posix (dropTrailingPathSeparator, normalise)
 import Time (Second, Time (..), sec)
 
+import Data.Text qualified as T
+import GHC.IO (unsafePerformIO)
+import Text.Printf (printf)
 import Xrefcheck.Util.Colorize
 import Xrefcheck.Util.Interpolate
 
@@ -64,3 +66,24 @@ posixTimeToTimeSecond posixTime =
 
 utcTimeToTimeSecond :: UTCTime -> Time Second
 utcTimeToTimeSecond = posixTimeToTimeSecond . utcTimeToPOSIXSeconds
+
+initialTime :: UTCTime
+{-# NOINLINE initialTime #-}
+initialTime = unsafePerformIO getCurrentTime
+
+timePrints :: IORef [(Text, Text)]
+{-# NOINLINE timePrints #-}
+timePrints = unsafePerformIO $ newIORef []
+
+printTimeSince :: Text -> IO ()
+printTimeSince descr = do
+  t1 <- getCurrentTime
+  atomicModifyIORef' timePrints $ \lst -> do
+    let time = (printf "time: %.2fs" (realToFrac (diffUTCTime t1 initialTime) :: Double)) :: String
+    ((descr, T.pack time) : lst, ())
+
+printTimestamps :: IO ()
+printTimestamps = do
+  entries <- reverse <$> readIORef timePrints
+  forM_ entries $ \(descr, time) ->
+    hPutStrLn stderr $ descr <> "; " <> time

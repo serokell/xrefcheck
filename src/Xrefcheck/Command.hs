@@ -9,6 +9,7 @@ module Xrefcheck.Command
 
 import Universum
 
+import Control.Exception (evaluate)
 import Data.Reflection (give)
 import Data.Yaml (decodeFileEither, prettyPrintParseException)
 import Fmt (build, fmt, fmtLn)
@@ -48,7 +49,10 @@ findFirstExistingFile = \case
     if exists then pure (Just file) else findFirstExistingFile files
 
 defaultAction :: Options -> IO ()
-defaultAction Options{..} = do
+defaultAction Options{..} = flip finally printTimestamps $ do
+  _ <- evaluate initialTime
+  printTimeSince "start"
+
   coloringSupported <- supportsPretty
   give (if coloringSupported then oColorMode else WithoutColors) $ do
     config <- case oConfigPath of
@@ -68,6 +72,7 @@ defaultAction Options{..} = do
     withinCI <- askWithinCI
     let showProgressBar = oShowProgressBar ?: not withinCI
 
+    printTimeSince "start scan repo"
     (ScanResult scanErrs repoInfo) <- allowRewrite showProgressBar $ \rw -> do
       let fullConfig = addExclusionOptions (cExclusions config) oExclusionOptions
       scanRepo oScanPolicy rw (formats $ cScanners config) fullConfig oRoot
@@ -81,10 +86,13 @@ defaultAction Options{..} = do
 
     whenJust (nonEmpty $ sortBy (compare `on` seFile) scanErrs) $ reportScanErrs
 
+    printTimeSince "end scan repo"
+    printTimeSince "start verify repo"
     verifyRes <- allowRewrite showProgressBar $ \rw -> do
       let fullConfig = config
             { cNetworking = addNetworkingOptions (cNetworking config) oNetworkingOptions }
       verifyRepo rw fullConfig oMode oRoot repoInfo
+    printTimeSince "end verify repo"
 
     case verifyErrors verifyRes of
       Nothing | null scanErrs -> fmtLn "All repository links are valid."

@@ -34,6 +34,7 @@ import Universum
 import Control.Lens (makeLensesWith)
 import Control.Parallel.Strategies
 import Data.Aeson (FromJSON (..), genericParseJSON, withText)
+import Data.ByteString qualified as BS
 import Data.List qualified as L
 import Data.Map qualified as M
 import Data.Reflection (Given)
@@ -80,7 +81,7 @@ normaliseExclusionConfigFilePaths ec@ExclusionConfig{..}
 type Extension = String
 
 -- | Way to parse a file.
-type ScanAction = FilePath -> IO (FileInfo, [ScanError])
+type ScanAction = FilePath -> BS.ByteString -> (FileInfo, [ScanError])
 
 -- | All supported ways to parse a file.
 type FormatsSupport = Extension -> Maybe ScanAction
@@ -204,9 +205,10 @@ scanRepo scanMode rw formatsSupport config root = do
   let mode = case scanMode of
         OnlyTracked -> RdmTracked
         IncludeUntracked -> RdmBothTrackedAndUtracked
-  coupledResultsThunk <- liftIO $ readDirectoryWith mode config processFile root
+  rawFiles <- liftIO $ readDirectoryWith mode config BS.readFile root >>= evaluateNF
 
-  coupledResults <- liftIO $ (coupledResultsThunk `usingIO` parList rdeepseq)
+  coupledResults <- liftIO $
+    ((map (\(f, info) -> (f, processFile f info)) rawFiles) `usingIO` parList rdeepseq)
 
   let (errs, processedFiles) = (gatherScanErrs &&& gatherFileStatuses) coupledResults
 
@@ -254,10 +256,10 @@ scanRepo scanMode rw formatsSupport config root = do
       -> [(FilePath, FileStatus)]
     gatherFileStatuses = map (second fst)
 
-    processFile :: FilePath -> IO (FileStatus, [ScanError])
-    processFile file = case mscanner file of
-        Nothing -> pure (NotScannable, [])
-        Just scanner -> scanner file <&> _1 %~ Scanned
+    processFile :: FilePath -> BS.ByteString -> (FileStatus, [ScanError])
+    processFile file input = case mscanner file of
+        Nothing -> (NotScannable, [])
+        Just scanner -> scanner file input & _1 %~ Scanned
 
 -----------------------------------------------------------
 -- Yaml instances

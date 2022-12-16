@@ -4,7 +4,7 @@
      scan error at src:35:1-25:
 
      Unrecognised option "no dh", perhaps you meant
-     <"ignore link"|"ignore paragraph"|"ignore all">
+     "ignore <link|paragraph|all>"
      or "no duplication check in <link|paragraph|file>"?
 
   ➥  In file second-file.md

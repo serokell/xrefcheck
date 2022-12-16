@@ -107,8 +107,8 @@ data FileInfoDiff = FileInfoDiff
 makeLenses ''FileInfoDiff
 
 diffToFileInfo :: Bool -> FileInfoDiff -> FileInfo
-diffToFileInfo ignoreCpcInFile (FileInfoDiff refs anchors) =
-    FileInfo (DList.toList refs) (DList.toList anchors) ignoreCpcInFile
+diffToFileInfo cpcEnabledInFile (FileInfoDiff refs anchors) =
+    FileInfo (DList.toList refs) (DList.toList anchors) cpcEnabledInFile
 
 instance Semigroup FileInfoDiff where
   FileInfoDiff a b <> FileInfoDiff c d = FileInfoDiff (a <> c) (b <> d)

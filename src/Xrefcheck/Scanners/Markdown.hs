@@ -207,11 +207,11 @@ processAnnotations fp = withIgnoreMode . cataNodeWithParentNodeInfo process
               IMAGE {}  -> handleLink      ign ty traverseChildren
               _         -> handleOther     ign ty traverseChildren
 
-    handleLink ::
-      Maybe Ignore ->
-      NodeType ->
-      ScannerM NodeCPC ->
-      ScannerM NodeCPC
+    handleLink
+      :: Maybe Ignore
+      -> NodeType
+      -> ScannerM NodeCPC
+      -> ScannerM NodeCPC
     handleLink ign ty traverseChildren = do
       -- It's common for all ignore states
       ssIgnore .= Nothing
@@ -230,10 +230,10 @@ processAnnotations fp = withIgnoreMode . cataNodeWithParentNodeInfo process
         Just (Ignore (IMSLink _) _) -> do
           pure defNode
 
-    handleParagraph ::
-      Maybe Ignore ->
-      ScannerM NodeCPC ->
-      ScannerM NodeCPC
+    handleParagraph
+      :: Maybe Ignore
+      -> ScannerM NodeCPC
+      -> ScannerM NodeCPC
     handleParagraph ign traverseChildren = do
       -- If a new paragraph was expected (this stands for True), now we
       -- don't expect paragraphs any more.
@@ -263,11 +263,11 @@ processAnnotations fp = withIgnoreMode . cataNodeWithParentNodeInfo process
 
       pure node
 
-    handleOther ::
-      Maybe Ignore ->
-      NodeType ->
-      ScannerM NodeCPC ->
-      ScannerM NodeCPC
+    handleOther
+      :: Maybe Ignore
+      -> NodeType
+      -> ScannerM NodeCPC
+      -> ScannerM NodeCPC
     handleOther ign ty traverseChildren = do
       -- If right now there was a copy/paste ignore annotation for paragraph,
       -- emit an error and reset these states.
@@ -295,8 +295,9 @@ processAnnotations fp = withIgnoreMode . cataNodeWithParentNodeInfo process
         Just (IMSLink _) -> ssIgnoreCopyPasteCheck .= Nothing
         _ -> pass
 
-    reportExpectedParagraphAfterIgnoreCpcAnnotation ::
-      NodeType -> ScannerM ()
+    reportExpectedParagraphAfterIgnoreCpcAnnotation
+      :: NodeType
+      -> ScannerM ()
     reportExpectedParagraphAfterIgnoreCpcAnnotation ty =
       use ssIgnoreCopyPasteCheck >>= \case
         Just (Ignore IMSParagraph modePos) ->
@@ -306,11 +307,11 @@ processAnnotations fp = withIgnoreMode . cataNodeWithParentNodeInfo process
             ssIgnoreCopyPasteCheck .= Nothing
         _ -> pass
 
-    wrapTraverseNodeWithLinkExpected ::
-      IgnoreLinkState ->
-      Maybe PosInfo ->
-      ScannerM NodeCPC ->
-      ScannerM NodeCPC
+    wrapTraverseNodeWithLinkExpected
+      :: IgnoreLinkState
+      -> Maybe PosInfo
+      -> ScannerM NodeCPC
+      -> ScannerM NodeCPC
     wrapTraverseNodeWithLinkExpected ignoreLinkState modePos =
       if ignoreLinkState /= ExpectingLinkInSubnodes
       then id
@@ -325,9 +326,9 @@ processAnnotations fp = withIgnoreMode . cataNodeWithParentNodeInfo process
           _ -> pass
         return node'
 
-    wrapTraverseNodeWithLinkExpectedForCpc ::
-      ScannerM NodeCPC ->
-      ScannerM NodeCPC
+    wrapTraverseNodeWithLinkExpectedForCpc
+      :: ScannerM NodeCPC
+      -> ScannerM NodeCPC
     wrapTraverseNodeWithLinkExpectedForCpc traverse' = do
       ignoreCpc <- use ssIgnoreCopyPasteCheck
       case ignoreCpc of

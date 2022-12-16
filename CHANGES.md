@@ -41,7 +41,7 @@ Unreleased
 * [#231](https://github.com/serokell/xrefcheck/pull/231)
   + Anchor analysis takes now into account the appropriate case-sensitivity depending on
   the configured Markdown flavour.
-* [240](https://github.com/serokell/xrefcheck/pull/240)
+* [#240](https://github.com/serokell/xrefcheck/pull/240)
   + Now xrefcheck is able to detect possible copy-pastes relying on links and their names.
 
 0.2.2

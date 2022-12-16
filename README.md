@@ -162,7 +162,7 @@ There are several ways to fix this:
       followed by an <!-- xrefcheck: no duplication check in link --> [copypasted intentionally](https://good.link.uri/).
       ```
     * You can use a `<!-- xrefcheck: no duplication check in paragraph -->` annotation to disable copy-paste check in a paragraph.
-    * You can use a `<!-- xrefcheck: no duplication check in file -->` annotation to disable copy-paste check within an entire file.
+    * You can use a `<!-- xrefcheck: no duplication check in file -->` annotation at the top of the file to disable copy-paste check within an entire file.
 
 ## Further work [↑](#xrefcheck)
 

@@ -136,7 +136,7 @@ instance Buildable ScanErrorDescription where
     ParagraphErrCpc txt -> [int||Expected a PARAGRAPH after \
                               "no duplication check in paragraph" annotation, but found #{txt}|]
     UnrecognisedErr txt -> [int||Unrecognised option "#{txt}", perhaps you meant
-                                 <"ignore link"|"ignore paragraph"|"ignore all">
+                                 "ignore <link|paragraph|all>"
                                  or "no duplication check in <link|paragraph|file>"?|]
 
 specificFormatsSupport :: [([Extension], ScanAction)] -> FormatsSupport

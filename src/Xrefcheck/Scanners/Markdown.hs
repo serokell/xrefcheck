@@ -24,7 +24,7 @@ import CMarkGFM
 import Control.Lens (_Just, makeLenses, makeLensesFor, (.=))
 import Control.Monad.Trans.Writer.CPS (Writer, runWriter, tell)
 import Data.Aeson (FromJSON (..), genericParseJSON)
-import Data.ByteString.Lazy qualified as BSL
+import Data.ByteString qualified as BS
 import Data.DList qualified as DList
 import Data.Default (def)
 import Data.Text qualified as T
@@ -415,7 +415,7 @@ parseFileInfo config fp input
   $ toStrict input
 
 markdownScanner :: MarkdownConfig -> ScanAction
-markdownScanner config path = parseFileInfo config path . decodeUtf8 <$> BSL.readFile path
+markdownScanner config path = parseFileInfo config path . decodeUtf8 <$> BS.readFile path
 
 markdownSupport :: MarkdownConfig -> ([Extension], ScanAction)
 markdownSupport config = ([".md"], markdownScanner config)

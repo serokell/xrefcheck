@@ -6,6 +6,8 @@
 # $ niv update hackage.nix; niv update stackage.nix
 resolver: lts-19.13
 
+system-ghc: true
+
 packages:
 - .
 

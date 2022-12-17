@@ -1,0 +1,38 @@
+# SPDX-FileCopyrightText: 2022 Serokell <https://serokell.io/>
+#
+# SPDX-License-Identifier: MPL-2.0
+
+name: Danger
+
+on: [pull_request]
+
+jobs:
+  danger-instant-checks:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: '2.7'
+        bundler-cache: true
+    - uses: MeilCli/danger-action@v5
+      name: Checks
+      with:
+        # plugins_file: 'Gemfile'
+        install_path: 'vendor/bundle'
+        danger_file: './danger/instant-checks.rb'
+        danger_id: 'instant-checks'
+        fail_on_stderr_when_danger: true
+      env:
+        DANGER_GITHUB_API_TOKEN: ${{ secrets.DANGER_BOT_TOKEN }}
+
+    # - uses: MeilCli/danger-action@v5
+    #   name: Premerge checks
+    #   with:
+    #     plugins_file: 'Gemfile'
+    #     install_path: 'vendor/bundle'
+    #     danger_file: './danger/premerge-checks.rb'
+    #     danger_id: 'premerge-checks'
+    #     fail_on_stderr_when_danger: true
+    #   env:
+    #     DANGER_GITHUB_API_TOKEN: ${{ secrets.DANGER_BOT_TOKEN }}

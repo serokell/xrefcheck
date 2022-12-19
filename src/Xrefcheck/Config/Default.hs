@@ -7,6 +7,7 @@ module Xrefcheck.Config.Default where
 
 import Universum
 
+import Fmt (Builder)
 import Text.Interpolation.Nyan
 
 import Xrefcheck.Core
@@ -65,21 +66,44 @@ networking:
   # On other errors xrefcheck fails immediately, without retrying.
   maxRetries: 3
 
-# Querying a given domain that ever returned 429 before,
-# this defines how many timeouts are allowed during retries.
-#
-# For such domains, timeouts likely mean hitting the rate limiter,
-# and so xrefcheck considers timeouts in the same way as 429 errors.
-#
-# For other domains, a timeout results in a respective error, no retry
-# attempts will be performed. Use `externalRefCheckTimeout` option
-# to increase the time after which timeout is declared.
-#
-# This option is similar to `maxRetries`, the difference is that
-# this `maxTimeoutRetries` option limits only the number of retries
-# caused by timeouts, and `maxRetries` limits the number of retries
-# caused both by 429s and timeouts.
+  # Querying a given domain that ever returned 429 before,
+  # this defines how many timeouts are allowed during retries.
+  #
+  # For such domains, timeouts likely mean hitting the rate limiter,
+  # and so xrefcheck considers timeouts in the same way as 429 errors.
+  #
+  # For other domains, a timeout results in a respective error, no retry
+  # attempts will be performed. Use `externalRefCheckTimeout` option
+  # to increase the time after which timeout is declared.
+  #
+  # This option is similar to `maxRetries`, the difference is that
+  # this `maxTimeoutRetries` option limits only the number of retries
+  # caused by timeouts, and `maxRetries` limits the number of retries
+  # caused both by 429s and timeouts.
   maxTimeoutRetries: 1
+
+  # Maximum number of links that can be followed in a single redirect
+  # chain.
+  #
+  # The link is considered as invalid if the limit is exceeded.
+  maxRedirectFollows: 10
+
+  # Rules to override the redirect behavior for external references that
+  # match, where
+  #   - 'from' is a regular expression for the source link in a single
+  #     redirection step. Its absence means that every link matches.
+  #   - 'to' is a regular expression for the target link in a single
+  #     redirection step. Its absence also means that every link matches.
+  #   - 'on' accepts 'temporary', 'permanent' or a specific redirect HTTP code.
+  #     Its absence also means that every response code matches.
+  #   - 'outcome' accepts 'valid', 'invalid' or 'follow'. The last one follows
+  #      the redirect by applying the same configuration rules so, for instance,
+  #      exclusion rules would also apply to the following links.
+  #
+  # The first one that matches is applied, and the link is considered
+  # as valid if none of them does match.
+  externalRefRedirects:
+#{interpolateIndentF 4 externalRefRedirects}
 
 # Parameters of scanners for various file types.
 scanners:
@@ -95,7 +119,7 @@ scanners:
 |]
   where
     ignoreLocalRefsFrom :: NonEmpty Text
-    ignoreLocalRefsFrom = fromList $  case flavor of
+    ignoreLocalRefsFrom = fromList $ case flavor of
       GitHub ->
         [ ".github/pull_request_template.md"
         , ".github/issue_template.md"
@@ -108,7 +132,7 @@ scanners:
         ]
 
     ignoreLocalRefsTo :: NonEmpty Text
-    ignoreLocalRefsTo = fromList $  case flavor of
+    ignoreLocalRefsTo = fromList $ case flavor of
       GitHub ->
         [ "../../../issues"
         , "../../../issues/*"
@@ -121,3 +145,20 @@ scanners:
         , "../../merge_requests"
         , "../../merge_requests/*"
         ]
+
+    externalRefRedirects :: Builder
+    externalRefRedirects = case flavor of
+      GitHub ->
+        [int||
+        - on: permanent
+          outcome: invalid|]
+      GitLab ->
+        [int||
+        - on: permanent
+          outcome: invalid
+        # GitLab redirects non-existing files to the repository's main page
+        # with a 302 code instead of answering with a 404 response.
+        - from: https?://gitlab.com/.*/-/blob/.*
+          to: https?://gitlab.com/.*
+          on: 302
+          outcome: invalid|]

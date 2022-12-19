@@ -3,7 +3,7 @@
  - SPDX-License-Identifier: MPL-2.0
  -}
 
-module Test.Xrefcheck.RedirectRequestsSpec where
+module Test.Xrefcheck.RedirectDefaultSpec where
 
 import Universum
 
@@ -17,11 +17,12 @@ import Test.Tasty.HUnit (Assertion, testCase)
 import Web.Firefly (ToResponse (toResponse), route, run)
 
 import Test.Xrefcheck.UtilRequests
+import Xrefcheck.Config
 import Xrefcheck.Progress
 import Xrefcheck.Verify
 
 test_redirectRequests :: TestTree
-test_redirectRequests = testGroup "Redirect response tests"
+test_redirectRequests = testGroup "Redirect response defaults"
   [ testGroup "Temporary" $ temporaryRedirectTests <$> [302, 303, 307]
   , testGroup "Permanent" $ permanentRedirectTests <$> [301, 308]
   ]
@@ -37,14 +38,20 @@ test_redirectRequests = testGroup "Redirect response tests"
       redirectTests
         (show statusCode <> " passes by default")
         (mkStatus statusCode "Temporary redirect")
-        (const Nothing)
+        (\case
+          Nothing -> Just $ RedirectMissingLocation $ fromList [url]
+          Just _ -> Nothing
+        )
 
     permanentRedirectTests :: Int -> TestTree
     permanentRedirectTests statusCode =
       redirectTests
         (show statusCode <> " fails by default")
         (mkStatus statusCode "Permanent redirect")
-        (Just . PermanentRedirectError url)
+        (\case
+          Nothing -> Just $ RedirectMissingLocation $ fromList [url]
+          Just loc -> Just $ RedirectRuleError (fromList [url, loc]) (Just RROPermanent)
+        )
 
     redirectTests :: TestName -> Status -> (Maybe Text -> Maybe VerifyError) -> TestTree
     redirectTests name expectedStatus expectedError =
@@ -74,9 +81,9 @@ test_redirectRequests = testGroup "Redirect response tests"
         (VerifyResult $ maybeToList expectedError)
 
     mockRedirect :: Maybe Text -> Status -> IO ()
-    mockRedirect expectedLocation expectedSocation =
+    mockRedirect expectedLocation expectedStatus =
       run 5000 $ route "/redirect" $ pure $ toResponse
         ( "" :: Text
-        , expectedSocation
+        , expectedStatus
         , M.fromList [(CI.map (decodeUtf8 @Text) hLocation, maybeToList expectedLocation)]
         )

@@ -15,7 +15,7 @@ import Test.Tasty (TestTree, askOption, testGroup)
 import Test.Tasty.HUnit (assertBool, assertFailure, testCase, (@?=))
 import Test.Tasty.Options as Tasty (IsOption (..), OptionDescription (Option), safeRead)
 
-import Xrefcheck.Config (Config, cExclusionsL, defConfig)
+import Xrefcheck.Config
 import Xrefcheck.Core (Flavor (GitHub))
 import Xrefcheck.Scan (ecIgnoreExternalRefsToL)
 import Xrefcheck.Verify (VerifyError (..), checkExternalResource)
@@ -48,27 +48,27 @@ test_FtpLinks = askOption $ \(FtpHostOpt host) -> do
   testGroup "Ftp links handler"
     [ testCase "handles correct link to file" $ do
         let link = host <> "/pub/file_exists.txt"
-        result <- runExceptT $ checkExternalResource config link
+        result <- runExceptT $ checkExternalResource emptyChain config link
         result @?= Right ()
 
     , testCase "handles empty link (host only)" $ do
         let link = host
-        result <- runExceptT $ checkExternalResource config link
+        result <- runExceptT $ checkExternalResource emptyChain config link
         result @?= Right ()
 
     , testCase "handles correct link to non empty directory" $ do
         let link = host <> "/pub/"
-        result <- runExceptT $ checkExternalResource config link
+        result <- runExceptT $ checkExternalResource emptyChain config link
         result @?= Right ()
 
     , testCase "handles correct link to empty directory" $ do
         let link = host <> "/empty/"
-        result <- runExceptT $ checkExternalResource config link
+        result <- runExceptT $ checkExternalResource emptyChain config link
         result @?= Right ()
 
     , testCase "throws exception when file not found" $ do
         let link = host <> "/pub/file_does_not_exists.txt"
-        result <- runExceptT $ checkExternalResource config link
+        result <- runExceptT $ checkExternalResource emptyChain config link
         case result of
           Right () ->
             assertFailure "No exception was raised, FtpEntryDoesNotExist expected"

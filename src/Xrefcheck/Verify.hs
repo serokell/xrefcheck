@@ -49,7 +49,7 @@ import Data.Text.Metrics (damerauLevenshteinNorm)
 import Data.Time (UTCTime, defaultTimeLocale, formatTime, readPTime, rfc822DateFormat)
 import Data.Time.Clock.POSIX (getPOSIXTime)
 import Data.Traversable (for)
-import Fmt (Buildable (..), fmt, maybeF, nameF)
+import Fmt (Buildable (..), Builder, fmt, maybeF, nameF)
 import GHC.Exts qualified as Exts
 import GHC.Read (Read (readPrec))
 import Network.FTP.Client
@@ -66,7 +66,6 @@ import System.FilePath (isPathSeparator)
 import System.FilePath.Posix ((</>))
 import Text.Interpolation.Nyan
 import Text.ParserCombinators.ReadPrec qualified as ReadPrec (lift)
-import Text.Regex.TDFA.Text (Regex, regexec)
 import Text.URI (Authority (..), ParseExceptionBs, URI (..), mkURIBs, unRText)
 import Time (RatioNat, Second, Time (..), ms, sec, threadDelay, timeout, (+:+), (-:-))
 import URI.ByteString qualified as URIBS
@@ -143,8 +142,15 @@ data VerifyError
   | ExternalFtpException FTPException
   | FtpEntryDoesNotExist FilePath
   | ExternalResourceSomeError Text
-  | PermanentRedirectError Text (Maybe Text)
+  | RedirectChainCycle RedirectChain
+  | RedirectMissingLocation RedirectChain
+  | RedirectChainLimit RedirectChain
+  | RedirectRuleError RedirectChain (Maybe RedirectRuleOn)
   deriving stock (Show, Eq)
+
+data ResponseResult
+  = RRDone
+  | RRFollow Text
 
 instance Given ColorMode => Buildable VerifyError where
   build = \case
@@ -159,7 +165,6 @@ instance Given ColorMode => Buildable VerifyError where
       Link targets a local file outside repository:
         #{file}
       |]
-
 
     LinkTargetNotAddedToGit file ->
       [int||
@@ -252,19 +257,42 @@ instance Given ColorMode => Buildable VerifyError where
       #{err}
       |]
 
-    PermanentRedirectError url Nothing ->
+    RedirectChainCycle chain ->
       [int||
-      Permanent redirect found:
-      #{url}
+      Cycle found in the following redirect chain:
+      #{interpolateIndentF 2 $ attachToRedirectChain chain "here"}
       |]
 
-    PermanentRedirectError url (Just redirectedUrl) ->
+    RedirectMissingLocation chain ->
       [int||
-      Permanent redirect found. Perhaps you want to replace the link:
-        #{url}
-      by:
-        #{redirectedUrl}
+      Missing location header in the following redirect chain:
+      #{interpolateIndentF 2 $ attachToRedirectChain chain "no location header"}
       |]
+
+    RedirectChainLimit chain ->
+        [int||
+        The follow redirects limit has been reached in the following redirect chain:
+        #{interpolateIndentF 2 $ attachToRedirectChain chain "stopped before this one"}
+        |]
+
+    RedirectRuleError chain mOn ->
+      [int||
+      #{redirect} found:
+      #{interpolateIndentF 2 $ attachToRedirectChain chain "stopped before this one"}
+      |]
+      where
+        redirect :: Text
+        redirect = case mOn of
+          Nothing -> "Redirect"
+          Just RROPermanent -> "Permanent redirect"
+          Just RROTemporary -> "Temporary redirect"
+          Just (RROCode code) -> show code <> " redirect"
+
+attachToRedirectChain :: RedirectChain -> Text -> Builder
+attachToRedirectChain chain attached
+  = build chain <> build attachedText
+  where
+    attachedText = "\n   ^-- " <> attached
 
 data RetryCounter = RetryCounter
   { rcTotalRetries   :: Int
@@ -279,7 +307,6 @@ incTotalCounter rc = rc {rcTotalRetries = rcTotalRetries rc + 1}
 
 incTimeoutCounter :: RetryCounter -> RetryCounter
 incTimeoutCounter rc = rc {rcTimeoutRetries = rcTimeoutRetries rc + 1}
-
 
 reportVerifyErrs
   :: Given ColorMode => NonEmpty (WithReferenceLoc VerifyError) -> IO ()
@@ -468,7 +495,7 @@ verifyReference
             let shownFilepath = dropWhile isPathSeparator (toString rLink)
             canonicalPath <- liftIO $ riRoot </ shownFilepath
             checkRef rAnchor riRoot canonicalPath shownFilepath
-          RIExternal -> checkExternalResource config rLink
+          RIExternal -> checkExternalResource emptyChain config rLink
           RIOtherProtocol -> pass
         else pass
   where
@@ -688,9 +715,13 @@ parseUri link = do
            & handleJust (fromException @ParseExceptionBs)
            (throwError . ExternalResourceUriConversionError)
 
-checkExternalResource :: Config -> Text -> ExceptT VerifyError IO ()
-checkExternalResource Config{..} link
+checkExternalResource :: RedirectChain -> Config -> Text -> ExceptT VerifyError IO ()
+checkExternalResource followed config@Config{..} link
   | isIgnored = pass
+  | followed `hasRequest` (RedirectChainLink link) =
+      throwError $ RedirectChainCycle $ followed `pushRequest` (RedirectChainLink link)
+  | ncMaxRedirectFollows >= 0 && totalFollowed followed > ncMaxRedirectFollows =
+      throwError $ RedirectChainLimit $ followed `pushRequest` (RedirectChainLink link)
   | otherwise = do
       uri <- parseUri link
       case toString <$> uriScheme uri of
@@ -704,15 +735,6 @@ checkExternalResource Config{..} link
     NetworkingConfig{..} = cNetworking
 
     isIgnored = doesMatchAnyRegex link ecIgnoreExternalRefsTo
-
-    doesMatchAnyRegex :: Text -> ([Regex] -> Bool)
-    doesMatchAnyRegex src = any $ \regex ->
-      case regexec regex src of
-        Right res -> case res of
-          Just (before, match, after, _) ->
-            null before && null after && not (null match)
-          Nothing -> False
-        Left _ -> False
 
     checkHttp :: URI -> ExceptT VerifyError IO ()
     checkHttp uri = makeHttpRequest uri HEAD 0.3 `catchError` \case
@@ -735,6 +757,7 @@ checkExternalResource Config{..} link
         -- so just in case we throw exception here
         Nothing -> throwError $ ExternalResourceInvalidUrl Nothing
         Just u -> pure u
+
       let reqLink = case parsedUrl of
             Left (url, option) ->
               runReq httpConfig $
@@ -745,19 +768,20 @@ checkExternalResource Config{..} link
 
       let maxTime = Time @Second $ unTime ncExternalRefCheckTimeout * timeoutFrac
 
-      mres <- liftIO (timeout maxTime $ void reqLink) `catch`
-        (either throwError (\() -> return (Just ())) . interpretErrors uri)
-      maybe (throwError $ ExternalHttpTimeout $ extractHost uri) pure mres
+      reqRes <- catch (liftIO (timeout maxTime $ reqLink $> RRDone)) $ \httpErr ->
+        case interpretErrors uri httpErr of
+          Left err -> throwError err
+          Right res -> pure $ Just res
+
+      case reqRes of
+        Nothing -> throwError $ ExternalHttpTimeout $ extractHost uri
+        Just RRDone -> pass
+        Just (RRFollow nextLink) ->
+          checkExternalResource (followed `pushRequest` (RedirectChainLink link)) config nextLink
 
     extractHost :: URI -> Maybe DomainName
     extractHost =
       either (const Nothing) (Just . DomainName . unRText . authHost) . uriAuthority
-
-    isTemporaryRedirectCode :: Int -> Bool
-    isTemporaryRedirectCode = flip elem [302, 303, 307]
-
-    isPermanentRedirectCode :: Int -> Bool
-    isPermanentRedirectCode = flip elem [301, 308]
 
     isAllowedErrorCode :: Int -> Bool
     isAllowedErrorCode = or . sequence
@@ -775,18 +799,29 @@ checkExternalResource Config{..} link
         InvalidUrlException{} -> error "External link URL invalid exception"
         HttpExceptionRequest _ exc -> case exc of
           StatusCodeException resp _
-            | isPermanentRedirectCode code -> Left
-              . PermanentRedirectError link
-              . fmap decodeUtf8
-              . lookup "Location"
-              $ responseHeaders resp
-            | isTemporaryRedirectCode code -> Right ()
-            | isAllowedErrorCode code -> Right ()
+            | isRedirectCode code -> case redirectLocation of
+                Nothing -> Left $ RedirectMissingLocation $ followed `pushRequest` (RedirectChainLink link)
+                Just nextLink -> case redirectRule link nextLink code ncExternalRefRedirects of
+                  Nothing -> Right RRDone
+                  Just RedirectRule{..} ->
+                    case rrOutcome of
+                      RROValid -> Right RRDone
+                      RROInvalid -> Left $ RedirectRuleError
+                        (followed `pushRequest` (RedirectChainLink link) `pushRequest` (RedirectChainLink nextLink))
+                        rrOn
+                      RROFollow -> Right $ RRFollow nextLink
+            | isAllowedErrorCode code -> Right RRDone
             | otherwise -> case statusCode (responseStatus resp) of
-              429 -> Left $ ExternalHttpTooManyRequests (retryAfterInfo resp) (extractHost uri)
-              _ -> Left . ExternalHttpResourceUnavailable $ responseStatus resp
+                429 -> Left $ ExternalHttpTooManyRequests (retryAfterInfo resp) (extractHost uri)
+                _ -> Left . ExternalHttpResourceUnavailable $ responseStatus resp
             where
+              code :: Int
               code = statusCode $ responseStatus resp
+
+              redirectLocation :: Maybe Text
+              redirectLocation = fmap decodeUtf8
+                . lookup "Location"
+                $ responseHeaders resp
           other -> Left . ExternalResourceSomeError $ show other
       where
         retryAfterInfo :: Response a -> Maybe RetryAfter

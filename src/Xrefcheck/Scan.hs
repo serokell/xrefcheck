@@ -23,6 +23,8 @@ module Xrefcheck.Scan
   , mkGatherScanError
   , scanRepo
   , specificFormatsSupport
+  , defaultCompOption
+  , defaultExecOption
   , ecIgnoreL
   , ecIgnoreLocalRefsToL
   , ecIgnoreRefsFromL

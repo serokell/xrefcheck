@@ -10,6 +10,7 @@ module Xrefcheck.Util
   , (-:)
   , aesonConfigOption
   , composeFuncList
+  , doesMatchAnyRegex
   , posixTimeToTimeSecond
   , utcTimeToTimeSecond
   , unlessFunc
@@ -29,6 +30,7 @@ import Data.Time (UTCTime)
 import Data.Time.Clock (nominalDiffTimeToSeconds)
 import Data.Time.Clock.POSIX (POSIXTime, utcTimeToPOSIXSeconds)
 import Fmt (Builder)
+import Text.Regex.TDFA.Text (Regex, regexec)
 import Time (Second, Time (..), sec)
 
 import Xrefcheck.Util.Colorize
@@ -72,3 +74,12 @@ whenFunc False _ = id
 
 unlessFunc :: Bool -> (a -> a) -> (a -> a)
 unlessFunc = whenFunc . not
+
+doesMatchAnyRegex :: Text -> ([Regex] -> Bool)
+doesMatchAnyRegex src = any $ \regex ->
+  case regexec regex src of
+    Right res -> case res of
+      Just (before, match, after, _) ->
+        null before && null after && not (null match)
+      Nothing -> False
+    Left _ -> False

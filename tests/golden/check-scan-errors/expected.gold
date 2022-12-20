@@ -18,7 +18,7 @@
   ➥  In file check-scan-errors.md
      scan error at src:21:1-50:
 
-     Unrecognised option "unrecognised-annotation" perhaps you meant <"ignore link"|"ignore paragraph"|"ignore all">
+     Unrecognised option "ignore unrecognised-annotation" perhaps you meant <"ignore link"|"ignore paragraph"|"ignore all">
 
   ➥  In file check-second-file.md
      scan error at src:9:1-29:

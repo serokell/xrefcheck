@@ -12,6 +12,7 @@ module Xrefcheck.Scanners.Markdown
 
   , defGithubMdConfig
   , markdownScanner
+  , markdownParallelScanner
   , markdownSupport
   , parseFileInfo
   , makeError
@@ -24,11 +25,10 @@ import CMarkGFM
 import Control.Lens (_Just, makeLenses, makeLensesFor, (.=))
 import Control.Monad.Trans.Writer.CPS (Writer, runWriter, tell)
 import Data.Aeson (FromJSON (..), genericParseJSON)
-import Data.ByteString.Lazy qualified as BSL
+import Data.ByteString qualified as BS
 import Data.DList qualified as DList
 import Data.Default (def)
 import Data.Text qualified as T
-import Data.Text.Lazy qualified as LT
 import Fmt (Buildable (..), nameF)
 import Text.HTML.TagSoup
 import Text.Interpolation.Nyan
@@ -36,6 +36,7 @@ import Text.Interpolation.Nyan
 import Xrefcheck.Core
 import Xrefcheck.Scan
 import Xrefcheck.Util
+import Control.Parallel.Strategies
 
 data MarkdownConfig = MarkdownConfig
   { mcFlavor :: Flavor
@@ -406,16 +407,20 @@ textToMode ("ignore" : [x])
   | otherwise        = InvalidMode x
 textToMode _         = NotAnAnnotation
 
-parseFileInfo :: MarkdownConfig -> FilePath -> LT.Text -> (FileInfo, [ScanError])
+parseFileInfo :: MarkdownConfig -> FilePath -> T.Text -> (FileInfo, [ScanError])
 parseFileInfo config fp input
   = runWriter
   $ flip runReaderT config
   $ nodeExtractInfo fp
-  $ commonmarkToNode [optFootnotes] [extAutolink]
-  $ toStrict input
+  $ commonmarkToNode [optFootnotes] [extAutolink] input
 
 markdownScanner :: MarkdownConfig -> ScanAction
-markdownScanner config path = parseFileInfo config path . decodeUtf8 <$> BSL.readFile path
+markdownScanner config path = parseFileInfo config path . decodeUtf8 <$> BS.readFile path
+
+markdownParallelScanner :: MarkdownConfig -> ScanAction
+markdownParallelScanner config path = do
+  resThunk <- parseFileInfo config path . decodeUtf8 <$> BS.readFile path
+  resThunk `usingIO` rparWith rdeepseq
 
 markdownSupport :: MarkdownConfig -> ([Extension], ScanAction)
-markdownSupport config = ([".md"], markdownScanner config)
+markdownSupport config = ([".md"], markdownParallelScanner config)

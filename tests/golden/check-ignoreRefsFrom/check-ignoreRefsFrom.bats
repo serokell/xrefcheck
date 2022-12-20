@@ -41,7 +41,7 @@ load '../helpers'
        - anchor: -
 
      File does not exist:
-       ./no-file.md
+       no-file.md
 
 Invalid references dumped, 1 in total.
 EOF

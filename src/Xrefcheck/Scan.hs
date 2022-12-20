@@ -13,13 +13,14 @@ module Xrefcheck.Scan
   , Extension
   , ScanAction
   , FormatsSupport
-  , RepoInfo (..)
   , ReadDirectoryMode(..)
   , ScanError (..)
   , ScanErrorDescription (..)
   , ScanResult (..)
+  , ScanStage (..)
 
-  , normaliseExclusionConfigFilePaths
+  , mkParseScanError
+  , mkGatherScanError
   , scanRepo
   , specificFormatsSupport
   , ecIgnoreL
@@ -38,8 +39,6 @@ import Data.Map qualified as M
 import Data.Reflection (Given)
 import Fmt (Buildable (..), fmt)
 import System.Directory (doesDirectoryExist)
-import System.FilePath.Posix
-  (dropTrailingPathSeparator, equalFilePath, splitDirectories, takeDirectory, takeExtension, (</>))
 import System.Process (cwd, readCreateProcess, shell)
 import Text.Interpolation.Nyan
 import Text.Regex.TDFA.Common (CompOption (..), ExecOption (..), Regex)
@@ -47,7 +46,7 @@ import Text.Regex.TDFA.Text qualified as R
 
 import Xrefcheck.Core
 import Xrefcheck.Progress
-import Xrefcheck.System (RelGlobPattern, matchesGlobPatterns, normaliseGlobPattern, readingSystem)
+import Xrefcheck.System
 import Xrefcheck.Util
 
 -- | Type alias for ExclusionConfig' with all required fields.
@@ -67,35 +66,58 @@ data ExclusionConfig' f = ExclusionConfig
 
 makeLensesWith postfixFields ''ExclusionConfig'
 
-normaliseExclusionConfigFilePaths :: ExclusionConfig -> ExclusionConfig
-normaliseExclusionConfigFilePaths ec@ExclusionConfig{..}
-  = ec
-    { ecIgnore            = map normaliseGlobPattern ecIgnore
-    , ecIgnoreLocalRefsTo = map normaliseGlobPattern ecIgnoreLocalRefsTo
-    , ecIgnoreRefsFrom    = map normaliseGlobPattern ecIgnoreRefsFrom
-    }
-
 -- | File extension, dot included.
 type Extension = String
 
 -- | Way to parse a file.
-type ScanAction = FilePath -> IO (FileInfo, [ScanError])
+type ScanAction = CanonicalPath -> IO (FileInfo, [ScanError 'Parse])
 
 -- | All supported ways to parse a file.
 type FormatsSupport = Extension -> Maybe ScanAction
 
 data ScanResult = ScanResult
-  { srScanErrors :: [ScanError]
+  { srScanErrors :: [ScanError 'Gather]
   , srRepoInfo   :: RepoInfo
-  } deriving stock (Show)
+  }
 
-data ScanError = ScanError
-  { sePosition    :: Position
-  , seFile        :: FilePath
+-- | A scan error indexed by different process stages.
+--
+-- Within 'Parse', 'seFile' has no information because the same
+-- file is being parsed.
+--
+-- Within 'Gather', 'seFile' stores the 'FilePath' corresponding
+-- to the file in where the error was found.
+data ScanError (a :: ScanStage) = ScanError
+  { seFile        :: ScanStageFile a
+  , sePosition    :: Position
   , seDescription :: ScanErrorDescription
-  } deriving stock (Show, Eq)
+  }
 
-instance Given ColorMode => Buildable ScanError where
+data ScanStage = Parse | Gather
+
+type family ScanStageFile (a :: ScanStage) where
+  ScanStageFile 'Parse = ()
+  ScanStageFile 'Gather = FilePath
+
+deriving stock instance Show (ScanError 'Parse)
+deriving stock instance Show (ScanError 'Gather)
+deriving stock instance Eq (ScanError 'Parse)
+deriving stock instance Eq (ScanError 'Gather)
+
+-- | Make a 'ScanError' for the 'Parse' stage.
+mkParseScanError :: Position -> ScanErrorDescription -> ScanError 'Parse
+mkParseScanError = ScanError ()
+
+-- | Promote a 'ScanError' from the 'Parse' stage
+-- to the 'Gather' stage.
+mkGatherScanError :: FilePath ->  ScanError 'Parse -> ScanError 'Gather
+mkGatherScanError seFile ScanError{sePosition, seDescription} = ScanError
+  { seFile
+  , sePosition
+  , seDescription
+  }
+
+instance Given ColorMode => Buildable (ScanError 'Gather) where
   build ScanError{..} = [int||
     In file #{styleIfNeeded Faint (styleIfNeeded Bold seFile)}
     scan error #{sePosition}:
@@ -104,7 +126,7 @@ instance Given ColorMode => Buildable ScanError where
 
     |]
 
-reportScanErrs :: Given ColorMode => NonEmpty ScanError -> IO ()
+reportScanErrs :: Given ColorMode => NonEmpty (ScanError 'Gather) -> IO ()
 reportScanErrs errs = fmt
   [int||
   === Scan errors found ===
@@ -153,14 +175,13 @@ data ReadDirectoryMode
 readDirectoryWith
   :: forall a. ReadDirectoryMode
   -> ExclusionConfig
-  -> (FilePath -> IO a)
-  -> FilePath
-  -> IO [(FilePath, a)]
-readDirectoryWith mode config scanner root =
-  traverse scanFile
-  . filter (not . isIgnored)
-  . fmap (location </>)
-  . L.lines =<< getFiles
+  -> (CanonicalPath -> IO a)
+  -> CanonicalPath
+  -> IO [(CanonicalPath, a)]
+readDirectoryWith mode config scanner root = do
+  relativeFiles <- L.lines <$> getFiles
+  canonicalFiles <- mapM (root </) relativeFiles
+  traverse scanFile $ filter (not . isIgnored) canonicalFiles
 
   where
 
@@ -170,22 +191,15 @@ readDirectoryWith mode config scanner root =
       RdmBothTrackedAndUtracked -> liftA2 (<>) getTrackedFiles getUntrackedFiles
 
     getTrackedFiles = readCreateProcess
-      (shell "git ls-files"){cwd = Just root} ""
+      (shell "git ls-files"){cwd = Just $ unCanonicalPath root} ""
     getUntrackedFiles = readCreateProcess
-      (shell "git ls-files --others --exclude-standard"){cwd = Just root} ""
+      (shell "git ls-files --others --exclude-standard"){cwd = Just $ unCanonicalPath root} ""
 
-    scanFile :: FilePath -> IO (FilePath, a)
-    scanFile = sequence . (normaliseWithNoTrailing &&& scanner)
+    scanFile :: CanonicalPath -> IO (CanonicalPath, a)
+    scanFile c = (c,) <$> scanner c
 
-    isIgnored :: FilePath -> Bool
+    isIgnored :: CanonicalPath -> Bool
     isIgnored = matchesGlobPatterns root $ ecIgnore config
-
-    -- Strip leading "." and trailing "/"
-    location :: FilePath
-    location =
-      if root `equalFilePath` "."
-        then ""
-        else dropTrailingPathSeparator root
 
 scanRepo
   :: MonadIO m
@@ -193,20 +207,21 @@ scanRepo
 scanRepo scanMode rw formatsSupport config root = do
   putTextRewrite rw "Scanning repository..."
 
-  when (not $ isDirectory root) $
+  liftIO $ whenM (not <$> doesDirectoryExist root) $
     die $ "Repository's root does not seem to be a directory: " <> root
+
+  canonicalRoot <- liftIO $ canonicalizePath root
 
   (errs, processedFiles) <-
     let mode = case scanMode of
           OnlyTracked -> RdmTracked
           IncludeUntracked -> RdmBothTrackedAndUtracked
-    in liftIO
-    $ (gatherScanErrs &&& gatherFileStatuses)
-    <$> readDirectoryWith mode config processFile root
+    in  liftIO $ (gatherScanErrs canonicalRoot &&& gatherFileStatuses)
+          <$> readDirectoryWith mode config processFile canonicalRoot
 
   notProcessedFiles <-  case scanMode of
     OnlyTracked -> liftIO $
-      readDirectoryWith RdmUntracked config (const $ pure NotAddedToGit) root
+      readDirectoryWith RdmUntracked config (const $ pure NotAddedToGit) canonicalRoot
     IncludeUntracked -> pure []
 
   let scannableNotProcessedFiles = filter (isJust . mscanner . fst) notProcessedFiles
@@ -214,44 +229,42 @@ scanRepo scanMode rw formatsSupport config root = do
   whenJust (nonEmpty $ map fst scannableNotProcessedFiles) $ \files -> hPutStrLn @Text stderr
     [int|A|
     Those files are not added by Git, so we're not scanning them:
-    #{interpolateBlockListF files}
+    #{interpolateBlockListF $ getPosixRelativeOrAbsoluteChild canonicalRoot <$> files}
     Please run "git add" before running xrefcheck or enable \
     --include-untracked CLI option to check these files.
     |]
 
-  let trackedDirs = foldMap (getDirs . fst) processedFiles
-      untrackedDirs = foldMap (getDirs . fst) notProcessedFiles
+  let trackedDirs = foldMap (getDirsBetweenRootAndFile canonicalRoot . fst) processedFiles
+      untrackedDirs = foldMap (getDirsBetweenRootAndFile canonicalRoot . fst) notProcessedFiles
+
   return . ScanResult errs $ RepoInfo
     { riFiles = M.fromList $ processedFiles <> notProcessedFiles
-    , riDirectories = M.fromList
-                      $ map (, TrackedDirectory) trackedDirs
-                      <> map (, UntrackedDirectory) untrackedDirs
+    , riDirectories = M.fromList $ (fmap (, TrackedDirectory) trackedDirs
+        <> fmap (, UntrackedDirectory) untrackedDirs)
+    , riRoot = canonicalRoot
     }
   where
-    mscanner :: FilePath -> Maybe ScanAction
+    mscanner :: CanonicalPath -> Maybe ScanAction
     mscanner = formatsSupport . takeExtension
 
-    isDirectory :: FilePath -> Bool
-    isDirectory = readingSystem . doesDirectoryExist
-
-    -- Get all directories from filepath.
-    getDirs :: FilePath -> [FilePath]
-    getDirs = scanl (</>) "" . splitDirectories . takeDirectory
-
     gatherScanErrs
-      :: [(FilePath, (FileStatus, [ScanError]))]
-      -> [ScanError]
-    gatherScanErrs = foldMap (snd . snd)
+      :: CanonicalPath
+      -> [(CanonicalPath, (FileStatus, [ScanError 'Parse]))]
+      -> [ScanError 'Gather]
+    gatherScanErrs canonicalRoot = foldMap $ \(file, (_, errs)) ->
+      mkGatherScanError (showFilepath file) <$> errs
+      where
+        showFilepath = getPosixRelativeOrAbsoluteChild canonicalRoot
 
     gatherFileStatuses
-      :: [(FilePath, (FileStatus, [ScanError]))]
-      -> [(FilePath, FileStatus)]
+      :: [(CanonicalPath, (FileStatus, [ScanError 'Parse]))]
+      -> [(CanonicalPath, FileStatus)]
     gatherFileStatuses = map (second fst)
 
-    processFile :: FilePath -> IO (FileStatus, [ScanError])
-    processFile file = case mscanner file of
+    processFile :: CanonicalPath -> IO (FileStatus, [ScanError 'Parse])
+    processFile canonicalFile = case mscanner canonicalFile of
         Nothing -> pure (NotScannable, [])
-        Just scanner -> scanner file <&> _1 %~ Scanned
+        Just scanner -> scanner canonicalFile <&> _1 %~ Scanned
 
 -----------------------------------------------------------
 -- Yaml instances

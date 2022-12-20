@@ -42,7 +42,7 @@ test_ignoreRegex = give WithoutColors $
         scanRepo OnlyTracked rw formats (config ^. cExclusionsL) root
 
       verifyRes <- allowRewrite showProgressBar $ \rw ->
-        verifyRepo rw config verifyMode root $ srRepoInfo scanResult
+        verifyRepo rw config verifyMode $ srRepoInfo scanResult
 
       let brokenLinks = pickBrokenLinks verifyRes
 

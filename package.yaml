@@ -87,7 +87,6 @@ library:
     - bytestring
     - containers
     - cmark-gfm >= 0.2.5
-    - data-default
     - directory
     - dlist
     - filepath

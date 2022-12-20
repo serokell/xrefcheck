@@ -22,19 +22,19 @@ test_ignoreAnnotations =
       [ testCase "Check if broken link annotation produce error" do
           let file = "tests/markdowns/with-annotations/no_link.md"
           errs <- getErrs file
-          errs @?= makeError (Just $ PosInfo 7 1 7 31) file LinkErr
+          errs @?= makeError (Just $ PosInfo 7 1 7 31) LinkErr
       , testCase "Check if broken paragraph annotation produce error" do
           let file = "tests/markdowns/with-annotations/no_paragraph.md"
           errs <- getErrs file
-          errs @?= makeError (Just $ PosInfo 7 1 7 35) file (ParagraphErr "HEADING")
+          errs @?= makeError (Just $ PosInfo 7 1 7 35) (ParagraphErr "HEADING")
       , testCase "Check if broken ignore all annotation produce error" do
           let file = "tests/markdowns/with-annotations/unexpected_ignore_file.md"
           errs <- getErrs file
-          errs @?= makeError (Just $ PosInfo 9 1 9 29) file FileErr
+          errs @?= makeError (Just $ PosInfo 9 1 9 29) FileErr
       , testCase "Check if broken unrecognised annotation produce error" do
           let file = "tests/markdowns/with-annotations/unrecognised_option.md"
           errs <- getErrs file
-          errs @?= makeError (Just $ PosInfo 7 1 7 46) file (UnrecognisedErr "unrecognised-option")
+          errs @?= makeError (Just $ PosInfo 7 1 7 46) (UnrecognisedErr "unrecognised-option")
       ]
   , testGroup "\"ignore link\" mode"
       [ testCase "Check \"ignore link\" performance" $ do
@@ -42,7 +42,7 @@ test_ignoreAnnotations =
           (fi, errs) <- parse GitHub file
           getRefs fi @?=
             ["team", "team", "team", "hire-us", "how-we-work", "privacy", "link2", "link2", "link3"]
-          errs @?= makeError (Just $ PosInfo 42 1 42 31) file LinkErr
+          errs @?= makeError (Just $ PosInfo 42 1 42 31) LinkErr
       ]
   , testGroup "\"ignore paragraph\" mode"
       [ testCase "Check \"ignore paragraph\" performance" $ do
@@ -61,5 +61,5 @@ test_ignoreAnnotations =
     getRefs :: FileInfo -> [Text]
     getRefs fi = map rName $ fi ^. fiReferences
 
-    getErrs :: FilePath -> IO [ScanError]
+    getErrs :: FilePath -> IO [ScanError 'Parse]
     getErrs path = snd <$> parse GitHub path

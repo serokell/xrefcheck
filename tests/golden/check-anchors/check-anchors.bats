@@ -14,14 +14,14 @@ load '../helpers'
 assert_diff - <<EOF
 === Invalid references found ===
 
-  ➥  In file ambiguous-anchors/a.md
+  ➥  In file a.md
      bad reference (file-local) at src:16:1-43:
        - text: "ambiguous anchor in this file"
        - link: -
        - anchor: some-text
 
      Ambiguous reference to anchor 'some-text'
-       In file ambiguous-anchors/a.md
+       In file a.md
        It could refer to either:
          - some-text (header I) at src:6:1-11
          - some-text (header I) at src:8:1-15
@@ -29,14 +29,14 @@ assert_diff - <<EOF
        Use of ambiguous anchors is discouraged because the target
        can change silently while the document containing it evolves.
 
-  ➥  In file ambiguous-anchors/b.md
+  ➥  In file b.md
      bad reference (relative) at src:7:1-48:
        - text: "ambiguous anchor in other file"
        - link: a.md
        - anchor: some-text
 
      Ambiguous reference to anchor 'some-text'
-       In file ambiguous-anchors/a.md
+       In file a.md
        It could refer to either:
          - some-text (header I) at src:6:1-11
          - some-text (header I) at src:8:1-15
@@ -53,7 +53,7 @@ EOF
 assert_diff - <<EOF
 === Invalid references found ===
 
-  ➥  In file non-existing-anchors/a.md
+  ➥  In file a.md
      bad reference (file-local) at src:12:1-13:
        - text: "broken"
        - link: -
@@ -63,7 +63,7 @@ assert_diff - <<EOF
          - h1 (header I) at src:6:1-4
          - h2 (header II) at src:8:1-5
 
-  ➥  In file non-existing-anchors/a.md
+  ➥  In file a.md
      bad reference (file-local) at src:14:1-18:
        - text: "broken"
        - link: -
@@ -72,7 +72,7 @@ assert_diff - <<EOF
      Anchor 'heading' is not present, did you mean:
          - the-heading (header I) at src:10:1-13
 
-  ➥  In file non-existing-anchors/a.md
+  ➥  In file a.md
      bad reference (file-local) at src:16:1-31:
        - text: "broken"
        - link: -

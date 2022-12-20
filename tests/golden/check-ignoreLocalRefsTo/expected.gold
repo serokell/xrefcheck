@@ -7,7 +7,7 @@
        - anchor: -
 
      File does not exist:
-       ./one/a.md
+       one/a.md
 
   ➥  In file check-ignoreLocalRefsTo.md
      bad reference (absolute) at src:9:1-26:
@@ -16,7 +16,7 @@
        - anchor: -
 
      File does not exist:
-       ./two/b.md
+       two/b.md
 
   ➥  In file check-ignoreLocalRefsTo.md
      bad reference (absolute) at src:11:1-39:
@@ -25,7 +25,7 @@
        - anchor: -
 
      File does not exist:
-       ./three/c.md
+       three/c.md
 
   ➥  In file check-ignoreLocalRefsTo.md
      bad reference (absolute) at src:13:1-51:
@@ -34,7 +34,7 @@
        - anchor: -
 
      File does not exist:
-       ./three/four/d.md
+       three/four/d.md
 
   ➥  In file check-ignoreLocalRefsTo.md
      bad reference (absolute) at src:15:1-59:
@@ -43,7 +43,7 @@
        - anchor: -
 
      File does not exist:
-       ./three/five/e.md
+       three/five/e.md
 
   ➥  In file one/file.md
      bad reference (relative) at src:7:1-58:
@@ -61,6 +61,6 @@
        - anchor: -
 
      File does not exist:
-       one/../two/b.md
+       two/b.md
 
 Invalid references dumped, 7 in total.

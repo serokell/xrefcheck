@@ -35,11 +35,15 @@ import Universum
 
 import Control.Concurrent.Async (Async, async, cancel, poll, wait, withAsync)
 import Control.Exception (AsyncException (..), throwIO)
+import Control.Exception.Safe (handleAsync, handleJust)
 import Control.Monad.Except (MonadError (..))
+import Data.Bits (toIntegralSized)
 import Data.ByteString qualified as BS
+import Data.List (lookup)
 import Data.List qualified as L
 import Data.Map qualified as M
 import Data.Reflection (Given)
+import Data.Text (toCaseFold)
 import Data.Text.Metrics (damerauLevenshteinNorm)
 import Data.Time (UTCTime, defaultTimeLocale, formatTime, readPTime, rfc822DateFormat)
 import Data.Time.Clock.POSIX (getPOSIXTime)
@@ -57,8 +61,8 @@ import Network.HTTP.Req
   defaultHttpConfig, ignoreResponse, req, runReq, useURI)
 import Network.HTTP.Types.Header (hRetryAfter)
 import Network.HTTP.Types.Status (Status, statusCode, statusMessage)
-import System.FilePath.Posix
-  (equalFilePath, joinPath, makeRelative, normalise, splitDirectories, takeDirectory, (</>))
+import System.FilePath (isPathSeparator)
+import System.FilePath.Posix ((</>))
 import Text.Interpolation.Nyan
 import Text.ParserCombinators.ReadPrec qualified as ReadPrec (lift)
 import Text.Regex.TDFA.Text (Regex, regexec)
@@ -66,10 +70,6 @@ import Text.URI (Authority (..), ParseExceptionBs, URI (..), mkURIBs)
 import Time (RatioNat, Second, Time (..), ms, sec, threadDelay, timeout, (+:+), (-:-))
 import URI.ByteString qualified as URIBS
 
-import Control.Exception.Safe (handleAsync, handleJust)
-import Data.Bits (toIntegralSized)
-import Data.List (lookup)
-import Data.Text (toCaseFold)
 import Xrefcheck.Config
 import Xrefcheck.Core
 import Xrefcheck.Orphans ()
@@ -265,7 +265,6 @@ reportVerifyErrs errs = fmt
   Invalid references dumped, #{length errs} in total.
   |]
 
-
 data RetryAfter = Date UTCTime | Seconds (Time Second)
   deriving stock (Show, Eq)
 
@@ -353,19 +352,17 @@ verifyRepo
   => Rewrite
   -> Config
   -> VerifyMode
-  -> FilePath
   -> RepoInfo
   -> IO (VerifyResult $ WithReferenceLoc VerifyError)
 verifyRepo
   rw
   config@Config{..}
   mode
-  root
-  repoInfo'@(RepoInfo files _)
+  repoInfo@RepoInfo{..}
     = do
   let toScan = do
-        (file, fileInfo) <- M.toList files
-        guard . not $ matchesGlobPatterns root (ecIgnoreRefsFrom cExclusions) file
+        (file, fileInfo) <- toPairs riFiles
+        guard . not $ matchesGlobPatterns riRoot (ecIgnoreRefsFrom cExclusions) file
         case fileInfo of
           Scanned fi -> do
             ref <- _fiReferences fi
@@ -379,7 +376,7 @@ verifyRepo
 
   accumulated <- loopAsyncUntil (printer progressRef) do
     forConcurrentlyCaching toScan ifExternalThenCache $ \(file, ref) ->
-      verifyReference config mode progressRef repoInfo' root file ref
+      verifyReference config mode progressRef repoInfo file ref
   case accumulated of
     Right res -> return $ fold res
     Left (exception, partialRes) -> do
@@ -408,11 +405,12 @@ verifyRepo
       threadDelay (ms 100)
 
     ifExternalThenCache :: (a, Reference) -> NeedsCaching Text
-    ifExternalThenCache (_, Reference{..}) = case locationType rLink of
-      ExternalLoc -> CacheUnderKey rLink
-      _           -> NoCaching
+    ifExternalThenCache (_, Reference{..}) =
+      if isExternal rInfo
+      then CacheUnderKey rLink
+      else NoCaching
 
-shouldCheckLocType :: VerifyMode -> LocationType -> Bool
+shouldCheckLocType :: VerifyMode -> ReferenceInfo -> Bool
 shouldCheckLocType mode locType
   | isExternal locType = shouldCheckExternal mode
   | isLocal locType = shouldCheckLocal mode
@@ -423,29 +421,31 @@ verifyReference
   -> VerifyMode
   -> IORef VerifyProgress
   -> RepoInfo
-  -> FilePath
-  -> FilePath
+  -> CanonicalPath
   -> Reference
   -> IO (VerifyResult $ WithReferenceLoc VerifyError)
 verifyReference
   config@Config{..}
   mode
   progressRef
-  (RepoInfo files dirs)
-  root
-  fileWithReference
+  repoInfo@RepoInfo{..}
+  file
   ref@Reference{..}
-    = retryVerification 0 $ do
-        let locType = locationType rLink
-        if shouldCheckLocType mode locType
-        then case locType of
-          FileLocalLoc      -> checkRef rAnchor fileWithReference
-          RelativeLoc       -> checkRef rAnchor
-                                (normalise $ takeDirectory fileWithReference
-                                  </> toString (canonizeLocalRef rLink))
-          AbsoluteLoc       -> checkRef rAnchor (root <> toString rLink)
-          ExternalLoc       -> checkExternalResource config rLink
-          OtherLoc          -> verifying pass
+    = retryVerification 0 $
+        if shouldCheckLocType mode rInfo
+        then case rInfo of
+          RIFileLocal -> checkRef rAnchor riRoot file ""
+          RIFileRelative -> do
+            let shownFilepath = getPosixRelativeOrAbsoluteChild riRoot (takeDirectory file)
+                  </> toString rLink
+            canonicalPath <- takeDirectory file </ toString rLink
+            checkRef rAnchor riRoot canonicalPath shownFilepath
+          RIFileAbsolute -> do
+            let shownFilepath = dropWhile isPathSeparator (toString rLink)
+            canonicalPath <- riRoot </ shownFilepath
+            checkRef rAnchor riRoot canonicalPath shownFilepath
+          RIExternal -> checkExternalResource config rLink
+          RIOtherProtocol -> verifying pass
         else return mempty
   where
     retryVerification
@@ -472,7 +472,7 @@ verifyReference
                        . alterProgressErrors res numberOfRetries
 
       atomicModifyIORef' progressRef $ \VerifyProgress{..} ->
-        ( if isExternal $ locationType rLink
+        ( if isExternal rInfo
           then VerifyProgress{ vrExternal =
             let vrExternalAdvanced = moveProgress vrExternal
             in if toRetry
@@ -488,7 +488,8 @@ verifyReference
       then do
         threadDelay currentRetryAfter
         retryVerification (numberOfRetries + 1) resIO
-      else return $ fmap (WithReferenceLoc fileWithReference ref) res
+      else return . (<$> res) $
+        WithReferenceLoc (getPosixRelativeOrAbsoluteChild riRoot file) ref
 
     alterOverallProgress
       :: (Num a)
@@ -530,76 +531,51 @@ verifyReference
       VerifyResult [ExternalHttpTooManyRequests retryAfter] -> retryAfter
       _ -> Nothing
 
-    isVirtual = matchesGlobPatterns root (ecIgnoreLocalRefsTo cExclusions)
+    isVirtual canonicalRoot = matchesGlobPatterns canonicalRoot (ecIgnoreLocalRefsTo cExclusions)
 
-    checkRef mAnchor referredFile = verifying $
-      unless (isVirtual referredFile) do
-        checkReferredFileIsInsideRepo referredFile
-        mFileStatus <- tryGetFileStatus referredFile
+    -- Checks a local file reference.
+    --
+    -- The `shownFilepath` argument is intended to be shown in the error
+    -- report when the `referredFile` path is not a child of `canonicalRoot`,
+    -- so it allows indirections and should be suitable for being shown to
+    -- the user. Also, it will be considered as outside the repository if
+    -- it is relative and its idirections pass through the repository root.
+    checkRef mAnchor canonicalRoot referredFile shownFilepath = verifying $
+      unless (isVirtual canonicalRoot referredFile) do
+        when (hasIndirectionThroughParent shownFilepath) $
+          throwError $ LocalFileOutsideRepo shownFilepath
+
+        referredFileRelative <-
+          case getPosixRelativeChild canonicalRoot referredFile of
+            Just ps -> pure ps
+            Nothing -> throwError (LocalFileOutsideRepo shownFilepath)
+
+        mFileStatus <- tryGetFileStatus referredFileRelative referredFile
         case mFileStatus of
           Right (Scanned referredFileInfo) -> whenJust mAnchor $
-            checkAnchor referredFile (_fiAnchors referredFileInfo)
-          Right NotScannable -> pass  -- no support for such file, can do nothing
-          Right NotAddedToGit -> throwError (LinkTargetNotAddedToGit referredFile)
-          Left UntrackedDirectory -> throwError (LinkTargetNotAddedToGit referredFile)
+            checkAnchor referredFileRelative (_fiAnchors referredFileInfo)
+          Right NotAddedToGit -> throwError (LinkTargetNotAddedToGit referredFileRelative)
+          Left UntrackedDirectory -> throwError (LinkTargetNotAddedToGit referredFileRelative)
+          Right NotScannable -> pass -- no support for such file, can do nothing
           Left TrackedDirectory -> pass -- path leads to directory, currently
                                         -- if such link contain anchor, we ignore it
 
-    -- expands ".." and "."
-    -- expandIndirections "a/b/../c"      = "a/c"
-    -- expandIndirections "a/b/c/../../d" = "a/d"
-    -- expandIndirections "../../a"       = "../../a"
-    -- expandIndirections "a/./b"         = "a/b"
-    -- expandIndirections "a/b/./../c"    = "a/c"
-    expandIndirections :: FilePath -> FilePath
-    expandIndirections = joinPath . reverse . expand 0 . reverse . splitDirectories
-      where
-        expand :: Int -> [FilePath] -> [FilePath]
-        expand acc ("..":xs) = expand (acc+1) xs
-        expand acc (".":xs)  = expand acc xs
-        expand 0 (x:xs)      = x : expand 0 xs
-        expand acc (_:xs)    = expand (acc-1) xs
-        expand acc []        = replicate acc ".."
-
-    checkReferredFileIsInsideRepo file = unless
-      (noNegativeNesting $ makeRelative root file) $
-        throwError (LocalFileOutsideRepo file)
-      where
-        -- checks that relative filepath fully belongs to the root directory
-        -- noNegativeNesting "a/../b" = True
-        -- noNegativeNesting "a/../../b" = False
-        noNegativeNesting path = all (>= 0) $ scanl
-          (\n dir -> n + nestingChange dir)
-          (0 :: Integer)
-          $ splitDirectories path
-
-        nestingChange ".." = -1
-        nestingChange "." = 0
-        nestingChange _ = 1
+    caseInsensitive = caseInsensitiveAnchors . mcFlavor . scMarkdown $ cScanners
 
     -- Returns `Nothing` when path corresponds to an existing (and tracked) directory
-    tryGetFileStatus :: FilePath -> ExceptT VerifyError IO (Either DirectoryStatus FileStatus)
-    tryGetFileStatus file
-      | Just f <- mFile = return $ Right f
-      | Just d <- mDir = return $ Left d
-      | otherwise = throwError (LocalFileDoesNotExist file)
-      where
-        matchesFilePath :: FilePath -> Bool
-        matchesFilePath = equalFilePath $ expandIndirections file
+    tryGetFileStatus :: FilePath -> CanonicalPath -> ExceptT VerifyError IO (Either DirectoryStatus FileStatus)
+    tryGetFileStatus filePath canonicalPath
+      | Just f <- lookupFile canonicalPath repoInfo = return (Right f)
+      | Just d <- lookupDirectory canonicalPath repoInfo = return (Left d)
+      | otherwise = throwError (LocalFileDoesNotExist filePath)
 
-        mFile :: Maybe FileStatus
-        mFile = (files M.!) <$> find matchesFilePath (M.keys files)
-
-        mDir :: Maybe DirectoryStatus
-        mDir = (dirs M.!) <$> find matchesFilePath (M.keys dirs)
-
-    checkAnchor file fileAnchors anchor = do
-      checkAnchorReferenceAmbiguity file fileAnchors anchor
-      checkDeduplicatedAnchorReference file fileAnchors anchor
+    checkAnchor filePath fileAnchors anchor = do
+      checkAnchorReferenceAmbiguity filePath fileAnchors anchor
+      checkDeduplicatedAnchorReference filePath fileAnchors anchor
       checkAnchorExists fileAnchors anchor
 
     anchorNameEq =
-      if caseInsensitiveAnchors . mcFlavor . scMarkdown $ cScanners
+      if caseInsensitive
       then (==) `on` toCaseFold
       else (==)
 
@@ -607,16 +583,16 @@ verifyReference
     -- has added a suffix to the duplicate, and now the original is referrenced -
     -- such links are pretty fragile and we discourage their use despite
     -- they are in fact unambiguous.
-    checkAnchorReferenceAmbiguity file fileAnchors anchor = do
+    checkAnchorReferenceAmbiguity filePath fileAnchors anchor = do
       let similarAnchors = filter (anchorNameEq anchor . aName) fileAnchors
       when (length similarAnchors > 1) $
-        throwError $ AmbiguousAnchorRef file anchor (Exts.fromList similarAnchors)
+        throwError $ AmbiguousAnchorRef filePath anchor (Exts.fromList similarAnchors)
 
     -- Similar to the previous one, but for the case when we reference the
     -- renamed duplicate.
-    checkDeduplicatedAnchorReference file fileAnchors anchor =
+    checkDeduplicatedAnchorReference filePath fileAnchors anchor =
       whenJust (stripAnchorDupNo anchor) $ \origAnchor ->
-        checkAnchorReferenceAmbiguity file fileAnchors origAnchor
+        checkAnchorReferenceAmbiguity filePath fileAnchors origAnchor
 
     checkAnchorExists givenAnchors anchor =
       case find (anchorNameEq anchor . aName) givenAnchors of

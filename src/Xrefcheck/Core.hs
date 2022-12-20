@@ -15,10 +15,10 @@ import Control.Lens (makeLenses)
 import Data.Aeson (FromJSON (..), withText)
 import Data.Char (isAlphaNum)
 import Data.Char qualified as C
-import Data.Default (Default (..))
 import Data.DList (DList)
 import Data.DList qualified as DList
 import Data.List qualified as L
+import Data.Map qualified as M
 import Data.Reflection (Given)
 import Data.Text qualified as T
 import Fmt (Buildable (..), Builder)
@@ -27,6 +27,7 @@ import Text.Interpolation.Nyan
 import Time (Second, Time)
 
 import Xrefcheck.Progress
+import Xrefcheck.System
 import Xrefcheck.Util
 
 -----------------------------------------------------------
@@ -77,7 +78,59 @@ data Reference = Reference
   , rAnchor :: Maybe Text
     -- ^ Section or custom anchor tag.
   , rPos    :: Position
+    -- ^ Position in source file.
+  , rInfo   :: ReferenceInfo
+    -- ^ More info about the link.
   } deriving stock (Show, Generic)
+
+-- | Info about the reference.
+data ReferenceInfo
+  = RIExternal
+    -- ^ Reference to a file at outer site, e.g @[d](http://www.google.com/doodles)@
+  | RIOtherProtocol
+    -- ^ Entry not to be processed, e.g. @mailto:e-mail@
+  | RIFileLocal
+    -- ^ Reference to this file, e.g. @[a](#header)@
+  | RIFileAbsolute
+    -- ^ Reference to a file absolute to the root, e.g. @[c](/folder/file#header)@
+  | RIFileRelative
+    -- ^ Reference to a file relative to given one, e.g. @[b](folder/file#header)@
+  deriving stock (Show, Generic)
+
+pattern PathSep :: Char
+pattern PathSep <- (isPathSeparator -> True)
+
+-- | Compute the 'ReferenceInfo' corresponding to a given link.
+referenceInfo :: Text -> ReferenceInfo
+referenceInfo link = case toString link of
+  [] -> RIFileLocal
+  PathSep : _             -> RIFileAbsolute
+  '.' : PathSep : _       -> RIFileRelative
+  '.' : '.' : PathSep : _ -> RIFileRelative
+  _ | hasUrlProtocol -> RIExternal
+    | hasProtocol -> RIOtherProtocol
+    | otherwise -> RIFileRelative
+  where
+    hasUrlProtocol = "://" `T.isInfixOf` T.take 10 link
+    hasProtocol = ":"   `T.isInfixOf` T.take 10 link
+
+-- | Whether this is a link to external resource.
+isExternal :: ReferenceInfo -> Bool
+isExternal = \case
+  RIFileLocal -> False
+  RIFileRelative -> False
+  RIFileAbsolute -> False
+  RIExternal -> True
+  RIOtherProtocol -> False
+
+-- | Whether this is a link to repo-local resource.
+isLocal :: ReferenceInfo -> Bool
+isLocal = \case
+  RIFileLocal -> True
+  RIFileRelative -> True
+  RIFileAbsolute -> True
+  RIExternal -> False
+  RIOtherProtocol -> False
 
 -- | Context of anchor.
 data AnchorType
@@ -119,9 +172,6 @@ data FileInfo = FileInfo
   } deriving stock (Show, Generic)
 makeLenses ''FileInfo
 
-instance Default FileInfo where
-  def = diffToFileInfo mempty
-
 data ScanPolicy
   = OnlyTracked
   -- ^ Scan and treat as existing only files tracked by Git.
@@ -148,11 +198,23 @@ data DirectoryStatus
 
 -- | All tracked files and directories.
 data RepoInfo = RepoInfo
- { riFiles       :: Map FilePath FileStatus
-   -- ^ Files from the repo with `FileInfo` attached to files that we've scanned.
- , riDirectories :: Map FilePath DirectoryStatus
-   -- ^ Directories containing those files.
- } deriving stock (Show)
+  { riFiles :: Map CanonicalPath FileStatus
+    -- ^ Files from the repo with `FileInfo` attached to files that we've scanned.
+  , riDirectories :: Map CanonicalPath DirectoryStatus
+    -- ^ Directories containing those files.
+  , riRoot :: CanonicalPath
+    -- ^ Repository root.
+  }
+
+-- Search for a file in the repository.
+lookupFile :: CanonicalPath -> RepoInfo -> Maybe FileStatus
+lookupFile path RepoInfo{..} =
+  M.lookup path riFiles
+
+-- Search for a directory in the repository.
+lookupDirectory :: CanonicalPath -> RepoInfo -> Maybe DirectoryStatus
+lookupDirectory path RepoInfo{..} =
+  M.lookup path riDirectories
 
 -----------------------------------------------------------
 -- Instances
@@ -160,6 +222,7 @@ data RepoInfo = RepoInfo
 
 instance NFData Position
 instance NFData Reference
+instance NFData ReferenceInfo
 instance NFData AnchorType
 instance NFData Anchor
 instance NFData FileInfo
@@ -167,11 +230,19 @@ instance NFData FileInfo
 instance Given ColorMode => Buildable Reference where
   build Reference{..} =
     [int||
-    reference #{paren . build $ locationType rLink} #{rPos}:
+    reference #{paren . build $ rInfo} #{rPos}:
       - text: #s{rName}
       - link: #{if null rLink then "-" else rLink}
       - anchor: #{rAnchor ?: styleIfNeeded Faint "-"}
     |]
+
+instance Given ColorMode => Buildable ReferenceInfo where
+  build = \case
+    RIFileLocal -> colorIfNeeded Green "file-local"
+    RIFileRelative -> colorIfNeeded Yellow "relative"
+    RIFileAbsolute -> colorIfNeeded Blue "absolute"
+    RIExternal -> colorIfNeeded Red "external"
+    RIOtherProtocol -> ""
 
 instance Given ColorMode => Buildable AnchorType where
   build = styleIfNeeded Faint . \case
@@ -204,14 +275,14 @@ instance Given ColorMode => Buildable FileInfo where
     |]
 
 instance Given ColorMode => Buildable RepoInfo where
-  build (RepoInfo m _)
-    | Just scanned <- nonEmpty [(name, info) | (name, Scanned info) <- toPairs m]
+  build RepoInfo{..}
+    | Just scanned <- nonEmpty [(name, info) | (name, Scanned info) <- toPairs riFiles]
     = interpolateUnlinesF $ buildFileReport <$> scanned
     where
-      buildFileReport :: ([Char], FileInfo) -> Builder
+      buildFileReport :: (CanonicalPath, FileInfo) -> Builder
       buildFileReport (name, info) =
         [int||
-        #{ colorIfNeeded Cyan $ name }:
+        #{ colorIfNeeded Cyan $ getPosixRelativeOrAbsoluteChild riRoot name }:
         #{ interpolateIndentF 2 $ build info }
         |]
   build _ = "No scannable files found."
@@ -219,60 +290,6 @@ instance Given ColorMode => Buildable RepoInfo where
 -----------------------------------------------------------
 -- Analysing
 -----------------------------------------------------------
-
-pattern PathSep :: Char
-pattern PathSep <- (isPathSeparator -> True)
-
--- | Type of reference.
-data LocationType
-  = FileLocalLoc
-    -- ^ Reference to this file, e.g. @[a](#header)@
-  | RelativeLoc
-    -- ^ Reference to a file relative to given one, e.g. @[b](folder/file#header)@
-  | AbsoluteLoc
-    -- ^ Reference to a file relative to the root, e.g. @[c](/folder/file#header)@
-  | ExternalLoc
-    -- ^ Reference to a file at outer site, e.g @[d](http://www.google.com/doodles)@
-  | OtherLoc
-    -- ^ Entry not to be processed, e.g. @mailto:e-mail@
-  deriving stock (Eq, Show)
-
-instance Given ColorMode => Buildable LocationType where
-  build = \case
-    FileLocalLoc   -> colorIfNeeded Green "file-local"
-    RelativeLoc    -> colorIfNeeded Yellow "relative"
-    AbsoluteLoc    -> colorIfNeeded Blue "absolute"
-    ExternalLoc    -> colorIfNeeded Red "external"
-    OtherLoc       -> ""
-
--- | Whether this is a link to external resource.
-isExternal :: LocationType -> Bool
-isExternal = \case
-  ExternalLoc -> True
-  _ -> False
-
--- | Whether this is a link to repo-local resource.
-isLocal :: LocationType -> Bool
-isLocal = \case
-  FileLocalLoc   -> True
-  RelativeLoc    -> True
-  AbsoluteLoc    -> True
-  ExternalLoc    -> False
-  OtherLoc       -> False
-
--- | Get type of reference.
-locationType :: Text -> LocationType
-locationType location = case toString location of
-  []                      -> FileLocalLoc
-  PathSep : _             -> AbsoluteLoc
-  '.' : PathSep : _       -> RelativeLoc
-  '.' : '.' : PathSep : _ -> RelativeLoc
-  _ | hasUrlProtocol      -> ExternalLoc
-    | hasProtocol         -> OtherLoc
-    | otherwise           -> RelativeLoc
-  where
-    hasUrlProtocol = "://" `T.isInfixOf` T.take 10 location
-    hasProtocol = ":" `T.isInfixOf` T.take 10 location
 
 -- | Which parts of verification do we perform.
 data VerifyMode
@@ -335,13 +352,6 @@ stripAnchorDupNo t = do
   guard (length strippedNo < length t)
   T.stripSuffix "-" strippedNo
 
--- | Strip './' prefix from local references.
-canonizeLocalRef :: Text -> Text
-canonizeLocalRef ref =
-  maybe ref canonizeLocalRef (T.stripPrefix localPrefix ref)
-  where
-    localPrefix = "./"
-
 -----------------------------------------------------------
 -- Visualisation
 -----------------------------------------------------------
@@ -357,7 +367,7 @@ initVerifyProgress references = VerifyProgress
   , vrExternal = initProgress (length (ordNub $ map rLink extRefs))
   }
   where
-    (extRefs, localRefs) = L.partition (isExternal . locationType . rLink) references
+    (extRefs, localRefs) = L.partition (isExternal . rInfo) references
 
 showAnalyseProgress :: Given ColorMode => VerifyMode -> Time Second -> VerifyProgress -> Text
 showAnalyseProgress mode posixTime VerifyProgress{..} =

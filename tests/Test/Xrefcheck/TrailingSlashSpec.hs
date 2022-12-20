@@ -17,6 +17,7 @@ import Xrefcheck.Core
 import Xrefcheck.Progress
 import Xrefcheck.Scan
 import Xrefcheck.Scanners.Markdown
+import Xrefcheck.System
 import Xrefcheck.Util
 
 test_slash :: TestTree
@@ -27,13 +28,13 @@ test_slash = testGroup "Trailing forward slash detection" $
     testCase ("All the files within the root \"" <>
       root <>
       "\" should exist") $ do
-        (ScanResult _ (RepoInfo repoInfo _)) <- allowRewrite False $ \rw ->
+        (ScanResult _ RepoInfo{..}) <- allowRewrite False $ \rw ->
           scanRepo OnlyTracked rw format (cExclusions config & ecIgnoreL .~ []) root
-        nonExistentFiles <- lefts <$> forM (keys repoInfo) (\filePath -> do
-          predicate <- doesFileExist filePath
+        nonExistentFiles <- lefts <$> forM (fst <$> toPairs riFiles) (\filePath -> do
+          predicate <- doesFileExist . unCanonicalPath $ filePath
           return $ if predicate
                     then Right ()
-                    else Left filePath)
+                    else Left . unCanonicalPath $ filePath)
         whenJust (nonEmpty nonExistentFiles) $ \files ->
           assertFailure
             [int||

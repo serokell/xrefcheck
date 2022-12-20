@@ -71,7 +71,7 @@ Scan errors dumped, 1 in total.
        - anchor: -
 
      File does not exist:
-       ./referenced-file.md
+       referenced-file.md
 
 Invalid references dumped, 1 in total.
 EOF

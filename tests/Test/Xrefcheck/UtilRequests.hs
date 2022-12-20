@@ -12,7 +12,6 @@ module Test.Xrefcheck.UtilRequests
 import Universum
 
 import Control.Exception qualified as E
-import Data.Map qualified as M
 import Text.Interpolation.Nyan
 
 import Control.Concurrent (forkIO, killThread)
@@ -21,6 +20,7 @@ import Xrefcheck.Config
 import Xrefcheck.Core
 import Xrefcheck.Progress
 import Xrefcheck.Scan
+import Xrefcheck.System (canonicalizePath)
 import Xrefcheck.Util
 import Xrefcheck.Verify
 
@@ -62,7 +62,7 @@ checkLinkAndProgressWithServer mock link progress vrExpectation =
 
 verifyLink :: Text -> IO (VerifyResult VerifyError, Progress Int)
 verifyLink link = do
-  let reference = Reference "" link Nothing (Position Nothing)
+  let reference = Reference "" link Nothing (Position Nothing) RIExternal
   progRef <- newIORef $ initVerifyProgress [reference]
   result <- verifyReferenceWithProgress reference progRef
   p <- readIORef progRef
@@ -70,6 +70,8 @@ verifyLink link = do
 
 verifyReferenceWithProgress :: Reference -> IORef VerifyProgress -> IO (VerifyResult VerifyError)
 verifyReferenceWithProgress reference progRef = do
+  canonicalRoot <- canonicalizePath "."
+  file <- canonicalizePath ""
   fmap wrlItem <$> verifyReference
     (defConfig GitHub & cExclusionsL . ecIgnoreExternalRefsToL .~ []) FullMode
-    progRef (RepoInfo M.empty mempty) "." "" reference
+    progRef (RepoInfo mempty mempty canonicalRoot) file reference

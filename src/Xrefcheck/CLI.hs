@@ -9,6 +9,7 @@ module Xrefcheck.CLI
   ( VerifyMode (..)
   , ExclusionOptions (..)
   , Command (..)
+  , DumpConfigMode (..)
   , Options (..)
   , NetworkingOptions (..)
 
@@ -70,7 +71,11 @@ modes =
 
 data Command
   = DefaultCommand Options
-  | DumpConfig Flavor FilePath
+  | DumpConfig Flavor DumpConfigMode
+
+data DumpConfigMode
+  = DCMFile Bool FilePath
+  | DCMStdout
 
 data Options = Options
   { oConfigPath        :: Maybe FilePath
@@ -218,7 +223,7 @@ dumpConfigOptions = hsubparser $
     info parser $
     progDesc "Dump default configuration into a file."
   where
-    parser = DumpConfig <$> repoTypeOption <*> outputOption
+    parser = DumpConfig <$> repoTypeOption <*> mode
 
     repoTypeOption =
       option repoTypeReadM $
@@ -230,6 +235,22 @@ dumpConfigOptions = hsubparser $
       Can be (#{intercalate " | " $ map show allFlavors}). \
       Case insensitive.
       |]
+
+    mode =
+      stdoutMode <|> fileMode
+
+    fileMode =
+      DCMFile <$> forceMode <*> outputOption
+
+    stdoutMode =
+      flag' DCMStdout $
+      long "stdout" <>
+      help "Write the config file to stdout."
+
+    forceMode =
+      switch $
+      long "force" <>
+      help "Overwrite the config file if it already exists."
 
     outputOption =
       filepathOption $

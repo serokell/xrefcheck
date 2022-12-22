@@ -41,6 +41,9 @@ Unreleased
 * [#231](https://github.com/serokell/xrefcheck/pull/231)
   + Anchor analysis takes now into account the appropriate case-sensitivity depending on
   the configured Markdown flavour.
+* [#254](https://github.com/serokell/xrefcheck/pull/254)
+  + Now the `dump-config` command does not overwrite a file unless explicitly told with a
+    `--force` flag. Also, a `--stdout` flag allows to print the config to stdout instead.
 
 0.2.2
 ==========

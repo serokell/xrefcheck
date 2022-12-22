@@ -130,6 +130,7 @@ executables:
     dependencies:
       - xrefcheck
       - universum
+      - directory
       - with-utf8
       - code-page
 

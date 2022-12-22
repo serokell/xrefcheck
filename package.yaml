@@ -46,11 +46,11 @@ default-extensions:
   - StandaloneDeriving
   - TemplateHaskell
   - TupleSections
+  - TypeApplications
   - TypeFamilies
+  - TypeOperators
   - UndecidableInstances
   - ViewPatterns
-  - TypeApplications
-  - TypeOperators
 
 ghc-options:
   - -Weverything
@@ -85,8 +85,8 @@ library:
     - aeson-casing
     - async
     - bytestring
-    - containers
     - cmark-gfm >= 0.2.5
+    - containers
     - directory
     - dlist
     - filepath
@@ -96,14 +96,17 @@ library:
     - http-client
     - http-types
     - lens
-    - pretty-terminal
     - modern-uri
     - mtl
+    - nyan-interpolation
     - o-clock
     - optparse-applicative
+    - pretty-terminal
     - process
+    - reflection
     - regex-tdfa
     - req
+    - safe-exceptions
     - tagsoup
     - text
     - text-metrics
@@ -112,9 +115,6 @@ library:
     - universum
     - uri-bytestring
     - yaml
-    - reflection
-    - nyan-interpolation
-    - safe-exceptions
 
 executables:
   xrefcheck:
@@ -128,11 +128,11 @@ executables:
       - -with-rtsopts=-N
       - -O2
     dependencies:
-      - xrefcheck
-      - universum
-      - directory
-      - with-utf8
       - code-page
+      - directory
+      - universum
+      - with-utf8
+      - xrefcheck
 
 tests:
   xrefcheck-tests:
@@ -143,24 +143,24 @@ tests:
       - Paths_xrefcheck
     dependencies:
       - case-insensitive
-      - containers
       - cmark-gfm
-      - firefly
-      - xrefcheck
+      - containers
       - directory
+      - firefly
       - http-types
+      - modern-uri
+      - nyan-interpolation
       - o-clock
+      - reflection
       - regex-tdfa
       - tasty
       - tasty-hunit
       - tasty-quickcheck
       - time
       - universum
-      - modern-uri
       - uri-bytestring
+      - xrefcheck
       - yaml
-      - reflection
-      - nyan-interpolation
 
   ftp-tests:
     main: Main.hs
@@ -173,5 +173,5 @@ tests:
       - tagged
       - tasty
       - tasty-hunit
-      - xrefcheck
       - universum
+      - xrefcheck

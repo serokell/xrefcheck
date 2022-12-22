@@ -57,8 +57,7 @@ import Network.HTTP.Req
   defaultHttpConfig, ignoreResponse, req, runReq, useURI)
 import Network.HTTP.Types.Header (hRetryAfter)
 import Network.HTTP.Types.Status (Status, statusCode, statusMessage)
-import System.FilePath.Posix
-  (equalFilePath, joinPath, makeRelative, normalise, splitDirectories, takeDirectory, (</>))
+import System.FilePath.Posix (makeRelative, normalise, splitDirectories, takeDirectory, (</>))
 import Text.Interpolation.Nyan
 import Text.ParserCombinators.ReadPrec qualified as ReadPrec (lift)
 import Text.Regex.TDFA.Text (Regex, regexec)
@@ -74,6 +73,7 @@ import Xrefcheck.Config
 import Xrefcheck.Core
 import Xrefcheck.Orphans ()
 import Xrefcheck.Progress
+import Xrefcheck.RepoInfo
 import Xrefcheck.Scan
 import Xrefcheck.Scanners.Markdown (MarkdownConfig (mcFlavor))
 import Xrefcheck.System
@@ -361,10 +361,10 @@ verifyRepo
   config@Config{..}
   mode
   root
-  repoInfo'@(RepoInfo files _)
+  repoInfo
     = do
   let toScan = do
-        (file, fileInfo) <- M.toList files
+        (file, fileInfo) <- riFiles repoInfo
         guard . not $ matchesGlobPatterns root (ecIgnoreRefsFrom cExclusions) file
         case fileInfo of
           Scanned fi -> do
@@ -379,7 +379,7 @@ verifyRepo
 
   accumulated <- loopAsyncUntil (printer progressRef) do
     forConcurrentlyCaching toScan ifExternalThenCache $ \(file, ref) ->
-      verifyReference config mode progressRef repoInfo' root file ref
+      verifyReference config mode progressRef repoInfo root file ref
   case accumulated of
     Right res -> return $ fold res
     Left (exception, partialRes) -> do
@@ -431,7 +431,7 @@ verifyReference
   config@Config{..}
   mode
   progressRef
-  (RepoInfo files dirs)
+  repoInfo
   root
   fileWithReference
   ref@Reference{..}
@@ -545,22 +545,6 @@ verifyReference
           Left TrackedDirectory -> pass -- path leads to directory, currently
                                         -- if such link contain anchor, we ignore it
 
-    -- expands ".." and "."
-    -- expandIndirections "a/b/../c"      = "a/c"
-    -- expandIndirections "a/b/c/../../d" = "a/d"
-    -- expandIndirections "../../a"       = "../../a"
-    -- expandIndirections "a/./b"         = "a/b"
-    -- expandIndirections "a/b/./../c"    = "a/c"
-    expandIndirections :: FilePath -> FilePath
-    expandIndirections = joinPath . reverse . expand 0 . reverse . splitDirectories
-      where
-        expand :: Int -> [FilePath] -> [FilePath]
-        expand acc ("..":xs) = expand (acc+1) xs
-        expand acc (".":xs)  = expand acc xs
-        expand 0 (x:xs)      = x : expand 0 xs
-        expand acc (_:xs)    = expand (acc-1) xs
-        expand acc []        = replicate acc ".."
-
     checkReferredFileIsInsideRepo file = unless
       (noNegativeNesting $ makeRelative root file) $
         throwError (LocalFileOutsideRepo file)
@@ -580,18 +564,9 @@ verifyReference
     -- Returns `Nothing` when path corresponds to an existing (and tracked) directory
     tryGetFileStatus :: FilePath -> ExceptT VerifyError IO (Either DirectoryStatus FileStatus)
     tryGetFileStatus file
-      | Just f <- mFile = return $ Right f
-      | Just d <- mDir = return $ Left d
+      | Just f <- lookupFile file repoInfo = return $ Right f
+      | Just d <- lookupDirectory file repoInfo = return $ Left d
       | otherwise = throwError (LocalFileDoesNotExist file)
-      where
-        matchesFilePath :: FilePath -> Bool
-        matchesFilePath = equalFilePath $ expandIndirections file
-
-        mFile :: Maybe FileStatus
-        mFile = (files M.!) <$> find matchesFilePath (M.keys files)
-
-        mDir :: Maybe DirectoryStatus
-        mDir = (dirs M.!) <$> find matchesFilePath (M.keys dirs)
 
     checkAnchor file fileAnchors anchor = do
       checkAnchorReferenceAmbiguity file fileAnchors anchor

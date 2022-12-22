@@ -15,6 +15,7 @@ import Text.Interpolation.Nyan
 import Xrefcheck.Config
 import Xrefcheck.Core
 import Xrefcheck.Progress
+import Xrefcheck.RepoInfo
 import Xrefcheck.Scan
 import Xrefcheck.Scanners.Markdown
 import Xrefcheck.Util
@@ -27,9 +28,9 @@ test_slash = testGroup "Trailing forward slash detection" $
     testCase ("All the files within the root \"" <>
       root <>
       "\" should exist") $ do
-        (ScanResult _ (RepoInfo repoInfo _)) <- allowRewrite False $ \rw ->
-          scanRepo OnlyTracked rw format (cExclusions config & ecIgnoreL .~ []) root
-        nonExistentFiles <- lefts <$> forM (keys repoInfo) (\filePath -> do
+        (ScanResult _ repoInfo) <- allowRewrite False $ \rw ->
+          scanRepo OnlyTracked rw format (cExclusions config & ecIgnoreL .~ []) GitHub root
+        nonExistentFiles <- lefts <$> forM (fst <$> riFiles repoInfo) (\filePath -> do
           predicate <- doesFileExist filePath
           return $ if predicate
                     then Right ()

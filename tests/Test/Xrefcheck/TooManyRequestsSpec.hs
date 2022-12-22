@@ -63,7 +63,7 @@ test_tooManyRequests = testGroup "429 response tests"
                   }
               }
         _ <- verifyReferenceWithProgress
-          (Reference "" "http://127.0.0.1:5000/429" Nothing (Position Nothing))
+          (Reference "" "http://127.0.0.1:5000/429" Nothing (Position Nothing) RIExternal)
           progressRef
         Progress{..} <- vrExternal <$> readIORef progressRef
         let ttc = ttTimeToCompletion <$> pTaskTimestamp
@@ -88,7 +88,7 @@ test_tooManyRequests = testGroup "429 response tests"
                   }
               }
         _ <- verifyReferenceWithProgress
-          (Reference "" "http://127.0.0.1:5000/429" Nothing (Position Nothing))
+          (Reference "" "http://127.0.0.1:5000/429" Nothing (Position Nothing) RIExternal)
           progressRef
         Progress{..} <- vrExternal <$> readIORef progressRef
         let ttc = fromMaybe (sec 0) $ ttTimeToCompletion <$> pTaskTimestamp
@@ -114,7 +114,7 @@ test_tooManyRequests = testGroup "429 response tests"
                   }
               }
         _ <- verifyReferenceWithProgress
-          (Reference "" "http://127.0.0.1:5000/429" Nothing (Position Nothing))
+          (Reference "" "http://127.0.0.1:5000/429" Nothing (Position Nothing) RIExternal)
           progressRef
         Progress{..} <- vrExternal <$> readIORef progressRef
         let ttc = ttTimeToCompletion <$> pTaskTimestamp

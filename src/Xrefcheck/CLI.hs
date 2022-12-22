@@ -39,7 +39,7 @@ import Xrefcheck.Config (NetworkingConfig, NetworkingConfig' (..))
 import Xrefcheck.Core
 import Xrefcheck.Scan
 import Xrefcheck.System (RelGlobPattern, mkGlobPattern)
-import Xrefcheck.Util (ColorMode (WithColors, WithoutColors), normaliseWithNoTrailing)
+import Xrefcheck.Util (ColorMode (WithColors, WithoutColors))
 
 modeReadM :: ReadM VerifyMode
 modeReadM = eitherReader $ \s ->
@@ -118,7 +118,7 @@ defaultConfigPaths = ["./xrefcheck.yaml", "./.xrefcheck.yaml"]
 type RepoType = Flavor
 
 filepathOption :: Mod OptionFields FilePath -> Parser FilePath
-filepathOption = fmap normaliseWithNoTrailing <$> strOption
+filepathOption = strOption
 
 globOption :: Mod OptionFields RelGlobPattern -> Parser RelGlobPattern
 globOption = option $ eitherReader $ mkGlobPattern

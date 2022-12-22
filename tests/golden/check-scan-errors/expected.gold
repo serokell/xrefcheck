@@ -46,7 +46,7 @@ Scan errors dumped, 7 in total.
        - anchor: -
 
      File does not exist:
-       ./no-file.md
+       no-file.md
 
   ➥  In file check-scan-errors.md
      bad reference (relative) at src:23:1-24:
@@ -64,6 +64,6 @@ Scan errors dumped, 7 in total.
        - anchor: -
 
      File does not exist:
-       ./a.md
+       a.md
 
 Invalid references dumped, 3 in total.

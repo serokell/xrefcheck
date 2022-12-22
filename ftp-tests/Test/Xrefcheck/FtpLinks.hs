@@ -41,7 +41,6 @@ instance IsOption FtpHostOpt where
     <> help (untag (optionHelp :: Tagged FtpHostOpt String))
     )
 
-
 config :: Config
 config = defConfig GitHub & cExclusionsL . ecIgnoreExternalRefsToL .~ []
 

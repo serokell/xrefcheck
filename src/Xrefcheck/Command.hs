@@ -18,8 +18,7 @@ import Text.Interpolation.Nyan
 
 import Xrefcheck.CLI (Options (..), addExclusionOptions, addNetworkingOptions, defaultConfigPaths)
 import Xrefcheck.Config
-  (Config, Config' (..), ScannersConfig, ScannersConfig' (..), defConfig, normaliseConfigFilePaths,
-  overrideConfig)
+  (Config, Config' (..), ScannersConfig, ScannersConfig' (..), defConfig, overrideConfig)
 import Xrefcheck.Core (Flavor (..))
 import Xrefcheck.Progress (allowRewrite)
 import Xrefcheck.Scan
@@ -31,7 +30,7 @@ import Xrefcheck.Util
 import Xrefcheck.Verify (reportVerifyErrs, verifyErrors, verifyRepo)
 
 readConfig :: FilePath -> IO Config
-readConfig path = fmap (normaliseConfigFilePaths . overrideConfig) do
+readConfig path = fmap overrideConfig do
   decodeFileEither path
     >>= either (error . toText . prettyPrintParseException) pure
 
@@ -70,7 +69,8 @@ defaultAction Options{..} = do
 
     (ScanResult scanErrs repoInfo) <- allowRewrite showProgressBar $ \rw -> do
       let fullConfig = addExclusionOptions (cExclusions config) oExclusionOptions
-      scanRepo oScanPolicy rw (formats $ cScanners config) fullConfig oRoot
+          formatsSupport = formats $ cScanners config
+      scanRepo oScanPolicy rw formatsSupport fullConfig oRoot
 
     when oVerbose $
       fmt [int||
@@ -84,7 +84,7 @@ defaultAction Options{..} = do
     verifyRes <- allowRewrite showProgressBar $ \rw -> do
       let fullConfig = config
             { cNetworking = addNetworkingOptions (cNetworking config) oNetworkingOptions }
-      verifyRepo rw fullConfig oMode oRoot repoInfo
+      verifyRepo rw fullConfig oMode repoInfo
 
     case verifyErrors verifyRes of
       Nothing | null scanErrs -> fmtLn "All repository links are valid."

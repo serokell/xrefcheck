@@ -10,7 +10,6 @@ module Xrefcheck.Config
   , defConfigText
   ) where
 
-
 import Universum
 
 import Control.Lens (makeLensesWith)
@@ -37,13 +36,6 @@ data Config' f = Config
   , cNetworking :: Field f (NetworkingConfig' f)
   , cScanners   :: ScannersConfig' f
   } deriving stock (Generic)
-
-normaliseConfigFilePaths :: Config -> Config
-normaliseConfigFilePaths Config{..}
-  = Config
-    { cExclusions = normaliseExclusionConfigFilePaths cExclusions
-    , ..
-    }
 
 -- | Type alias for NetworkingConfig' with all required fields.
 type NetworkingConfig = NetworkingConfig' Identity
@@ -79,9 +71,10 @@ makeLensesWith postfixFields ''Config'
 makeLensesWith postfixFields ''NetworkingConfig'
 
 defConfig :: HasCallStack => Flavor -> Config
-defConfig flavor = normaliseConfigFilePaths $
-  either (error . toText . prettyPrintParseException) id $
-  decodeEither' $ encodeUtf8 $ defConfigText flavor
+defConfig = either (error . toText . prettyPrintParseException) id
+    . decodeEither'
+    . encodeUtf8
+    . defConfigText
 
 -- | Override missed fields with default values.
 overrideConfig :: ConfigOptional -> Config

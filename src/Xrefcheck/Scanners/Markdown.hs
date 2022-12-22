@@ -26,7 +26,6 @@ import Control.Monad.Trans.Writer.CPS (Writer, runWriter, tell)
 import Data.Aeson (FromJSON (..), genericParseJSON)
 import Data.ByteString.Lazy qualified as BSL
 import Data.DList qualified as DList
-import Data.Default (def)
 import Data.Text qualified as T
 import Data.Text.Lazy qualified as LT
 import Fmt (Buildable (..), nameF)
@@ -35,6 +34,7 @@ import Text.Interpolation.Nyan
 
 import Xrefcheck.Core
 import Xrefcheck.Scan
+import Xrefcheck.System
 import Xrefcheck.Util
 
 data MarkdownConfig = MarkdownConfig
@@ -124,8 +124,6 @@ data GetIgnoreMode
   | InvalidMode Text
   deriving stock (Eq)
 
-
-
 data ScannerState = ScannerState
   { _ssIgnore :: Maybe Ignore
   , _ssParentNodeType :: Maybe NodeType
@@ -139,7 +137,7 @@ initialScannerState = ScannerState
   , _ssParentNodeType = Nothing
   }
 
-type ScannerM a = StateT ScannerState (Writer [ScanError]) a
+type ScannerM a = StateT ScannerState (Writer [ScanError 'Parse]) a
 
 -- | A fold over a `Node`.
 cataNode :: (Maybe PosInfo -> NodeType -> [c] -> c) -> Node -> c
@@ -156,9 +154,9 @@ cataNodeWithParentNodeInfo f node = cataNode f' node
       map (ssParentNodeType .= Just ty >>) childScanners
 
 -- | Find ignore annotations (ignore paragraph and ignore link)
--- and remove nodes that should be ignored
-removeIgnored :: FilePath -> Node -> Writer [ScanError] Node
-removeIgnored fp = withIgnoreMode . cataNodeWithParentNodeInfo remove
+-- and remove nodes that should be ignored.
+removeIgnored :: Node -> Writer [ScanError 'Parse] Node
+removeIgnored = withIgnoreMode . cataNodeWithParentNodeInfo remove
   where
     remove
       :: Maybe PosInfo
@@ -178,7 +176,7 @@ removeIgnored fp = withIgnoreMode . cataNodeWithParentNodeInfo remove
             -- found we should report an error.
             (IMSParagraph, PARAGRAPH)    -> (ssIgnore .= Nothing) $> defNode
             (IMSParagraph, x)            -> do
-              lift . tell . makeError modePos fp . ParagraphErr $ prettyType x
+              lift . tell . makeError modePos . ParagraphErr $ prettyType x
               ssIgnore .= Nothing
               Node pos ty <$> sequence subs
 
@@ -187,7 +185,7 @@ removeIgnored fp = withIgnoreMode . cataNodeWithParentNodeInfo remove
             -- the file should already be ignored when `checkIgnoreFile` is called.
             -- We should report an error if we find it anyway.
             (IMSAll, _)                 -> do
-              lift . tell $ makeError modePos fp FileErr
+              lift . tell $ makeError modePos FileErr
               ssIgnore .= Nothing
               Node pos ty <$> sequence subs
 
@@ -205,14 +203,14 @@ removeIgnored fp = withIgnoreMode . cataNodeWithParentNodeInfo remove
                 currentIgnore <- use ssIgnore
                 case currentIgnore of
                   Just (Ignore {_ignoreMode = IMSLink ParentExpectsLink}) -> do
-                    lift $ tell $ makeError modePos fp LinkErr
+                    lift $ tell $ makeError modePos LinkErr
                     ssIgnore .= Nothing
                   _ -> pass
               return node'
 
       when (ty == PARAGRAPH) $ use ssIgnore >>= \case
         Just (Ignore (IMSLink ExpectingLinkInParagraph) pragmaPos) ->
-          lift $ tell $ makeError pragmaPos fp LinkErr
+          lift $ tell $ makeError pragmaPos LinkErr
         _ -> pass
 
       return scan
@@ -236,7 +234,7 @@ removeIgnored fp = withIgnoreMode . cataNodeWithParentNodeInfo remove
 
         (ssIgnore .= Just (Ignore ignoreModeState correctPos)) $> defNode
       InvalidMode msg -> do
-        lift . tell $ makeError correctPos fp $ UnrecognisedErr msg
+        lift . tell $ makeError correctPos $ UnrecognisedErr msg
         (ssIgnore .= Nothing) $> defNode
       NotAnAnnotation -> Node pos nodeType <$> sequence subs
       where
@@ -249,20 +247,20 @@ removeIgnored fp = withIgnoreMode . cataNodeWithParentNodeInfo remove
 
     withIgnoreMode
       :: ScannerM Node
-      -> Writer [ScanError] Node
+      -> Writer [ScanError 'Parse] Node
     withIgnoreMode action = action `runStateT` initialScannerState >>= \case
       -- We expect `Ignore` state to be `Nothing` when we reach EOF,
       -- otherwise that means there was an annotation that didn't match
       -- any node, so we have to report that.
       (node, ScannerState {_ssIgnore = Just (Ignore mode pos)}) -> case mode of
         IMSParagraph -> do
-            tell . makeError pos fp $ ParagraphErr "EOF"
+            tell . makeError pos $ ParagraphErr "EOF"
             pure node
         IMSLink _ -> do
-            tell $ makeError pos fp LinkErr
+            tell $ makeError pos LinkErr
             pure node
         IMSAll -> do
-            tell $ makeError pos fp FileErr
+            tell $ makeError pos FileErr
             pure node
       (node, _) -> pure node
 
@@ -273,17 +271,14 @@ foldNode action node@(Node _ _ subs) = do
   b <- concatForM subs (foldNode action)
   return (a <> b)
 
-type ExtractorM a = ReaderT MarkdownConfig (Writer [ScanError]) a
+type ExtractorM a = ReaderT MarkdownConfig (Writer [ScanError 'Parse]) a
 
 -- | Extract information from source tree.
-nodeExtractInfo
-  :: FilePath
-  -> Node
-  -> ExtractorM FileInfo
-nodeExtractInfo fp input@(Node _ _ nSubs) = do
+nodeExtractInfo :: Node -> ExtractorM FileInfo
+nodeExtractInfo input@(Node _ _ nSubs) = do
   if checkIgnoreAllFile nSubs
-  then return def
-  else diffToFileInfo <$> (foldNode extractor =<< lift (removeIgnored fp input))
+  then return (diffToFileInfo mempty)
+  else diffToFileInfo <$> (foldNode extractor =<< lift (removeIgnored input))
 
   where
     extractor :: Node -> ExtractorM FileInfoDiff
@@ -327,18 +322,22 @@ nodeExtractInfo fp input@(Node _ _ nSubs) = do
 
         _ -> return mempty
 
-     where
-       extractLink url = do
-         let rName = nodeExtractText node
-             rPos = toPosition pos
-             link = if null url then rName else url
-         let (rLink, rAnchor) = case T.splitOn "#" link of
-                 [t]    -> (t, Nothing)
-                 t : ts -> (t, Just $ T.intercalate "#" ts)
-                 []     -> error "impossible"
-         return $ FileInfoDiff
-           (DList.singleton $ Reference {rName, rPos, rLink, rAnchor})
-           DList.empty
+      where
+        extractLink url = do
+          let rName = nodeExtractText node
+              rPos = toPosition pos
+              link = if null url then rName else url
+
+          let (rLink, rAnchor) = case T.splitOn "#" link of
+                [t] -> (t, Nothing)
+                t : ts -> (t, Just $ T.intercalate "#" ts)
+                [] -> error "impossible"
+
+          let rInfo = referenceInfo rLink
+
+          return $ FileInfoDiff
+            (DList.singleton $ Reference {rName, rPos, rLink, rAnchor, rInfo})
+            DList.empty
 
 -- | Check if there is `ignore all` at the beginning of the file,
 -- ignoring preceding comments if there are any.
@@ -361,10 +360,9 @@ defNode = Node Nothing DOCUMENT [] -- hard-coded default Node
 
 makeError
   :: Maybe PosInfo
-  -> FilePath
   -> ScanErrorDescription
-  -> [ScanError]
-makeError pos fp errDescription = one $ ScanError (toPosition pos) fp errDescription
+  -> [ScanError 'Parse]
+makeError pos errDescription = one $ mkParseScanError (toPosition pos) errDescription
 
 getCommentContent :: Node -> Maybe Text
 getCommentContent node = do
@@ -406,16 +404,18 @@ textToMode ("ignore" : [x])
   | otherwise        = InvalidMode x
 textToMode _         = NotAnAnnotation
 
-parseFileInfo :: MarkdownConfig -> FilePath -> LT.Text -> (FileInfo, [ScanError])
-parseFileInfo config fp input
+parseFileInfo :: MarkdownConfig -> LT.Text -> (FileInfo, [ScanError 'Parse])
+parseFileInfo config input
   = runWriter
   $ flip runReaderT config
-  $ nodeExtractInfo fp
+  $ nodeExtractInfo
   $ commonmarkToNode [optFootnotes] [extAutolink]
   $ toStrict input
 
 markdownScanner :: MarkdownConfig -> ScanAction
-markdownScanner config path = parseFileInfo config path . decodeUtf8 <$> BSL.readFile path
+markdownScanner config canonicalFile =
+  parseFileInfo config . decodeUtf8
+    <$> BSL.readFile (unCanonicalPath canonicalFile)
 
 markdownSupport :: MarkdownConfig -> ([Extension], ScanAction)
 markdownSupport config = ([".md"], markdownScanner config)

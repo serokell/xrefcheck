@@ -9,7 +9,6 @@ module Xrefcheck.Util
   , postfixFields
   , (-:)
   , aesonConfigOption
-  , normaliseWithNoTrailing
   , posixTimeToTimeSecond
   , utcTimeToTimeSecond
   , module Xrefcheck.Util.Colorize
@@ -27,7 +26,6 @@ import Data.Time (UTCTime)
 import Data.Time.Clock (nominalDiffTimeToSeconds)
 import Data.Time.Clock.POSIX (POSIXTime, utcTimeToPOSIXSeconds)
 import Fmt (Builder)
-import System.FilePath.Posix (dropTrailingPathSeparator, normalise)
 import Time (Second, Time (..), sec)
 
 import Xrefcheck.Util.Colorize
@@ -53,9 +51,6 @@ aesonConfigOption = (aesonPrefix camelCase){Aeson.rejectUnknownFields = True}
 type family Field f a where
   Field Identity a = a
   Field Maybe a = Maybe a
-
-normaliseWithNoTrailing :: FilePath -> FilePath
-normaliseWithNoTrailing =  dropTrailingPathSeparator . normalise
 
 posixTimeToTimeSecond :: POSIXTime -> Time Second
 posixTimeToTimeSecond posixTime =

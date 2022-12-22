@@ -96,7 +96,7 @@ end
 
 # Example: `[Chore][#123] My commit`
 def issue_tags_pattern
-  /^(\[(#\d+|Chore)\])+ (?=\w)/
+  /^(\[(#\d+|Chore|Style)\])+ (?=\w)/
 end
 
 # Whether a string starts with an appropriate ticket tag.

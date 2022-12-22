@@ -24,7 +24,7 @@ mr_title_payload = githost.mr_title_payload
 unless has_valid_issue_tags(mr_title_payload)
   warn(
     "Inappropriate title for PR.\n"\
-    "Should start from issue ID (e.g. `[#123]`) or `[Chore]` tag.\n"\
+    "Should start from issue ID (e.g. `[#123]`), `[Chore]` or `[Style]` tag.\n"\
     "Note: please use `[Chore]` also for tickets tracked internally on YouTrack."
   )
 end

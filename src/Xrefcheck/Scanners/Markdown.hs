@@ -327,18 +327,18 @@ nodeExtractInfo fp input@(Node _ _ nSubs) = do
 
         _ -> return mempty
 
-     where
-       extractLink url = do
-         let rName = nodeExtractText node
-             rPos = toPosition pos
-             link = if null url then rName else url
-         let (rLink, rAnchor) = case T.splitOn "#" link of
-                 [t]    -> (t, Nothing)
-                 t : ts -> (t, Just $ T.intercalate "#" ts)
-                 []     -> error "impossible"
-         return $ FileInfoDiff
-           (DList.singleton $ Reference {rName, rPos, rLink, rAnchor})
-           DList.empty
+      where
+        extractLink url = do
+          let rName = nodeExtractText node
+              rPos = toPosition pos
+              link = if null url then rName else url
+          let (rLink, rAnchor) = case T.splitOn "#" link of
+                  [t]    -> (t, Nothing)
+                  t : ts -> (t, Just $ T.intercalate "#" ts)
+                  []     -> error "impossible"
+          return $ FileInfoDiff
+            (DList.singleton $ Reference {rName, rPos, rLink, rAnchor})
+            DList.empty
 
 -- | Check if there is `ignore all` at the beginning of the file,
 -- ignoring preceding comments if there are any.

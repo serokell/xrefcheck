@@ -3,57 +3,54 @@
 # SPDX-License-Identifier: MPL-2.0
 
 steps:
-  - command: nix-build ci.nix -A trailing-whitespace-check
-    label: Check trailing whitespaces
+  - command: nix flake check -L --allow-import-from-derivation
+    label: Check flake
 
   - label: shellcheck
-    command: nix run -f ci.nix pkgs.shellcheck -c find . -name '*.sh' -exec shellcheck {} +
+    command: nix shell .#shellcheck -c find . -name '*.sh' -exec shellcheck {} +
 
   - label: stylish
-    command: nix run -f ci.nix pkgs.gnumake pkgs-stylish.stylish-haskell -c ./scripts/validate-stylish.sh
+    command: nix shell .#gnumake .#stylish-haskell -c ./scripts/validate-stylish.sh
 
-  - command: nix-build ci.nix -A xrefcheck-lib-and-tests
+  - command: nix build -L .#"xrefcheck:lib:xrefcheck" .#"xrefcheck:test:ftp-tests" .#"xrefcheck:test:xrefcheck-tests"
     label: Library and tests
 
-  - command: nix run -f ci.nix pkgs.bats pkgs.diffutils xrefcheck-static -c bash -c "cd tests/golden/ && bats ./**"
+  - command: nix shell .#bats .#diffutils .#xrefcheck-static -c bash -c "cd tests/golden/ && bats ./**"
     label: Golden tests (bats)
 
-  - command: nix-build ci.nix -A xrefcheck-static
+  - command: nix build -L .#xrefcheck-static
     label: Executable
     artifact_paths:
       - "result/bin/xrefcheck"
 
-  - command: nix-build ci.nix -A xrefcheck-windows
+  - command: nix build -L .#xrefcheck-windows
     label: Windows executable
     artifact_paths:
       - "result/bin/*"
 
-  - command: nix run -f ci.nix xrefcheck-static -c xrefcheck
+  - command: nix run . -L
     label: Xrefcheck itself
     retry:
       automatic:
         limit: 2
 
   - label: lint
-    command: nix run -f ci.nix pkgs.haskellPackages.hlint -c hlint .
-
-  - command: nix run -f ci.nix pkgs.reuse -c reuse lint
-    label: REUSE lint
+    command: nix shell .#haskellPackages.hlint -c hlint .
 
   - command:
-      - nix run -f ci.nix pkgs.curl pkgs.gitAndTools.hub -c bash -c "curl https://raw.githubusercontent.com/serokell/scratch/release-binary/scripts/release-binary.sh | bash"
+      - nix shell .#curl .#gitAndTools.hub -c bash -c "curl https://raw.githubusercontent.com/serokell/scratch/release-binary/scripts/release-binary.sh | bash"
     label: Create a pre-release
     branches: master
 
   - command:
-      - nix-build docker
-      - nix run -f ci.nix pkgs.skopeo -c ./scripts/upload-docker-image.sh "docker-archive:$(readlink result)" "docker://docker.io/serokell/xrefcheck:latest"
+      - nix build -L .#docker-image
+      - nix shell .#skopeo -c ./scripts/upload-docker-image.sh "docker-archive:$(readlink result)" "docker://docker.io/serokell/xrefcheck:latest"
     label: Push to dockerhub
     branches: master
 
   - command:
-      - nix-build docker
-      - nix run -f ci.nix pkgs.skopeo -c ./scripts/upload-docker-image.sh "docker-archive:$(readlink result)" "docker://docker.io/serokell/xrefcheck:${BUILDKITE_BRANCH}"
+      - nix build .#docker-image
+      - nix shell .#skopeo -c ./scripts/upload-docker-image.sh "docker-archive:$(readlink result)" "docker://docker.io/serokell/xrefcheck:${BUILDKITE_BRANCH}"
     label: Push release to dockerhub
     if: |
       build.tag =~ /^v[0-9]+.*/

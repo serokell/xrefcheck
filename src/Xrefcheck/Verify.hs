@@ -47,7 +47,6 @@ import Control.Monad.Except (MonadError (..))
 import Data.Bits (toIntegralSized)
 import Data.ByteString qualified as BS
 import Data.Char (isAlphaNum)
-import Data.List (lookup)
 import Data.List qualified as L
 import Data.Map qualified as M
 import Data.Reflection (Given)
@@ -265,9 +264,9 @@ instance Given ColorMode => Buildable VerifyError where
       |]
 
 data CopyPasteCheckResult = CopyPasteCheckResult
-  { crFile :: FilePath,
-    crOriginalRef :: Reference,
-    crCopiedRef :: Reference
+  { crFile :: FilePath
+  , crOriginalRef :: Reference
+  , crCopiedRef :: Reference
   } deriving stock (Show, Eq, Ord)
 
 instance (Given ColorMode) => Buildable CopyPasteCheckResult where
@@ -298,8 +297,6 @@ reportCopyPasteErrors errs = fmt
   #{interpolateIndentF 2 (interpolateBlockListF' "➥ " build errs)}
   Possible copy/paste errors dumped, #{length errs} in total.
   |]
-
-
 
 data RetryAfter = Date UTCTime | Seconds (Time Second)
   deriving stock (Show, Eq)
@@ -411,12 +408,14 @@ verifyRepo
 
       toCheckCopyPaste = map (second _fiReferences) filesToScan
       toScan = concatMap (\(file, fileInfo) -> map (file,) $ _fiReferences fileInfo) filesToScan
-      copyPasteErrors = if scCopyPasteCheckEnabled cScanners
-                        then [ res
-                             | (file, refs) <- toCheckCopyPaste,
-                               res <- checkCopyPaste file refs
-                             ]
-                        else []
+      copyPasteErrors =
+        if scCopyPasteCheckEnabled cScanners
+          then
+            [ res
+            | (file, refs) <- toCheckCopyPaste,
+              res <- checkCopyPaste file refs
+            ]
+          else []
 
   progressRef <- newIORef $ initVerifyProgress (map snd toScan)
 
@@ -466,13 +465,12 @@ checkCopyPaste file refs = do
     checkGroup :: [Reference] -> [CopyPasteCheckResult]
     checkGroup refsInGroup = do
       let mergeLinkAndAnchor ref = maybe (rLink ref) (rLink ref <>) $ rAnchor ref
-      let refsInGroup' = flip map refsInGroup $ \ref ->
+      let refsInGroup' = refsInGroup <&> \ref ->
             (ref, (prepareNameForCheck $ rName ref,
                    prepareNameForCheck $ mergeLinkAndAnchor ref))
-      -- Most of time this will be Nothing and we won't need `others`.
-      -- The first matching link will be shown as original.
-      let mbSubstrRef = fst <$> find (textIsLinkSubstr . snd) refsInGroup'
-          others = fst <$> filter (not . textIsLinkSubstr . snd) refsInGroup'
+      let (mbSubstrRef, others) =
+            bimap (fmap fst . safeHead) (map fst) $
+              L.partition (textIsLinkSubstr . snd) refsInGroup'
       maybe [] (\substrRef -> map (CopyPasteCheckResult file substrRef) others) mbSubstrRef
 
     textIsLinkSubstr :: (Text, Text) -> Bool
@@ -830,7 +828,7 @@ checkExternalResource Config{..} link
             | isPermanentRedirectCode code -> Left
               . PermanentRedirectError link
               . fmap decodeUtf8
-              . lookup "Location"
+              . L.lookup "Location"
               $ responseHeaders resp
             | isTemporaryRedirectCode code -> Right ()
             | isAllowedErrorCode code -> Right ()

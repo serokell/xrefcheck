@@ -44,7 +44,7 @@ test_ignoreRegex = give WithoutColors $
       verifyRes <- allowRewrite showProgressBar $ \rw ->
         verifyRepo rw config verifyMode root $ srRepoInfo scanResult
 
-      let brokenLinks = pickBrokenLinks verifyRes
+      let brokenLinks = pickBrokenLinks $ fst verifyRes
 
       let matchedLinks =
             [ "https://bad.referenc/"

@@ -28,7 +28,7 @@ import Xrefcheck.Scan
 import Xrefcheck.Scanners.Markdown (markdownSupport)
 import Xrefcheck.System (askWithinCI)
 import Xrefcheck.Util
-import Xrefcheck.Verify (reportVerifyErrs, verifyErrors, verifyRepo)
+import Xrefcheck.Verify (reportCopyPasteErrors, reportVerifyErrs, verifyErrors, verifyRepo)
 
 readConfig :: FilePath -> IO Config
 readConfig path = fmap (normaliseConfigFilePaths . overrideConfig) do
@@ -81,11 +81,14 @@ defaultAction Options{..} = do
 
     whenJust (nonEmpty $ sortBy (compare `on` seFile) scanErrs) $ reportScanErrs
 
-    verifyRes <- allowRewrite showProgressBar $ \rw -> do
+    (verifyRes, copyPasteErrors) <- allowRewrite showProgressBar $ \rw -> do
       let fullConfig = config
             { cNetworking = addNetworkingOptions (cNetworking config) oNetworkingOptions }
       verifyRepo rw fullConfig oMode oRoot repoInfo
 
+    whenJust (nonEmpty copyPasteErrors) $ \errs -> do
+      reportCopyPasteErrors errs
+      fmt "\n"
     case verifyErrors verifyRes of
       Nothing | null scanErrs -> fmtLn "All repository links are valid."
       Nothing -> exitFailure

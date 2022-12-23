@@ -44,6 +44,7 @@ Comparing to alternative solutions, this tool tries to achieve the following poi
 * Supports relative and absolute local links.
 * Supports external links (`http`, `https`, `ftp` and `ftps`).
 * Detects broken and ambiguous anchors in local links.
+* Detects possible bad copy-pastes of links.
 * Integration with GitHub Actions.
 
 ## Dependencies [↑](#xrefcheck)
@@ -147,6 +148,16 @@ There are several ways to fix this:
 1. How does `xrefcheck` handle localhost links?
     * By default, `xrefcheck` will ignore links to localhost.
     * This behavior can be disabled by removing the corresponding entry from the `ignoreExternalRefsTo` list in the config file.
+
+1. How does the copy-paste check work?
+    * If there are some references with the same links and for one of them the link's text is similar to the link itself, other links may turn out to be copypasted from that link. Example:
+      ```md
+      Links with bad copy-paste:
+      [good link](https://good.link.uri/).
+      [copypasted link](https://good.link.uri/).
+      ```
+      The second link will be reported by `xrefcheck` as a possible bad copy-paste of the first link.
+    * This checks both external references and local ones.
 
 ## Further work [↑](#xrefcheck)
 

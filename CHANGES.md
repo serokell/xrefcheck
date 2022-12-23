@@ -41,6 +41,9 @@ Unreleased
 * [#231](https://github.com/serokell/xrefcheck/pull/231)
   + Anchor analysis takes now into account the appropriate case-sensitivity depending on
   the configured Markdown flavour.
+* [#259](https://github.com/serokell/xrefcheck/pull/259)
+  + Add support for image tags `<img src="link">`, anchor hyperlinks `<a href="link">Text</a>`
+  and anchor target locations `<a name="loc">` or `<a id="loc">`.
 
 0.2.2
 ==========

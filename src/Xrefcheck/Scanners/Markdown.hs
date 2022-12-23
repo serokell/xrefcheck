@@ -22,6 +22,7 @@ import Universum
 import CMarkGFM
   (Node (..), NodeType (..), PosInfo (..), commonmarkToNode, extAutolink, optFootnotes)
 import Control.Lens (_Just, makeLenses, makeLensesFor, (.=))
+import Control.Monad.Trans.RWS.CPS qualified as RWS
 import Control.Monad.Trans.Writer.CPS (Writer, runWriter, tell)
 import Data.Aeson (FromJSON (..), genericParseJSON)
 import Data.ByteString.Lazy qualified as BSL
@@ -195,6 +196,12 @@ removeIgnored = withIgnoreMode . cataNodeWithParentNodeInfo remove
             (IMSLink _, IMAGE {})        -> do
               ssIgnore .= Nothing
               return defNode
+            (IMSLink _, HTML_INLINE text) | isLink text -> do
+              ssIgnore .= Nothing
+              pure defNode
+            (IMSLink _, HTML_BLOCK text) | isLink text -> do
+              ssIgnore .= Nothing
+              pure defNode
             (IMSLink ignoreLinkState, _) -> do
               when (ignoreLinkState == ExpectingLinkInSubnodes) $
                 ssIgnore . _Just . ignoreMode .=  IMSLink ParentExpectsLink
@@ -264,6 +271,18 @@ removeIgnored = withIgnoreMode . cataNodeWithParentNodeInfo remove
             pure node
       (node, _) -> pure node
 
+findAttributes :: [Text] -> [Attribute Text] -> Maybe Text
+findAttributes (map T.toLower -> attrs) =
+  fmap snd . find (\(attr, _) -> T.toLower attr `elem` attrs)
+
+isLink :: Text -> Bool
+isLink (parseTags -> tags) = case safeHead tags of
+  Just (TagOpen tag attrs) ->
+      T.toLower tag == "a" && isJust (findAttributes ["href"] attrs)
+      || T.toLower tag == "img" && isJust (findAttributes ["src"] attrs)
+  _ -> False
+
+
 -- | Custom `foldMap` for source tree.
 foldNode :: (Monoid a, Monad m) => (Node -> m a) -> Node -> m a
 foldNode action node@(Node _ _ subs) = do
@@ -271,50 +290,41 @@ foldNode action node@(Node _ _ subs) = do
   b <- concatForM subs (foldNode action)
   return (a <> b)
 
-type ExtractorM a = ReaderT MarkdownConfig (Writer [ScanError 'Parse]) a
+type ExtractorM a = RWS.RWS MarkdownConfig [ScanError 'Parse] (Maybe Reference) a
 
 -- | Extract information from source tree.
 nodeExtractInfo :: Node -> ExtractorM FileInfo
 nodeExtractInfo input@(Node _ _ nSubs) = do
   if checkIgnoreAllFile nSubs
   then return (diffToFileInfo mempty)
-  else diffToFileInfo <$> (foldNode extractor =<< lift (removeIgnored input))
+  else diffToFileInfo <$> (foldNode extractor =<< (RWS.writer . runWriter $ removeIgnored input))
 
   where
     extractor :: Node -> ExtractorM FileInfoDiff
-    extractor node@(Node pos ty _) =
-      case ty of
-        HTML_BLOCK _ -> do
-          return mempty
+    extractor node@(Node pos ty _) = do
+      reference' <- RWS.get
+      -- If current state is not `Nothing`, try extracting associated text
+      let fileInfoDiff = case (reference', ty) of
+             (Just ref, TEXT text) ->
+               mempty & fidReferences .~ DList.singleton ref {rName = text}
+             (Just ref, _) -> mempty & fidReferences .~ DList.singleton ref
+             _ -> mempty
+      RWS.put Nothing
+      fmap (fileInfoDiff <>) case ty of
+        HTML_BLOCK text | isLink text -> extractHtmlLink text
+
+        HTML_BLOCK text -> extractAnchor text
 
         HEADING lvl -> do
-          flavor <- asks mcFlavor
+          flavor <- RWS.asks mcFlavor
           let aType = HeaderAnchor lvl
           let aName = headerToAnchor flavor $ nodeExtractText node
           let aPos  = toPosition pos
           return $ FileInfoDiff DList.empty $ DList.singleton $ Anchor {aType, aName, aPos}
 
-        HTML_INLINE text -> do
-          let
-            mName = do
-              tag <- safeHead $ parseTags text
-              attributes <- case tag of
-                TagOpen a attrs
-                  | T.toLower a == "a" -> Just attrs
-                _ -> Nothing
-              (_, name) <- find (\(field, _) -> T.toLower field `elem` ["name", "id"]) attributes
-              pure name
+        HTML_INLINE text | isLink text -> extractHtmlLink text
 
-          case mName of
-            Just aName -> do
-              let aType = HandAnchor
-                  aPos  = toPosition pos
-              return $ FileInfoDiff
-                mempty
-                (pure $ Anchor {aType, aName, aPos})
-
-            Nothing -> do
-              return mempty
+        HTML_INLINE text -> extractAnchor text
 
         LINK url _ -> extractLink url
 
@@ -328,16 +338,70 @@ nodeExtractInfo input@(Node _ _ nSubs) = do
               rPos = toPosition pos
               link = if null url then rName else url
 
-          let (rLink, rAnchor) = case T.splitOn "#" link of
-                [t] -> (t, Nothing)
-                t : ts -> (t, Just $ T.intercalate "#" ts)
-                [] -> error "impossible"
+          let (rLink, rAnchor) = splitLink link
 
           let rInfo = referenceInfo rLink
 
           return $ FileInfoDiff
             (DList.singleton $ Reference {rName, rPos, rLink, rAnchor, rInfo})
             DList.empty
+
+        extractAnchor :: Text -> ExtractorM FileInfoDiff
+        extractAnchor text = do
+          let mName = do
+                tag <- safeHead $ parseTags text
+                attributes <- case tag of
+                  TagOpen a attrs | T.toLower a == "a" -> Just attrs
+                  _ -> Nothing
+                (_, name) <- find (\(field, _) -> T.toLower field `elem` ["name", "id"]) attributes
+                pure name
+
+          case mName of
+            Just aName -> do
+              let aType = HandAnchor
+                  aPos  = toPosition pos
+              return $ FileInfoDiff
+                mempty
+                (pure $ Anchor {aType, aName, aPos})
+
+            Nothing -> do
+              return mempty
+
+        extractHtmlReference ::  [Attribute Text] -> Maybe PosInfo -> DList.DList Reference
+        extractHtmlReference attrs tagPos = fromMaybe mempty do
+          link <- findAttributes ["href"] attrs
+          let (rLink, rAnchor) = splitLink link
+          pure . DList.singleton $ Reference "" rLink rAnchor (toPosition tagPos) (referenceInfo rLink)
+
+        splitLink :: Text -> (Text, Maybe Text)
+        splitLink link = case T.splitOn "#" link of
+          [t]    -> (t, Nothing)
+          t : ts -> (t, Just $ T.intercalate "#" ts)
+          []     -> error "impossible"
+
+        extractHtmlImage :: [Attribute Text] -> Maybe PosInfo -> DList.DList Reference
+        extractHtmlImage attrs tagPos = fromMaybe mempty do
+          link <- findAttributes ["src"] attrs
+          pure . DList.singleton $ Reference "" link Nothing (toPosition tagPos) (referenceInfo link)
+
+        extractHtmlLink :: Text -> ExtractorM FileInfoDiff
+        extractHtmlLink text =
+          case safeHead $ parseTags text of
+            Just (TagOpen tag attrs) | T.toLower tag == "img" ->
+              pure $ mempty & fidReferences .~ extractHtmlImage attrs pos
+            Just (TagOpen tag attrs) | T.toLower tag == "a" -> do
+              let  reference = extractHtmlReference attrs pos
+              case DList.toList reference of
+                [ref] -> do
+                  -- The `cmark-gfm` package parses the link tag as three separate nodes:
+                  -- `HTML_INLINE` with an opening tag, a `TEXT` with text in between,
+                  -- and `HTML_INLINE` with a closing tag. So we keep the extracted link in a state and
+                  -- try to get associated text in the next node.
+                  RWS.put $ Just ref
+                  pure mempty
+                _ -> pure mempty
+            _ -> pure mempty
+
 
 -- | Check if there is `ignore all` at the beginning of the file,
 -- ignoring preceding comments if there are any.
@@ -406,11 +470,10 @@ textToMode _         = NotAnAnnotation
 
 parseFileInfo :: MarkdownConfig -> LT.Text -> (FileInfo, [ScanError 'Parse])
 parseFileInfo config input
-  = runWriter
-  $ flip runReaderT config
-  $ nodeExtractInfo
+  = RWS.evalRWS
+  (nodeExtractInfo
   $ commonmarkToNode [optFootnotes] [extAutolink]
-  $ toStrict input
+  $ toStrict input) config Nothing
 
 markdownScanner :: MarkdownConfig -> ScanAction
 markdownScanner config canonicalFile =

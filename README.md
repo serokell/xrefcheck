@@ -150,9 +150,9 @@ There are several ways to fix this:
     * This behavior can be disabled by removing the corresponding entry from the `ignoreExternalRefsTo` list in the config file.
 
 1. How does the copy-paste check work?
-    * If there are some references with the same links and for one of them name is similar to the link itself, other links may turn out to be copypasted from that link. Example:
+    * If there are some references with the same links and for one of them the link's text is similar to the link itself, other links may turn out to be copypasted from that link. Example:
       ```md
-      Links with bad copypaste:
+      Links with bad copy-paste:
       [good link](https://good.link.uri/).
       [copypasted link](https://good.link.uri/).
       ```

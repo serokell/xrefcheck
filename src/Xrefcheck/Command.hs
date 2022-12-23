@@ -86,7 +86,9 @@ defaultAction Options{..} = do
             { cNetworking = addNetworkingOptions (cNetworking config) oNetworkingOptions }
       verifyRepo rw fullConfig oMode oRoot repoInfo
 
-    whenJust (nonEmpty copyPasteErrors) reportCopyPasteErrors
+    whenJust (nonEmpty copyPasteErrors) $ \errs -> do
+      reportCopyPasteErrors errs
+      fmt "\n"
     case verifyErrors verifyRes of
       Nothing | null scanErrs -> fmtLn "All repository links are valid."
       Nothing -> exitFailure

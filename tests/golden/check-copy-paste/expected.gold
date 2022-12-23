@@ -23,26 +23,67 @@
        - anchor: -
 
   ➥  In file second-file.md
-     reference (relative) at src:24:1-29:
-       - text: "fdw"
-       - link: ./first-file.md
-       - anchor: chor
+     reference (relative) at src:23:1-33:
+       - text: "fubarw"
+       - link: ./nonexistent-file.md
+       - anchor: -
      is possibly a bad copy paste of
-     reference (relative) at src:23:1-32:
-       - text: "ff-cho"
-       - link: ./first-file.md
-       - anchor: chor
+     reference (relative) at src:24:1-36:
+       - text: "nonexfile"
+       - link: ./nonexistent-file.md
+       - anchor: -
 
   ➥  In file second-file.md
-     reference (external) at src:29:1-28:
+     reference (relative) at src:25:1-30:
+       - text: "fdw"
+       - link: ./nonexistent-file.md
+       - anchor: -
+     is possibly a bad copy paste of
+     reference (relative) at src:24:1-36:
+       - text: "nonexfile"
+       - link: ./nonexistent-file.md
+       - anchor: -
+
+  ➥  In file second-file.md
+     reference (external) at src:30:1-28:
        - text: "gitlab"
        - link: https://github.com
        - anchor: -
      is possibly a bad copy paste of
-     reference (external) at src:28:1-28:
+     reference (external) at src:29:1-28:
        - text: "github"
        - link: https://github.com
        - anchor: -
 
-Possible copy/paste errors dumped, 4 in total.
-All repository links are valid.
+Possible copy/paste errors dumped, 5 in total.
+
+=== Invalid references found ===
+
+  ➥  In file second-file.md
+     bad reference (relative) at src:23:1-33:
+       - text: "fubarw"
+       - link: ./nonexistent-file.md
+       - anchor: -
+
+     File does not exist:
+       nonexistent-file.md
+
+  ➥  In file second-file.md
+     bad reference (relative) at src:24:1-36:
+       - text: "nonexfile"
+       - link: ./nonexistent-file.md
+       - anchor: -
+
+     File does not exist:
+       nonexistent-file.md
+
+  ➥  In file second-file.md
+     bad reference (relative) at src:25:1-30:
+       - text: "fdw"
+       - link: ./nonexistent-file.md
+       - anchor: -
+
+     File does not exist:
+       nonexistent-file.md
+
+Invalid references dumped, 3 in total.

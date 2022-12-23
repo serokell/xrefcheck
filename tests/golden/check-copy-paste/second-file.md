@@ -20,8 +20,9 @@
 
 <!-- These ones are reported because -->
 <!-- ff-cho is a subsequence of link+anchor -->
-[  ff-cho](./first-file.md#chor)
-[  fdw](./first-file.md#chor)
+[  fubarw](./nonexistent-file.md)
+[  nonexfile](./nonexistent-file.md)
+[  fdw](./nonexistent-file.md)
 
 
 <!-- check external links -->

@@ -6,7 +6,7 @@ exclusions:
   ignore:
     - tests/markdowns/**/*
     - tests/golden/**/*
-    - docs/output-sample/**/*
+    - docs/output-sample/**/*.md
 
 scanners:
   markdown:

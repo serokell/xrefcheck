@@ -273,7 +273,7 @@ removeIgnored = withIgnoreMode . cataNodeWithParentNodeInfo remove
 
 findAttributes :: [Text] -> [Attribute Text] -> Maybe Text
 findAttributes (map T.toLower -> attrs) =
-  fmap snd . find (\(attr, _) -> T.toLower attr `elem` attrs)
+  fmap snd . find ((`elem` attrs) . T.toLower . fst)
 
 isLink :: Text -> Bool
 isLink (parseTags -> tags) = case safeHead tags of
@@ -281,7 +281,6 @@ isLink (parseTags -> tags) = case safeHead tags of
       T.toLower tag == "a" && isJust (findAttributes ["href"] attrs)
       || T.toLower tag == "img" && isJust (findAttributes ["src"] attrs)
   _ -> False
-
 
 -- | Custom `foldMap` for source tree.
 foldNode :: (Monoid a, Monad m) => (Node -> m a) -> Node -> m a
@@ -353,8 +352,7 @@ nodeExtractInfo input@(Node _ _ nSubs) = do
                 attributes <- case tag of
                   TagOpen a attrs | T.toLower a == "a" -> Just attrs
                   _ -> Nothing
-                (_, name) <- find (\(field, _) -> T.toLower field `elem` ["name", "id"]) attributes
-                pure name
+                findAttributes ["name", "id"] attributes
 
           case mName of
             Just aName -> do
@@ -401,7 +399,6 @@ nodeExtractInfo input@(Node _ _ nSubs) = do
                   pure mempty
                 _ -> pure mempty
             _ -> pure mempty
-
 
 -- | Check if there is `ignore all` at the beginning of the file,
 -- ignoring preceding comments if there are any.

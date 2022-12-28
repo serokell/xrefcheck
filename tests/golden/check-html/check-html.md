@@ -35,3 +35,9 @@ text <a href=#seven>Seven</a> text
 
 <!-- xrefcheck: ignore link -->
 text <a href=https://serokell.io/404>serokell404</a> text
+
+<!-- xrefcheck: ignore link -->
+<img src=https://serokell.io/404>
+
+<!-- xrefcheck: ignore link -->
+text <img src=https://serokell.io/404> text

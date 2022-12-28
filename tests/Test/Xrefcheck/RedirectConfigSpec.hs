@@ -49,7 +49,7 @@ test_redirectRequests = testGroup "Redirect config tests"
           [ testCase "Do match" $ do
               setRef <- newIORef mempty
               checkLinkAndProgressWithServer
-                (configMod [RedirectRule Nothing (regex "^.*/ok$") Nothing RROValid] [])
+                (configMod [RedirectRule Nothing (regex ".*/ok") Nothing RROValid] [])
                 setRef
                 mockRedirect
                 (link "/permanent-redirect")
@@ -58,7 +58,7 @@ test_redirectRequests = testGroup "Redirect config tests"
           , testCase "Do not match" $ do
               setRef <- newIORef mempty
               checkLinkAndProgressWithServer
-                (configMod [RedirectRule Nothing (regex "^.*/no-ok$") (Just RROPermanent) RROValid] [])
+                (configMod [RedirectRule Nothing (regex ".*/no-ok") (Just RROPermanent) RROValid] [])
                 setRef
                 mockRedirect
                 (link "/permanent-redirect")
@@ -69,7 +69,7 @@ test_redirectRequests = testGroup "Redirect config tests"
           [ testCase "Do match" $ do
               setRef <- newIORef mempty
               checkLinkAndProgressWithServer
-                (configMod [RedirectRule (regex "^.*/permanent-.*$") Nothing Nothing RROValid] [])
+                (configMod [RedirectRule (regex ".*/permanent-.*") Nothing Nothing RROValid] [])
                 setRef
                 mockRedirect
                 (link "/permanent-redirect")
@@ -78,7 +78,7 @@ test_redirectRequests = testGroup "Redirect config tests"
           , testCase "Do not match" $ do
               setRef <- newIORef mempty
               checkLinkAndProgressWithServer
-                (configMod [RedirectRule (regex "^.*/temporary-.*$") Nothing (Just RROPermanent) RROValid] [])
+                (configMod [RedirectRule (regex ".*/temporary-.*") Nothing (Just RROPermanent) RROValid] [])
                 setRef
                 mockRedirect
                 (link "/permanent-redirect")
@@ -89,7 +89,7 @@ test_redirectRequests = testGroup "Redirect config tests"
         [ testCase "Do match" $ do
             setRef <- newIORef mempty
             checkLinkAndProgressWithServer
-              (configMod [RedirectRule (regex "^.*/follow[0-9]$") (regex "^.*/ok$") (Just (RROCode 307)) RROInvalid] [])
+              (configMod [RedirectRule (regex ".*/follow[0-9]") (regex "^.*/ok$") (Just (RROCode 307)) RROInvalid] [])
               setRef
               mockRedirect
               (link "/follow3")
@@ -98,7 +98,7 @@ test_redirectRequests = testGroup "Redirect config tests"
         , testCase "Do not match" $ do
             setRef <- newIORef mempty
             checkLinkAndProgressWithServer
-              (configMod [RedirectRule (regex "^.*/follow[0-9]$") (regex "^.*/ok$") (Just (RROCode 307)) RROInvalid] [])
+              (configMod [RedirectRule (regex ".*/follow[0-9]") (regex "^.*/ok$") (Just (RROCode 307)) RROInvalid] [])
               setRef
               mockRedirect
               (link "/follow2")
@@ -137,7 +137,7 @@ test_redirectRequests = testGroup "Redirect config tests"
       , testCase "Mixed with ignore" $ do
           setRef <- newIORef mempty
           checkLinkAndProgressWithServer
-            (configMod [RedirectRule Nothing Nothing (Just (RROCode 307)) RROInvalid, RedirectRule Nothing Nothing Nothing RROFollow] (maybeToList (regex "^.*/follow3$")))
+            (configMod [RedirectRule Nothing Nothing (Just (RROCode 307)) RROInvalid, RedirectRule Nothing Nothing Nothing RROFollow] (maybeToList (regex ".*/follow3")))
             setRef
             mockRedirect
             (link "/follow1")

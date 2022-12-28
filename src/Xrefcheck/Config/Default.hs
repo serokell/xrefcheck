@@ -37,7 +37,7 @@ exclusions:
   # List of POSIX extended regular expressions.
   ignoreExternalRefsTo:
     # Ignore localhost links by default
-    - ^(https?|ftps?)://(localhost|127\\.0\\.0\\.1).*
+    - (https?|ftps?)://(localhost|127\\.0\\.0\\.1).*
 
 # Networking parameters.
 networking:

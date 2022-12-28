@@ -9,5 +9,5 @@ scanners:
 networking:
   externalRefRedirects:
     - outcome: valid
-      to: ^https://.*$
+      to: https://.*
       on: permanent

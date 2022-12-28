@@ -4,7 +4,7 @@
 
 exclusions:
   ignoreExternalRefsTo:
-    - ^(https?|ftps?)://(localhost|127\.0\.0\.1).*
+    - (https?|ftps?)://(localhost|127\.0\.0\.1).*
 
 scanners:
   markdown:

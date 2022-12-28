@@ -9,5 +9,4 @@ scanners:
 networking:
   externalRefRedirects:
     - outcome: valid
-      to: ^.*$
       on: 404

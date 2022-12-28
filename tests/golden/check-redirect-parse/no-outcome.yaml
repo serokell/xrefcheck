@@ -10,5 +10,5 @@ networking:
   externalRefRedirects:
     - outcome: valid
       on: temporary
-    - to: ^https://.*$
+    - to: https://.*
       on: temporary

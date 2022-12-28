@@ -162,8 +162,8 @@ There are several ways to fix this:
         - to: "https?://forbidden.com.*"
           on: 307
           outcome: invalid
-        - from: "^http://.*"
-          to: "^https://.*"
+        - from: "http://.*"
+          to: "https://.*"
           outcome: follow
       ```
 

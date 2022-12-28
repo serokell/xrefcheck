@@ -1,0 +1,67 @@
+=== Repository data ===
+
+  check-html.md:
+    - references:
+        - reference (file-local) at src:13:1-11:
+            - text: "One"
+            - link: -
+            - anchor: one
+        - reference (file-local) at src:14:1-11:
+            - text: "Two"
+            - link: -
+            - anchor: two
+        - reference (file-local) at src:15:1-15:
+            - text: "Three"
+            - link: -
+            - anchor: three
+        - reference (file-local) at src:16:1-13:
+            - text: "Four"
+            - link: -
+            - anchor: four
+        - reference (file-local) at src:17:1-13:
+            - text: "Five"
+            - link: -
+            - anchor: five
+        - reference (file-local) at src:18:1-11:
+            - text: "Six"
+            - link: -
+            - anchor: six
+        - reference (file-local) at src:19:1-15:
+            - text: "Seven"
+            - link: -
+            - anchor: seven
+        - reference (external) at src:21:1-144:
+            - text: ""
+            - link: https://user-images.githubusercontent.com/5394217/70820564-06b06e00-1dea-11ea-9680-27f661ca2a58.png
+            - anchor: -
+        - reference (external) at src:23:6-149:
+            - text: ""
+            - link: https://user-images.githubusercontent.com/5394217/70820564-06b06e00-1dea-11ea-9680-27f661ca2a58.png
+            - anchor: -
+        - reference (external) at src:25:1-29:
+            - text: "serokell"
+            - link: https://serokell.io/
+            - anchor: -
+        - reference (external) at src:27:6-34:
+            - text: "serokell"
+            - link: https://serokell.io/
+            - anchor: -
+        - reference (file-local) at src:29:1-13:
+            - text: "Six"
+            - link: -
+            - anchor: six
+        - reference (file-local) at src:31:6-20:
+            - text: "Seven"
+            - link: -
+            - anchor: seven
+    - anchors:
+        - title1 (header II) at src:7:1-96
+        - one (hand made) at src:7:4-17
+        - two (hand made) at src:7:19-30
+        - three (hand made) at src:7:32-47
+        - four (hand made) at src:7:49-63
+        - five (hand made) at src:7:69-88
+        - six (hand made) at src:9:1-12
+        - seven (hand made) at src:11:6-17
+
+All repository links are valid.

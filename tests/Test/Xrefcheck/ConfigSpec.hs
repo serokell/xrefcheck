@@ -35,14 +35,14 @@ test_config =
 
   , testGroup "Filled default config matches the expected format"
     -- The config we match against can be regenerated with
-    -- stack exec xrefcheck -- dump-config -t GitHub -o tests/configs/github-config.yaml
+    -- stack exec xrefcheck -- dump-config -t GitHub -o tests/configs/github-config.yaml --force
       [ testCase "Config matches" $ do
         config <- readFile "tests/configs/github-config.yaml"
         when (config /= defConfigText GitHub) $
           assertFailure $ toString $ unwords
             [ "Config does not match the expected format."
             , "Run"
-            , "`stack exec xrefcheck -- dump-config -t GitHub -o tests/configs/github-config.yaml`"
+            , "`stack exec xrefcheck -- dump-config -t GitHub -o tests/configs/github-config.yaml --force`"
             , "and verify changes"
             ]
       ]

@@ -239,7 +239,7 @@ scanRepo scanMode rw formatsSupport config root = do
 
   return . ScanResult errs $ RepoInfo
     { riFiles = M.fromList $ processedFiles <> notProcessedFiles
-    , riDirectories = M.fromList $ (fmap (, TrackedDirectory) trackedDirs
+    , riDirectories = M.fromList (fmap (, TrackedDirectory) trackedDirs
         <> fmap (, UntrackedDirectory) untrackedDirs)
     , riRoot = canonicalRoot
     }

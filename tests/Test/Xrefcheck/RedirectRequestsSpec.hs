@@ -9,6 +9,7 @@ import Universum
 
 import Data.CaseInsensitive qualified as CI
 import Data.Map qualified as M
+import Data.Set qualified as S
 import Network.HTTP.Types (Status, mkStatus)
 import Network.HTTP.Types.Header (hLocation)
 import Test.Tasty (TestName, TestTree, testGroup)
@@ -56,8 +57,10 @@ test_redirectRequests = testGroup "Redirect response tests"
         ]
 
     redirectAssertion :: Status -> Maybe Text -> Maybe VerifyError -> Assertion
-    redirectAssertion expectedStatus expectedLocation expectedError =
-      checkLinkAndProgressWithServer
+    redirectAssertion expectedStatus expectedLocation expectedError = do
+      setRef <- newIORef S.empty
+      checkLinkAndProgressWithServerDefault
+        setRef
         (mockRedirect expectedLocation expectedStatus)
         url
         (Progress

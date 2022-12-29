@@ -9,8 +9,11 @@ module Xrefcheck.Util
   , postfixFields
   , (-:)
   , aesonConfigOption
+  , composeFuncList
   , posixTimeToTimeSecond
   , utcTimeToTimeSecond
+  , unlessFunc
+  , whenFunc
   , module Xrefcheck.Util.Colorize
   , module Xrefcheck.Util.Interpolate
   ) where
@@ -59,3 +62,13 @@ posixTimeToTimeSecond posixTime =
 
 utcTimeToTimeSecond :: UTCTime -> Time Second
 utcTimeToTimeSecond = posixTimeToTimeSecond . utcTimeToPOSIXSeconds
+
+composeFuncList :: [a -> a] -> a -> a
+composeFuncList = foldr (.) id
+
+whenFunc :: Bool -> (a -> a) -> (a -> a)
+whenFunc True f = f
+whenFunc False _ = id
+
+unlessFunc :: Bool -> (a -> a) -> (a -> a)
+unlessFunc = whenFunc . not

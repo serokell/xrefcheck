@@ -126,7 +126,7 @@ filepathOption :: Mod OptionFields FilePath -> Parser FilePath
 filepathOption = strOption
 
 globOption :: Mod OptionFields RelGlobPattern -> Parser RelGlobPattern
-globOption = option $ eitherReader $ mkGlobPattern
+globOption = option $ eitherReader mkGlobPattern
 
 repoTypeReadM :: ReadM RepoType
 repoTypeReadM = eitherReader $ \name ->

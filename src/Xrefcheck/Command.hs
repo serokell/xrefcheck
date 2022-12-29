@@ -79,7 +79,7 @@ defaultAction Options{..} = do
       #{interpolateIndentF 2 (build repoInfo)}
       |]
 
-    whenJust (nonEmpty $ sortBy (compare `on` seFile) scanErrs) $ reportScanErrs
+    whenJust (nonEmpty $ sortBy (compare `on` seFile) scanErrs) reportScanErrs
 
     verifyRes <- allowRewrite showProgressBar $ \rw -> do
       let fullConfig = config

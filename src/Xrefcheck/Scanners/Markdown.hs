@@ -57,11 +57,11 @@ toPosition :: Maybe PosInfo -> Position
 toPosition = Position . \case
   Nothing -> Nothing
   Just PosInfo{..}
-    | startLine == endLine -> Just $
+    | startLine == endLine -> Just
         [int|s|
         #{startLine}:#{startColumn}-#{endColumn}
         |]
-    | otherwise -> Just $
+    | otherwise -> Just
         [int|s|
         #{startLine}:#{startColumn}-#{endLine}:#{endColumn}
         |]

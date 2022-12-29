@@ -9,7 +9,6 @@
 module Xrefcheck.Verify
   ( -- * General verification
     VerifyResult (..)
-  , verifyOk
   , verifyErrors
   , verifying
 
@@ -21,6 +20,7 @@ module Xrefcheck.Verify
   , forConcurrentlyCaching
 
     -- * Cross-references validation
+  , DomainName (..)
   , VerifyError (..)
   , verifyRepo
   , verifyReference
@@ -43,6 +43,7 @@ import Data.List (lookup)
 import Data.List qualified as L
 import Data.Map qualified as M
 import Data.Reflection (Given)
+import Data.Set qualified as S
 import Data.Text (toCaseFold)
 import Data.Text.Metrics (damerauLevenshteinNorm)
 import Data.Time (UTCTime, defaultTimeLocale, formatTime, readPTime, rfc822DateFormat)
@@ -66,7 +67,7 @@ import System.FilePath.Posix ((</>))
 import Text.Interpolation.Nyan
 import Text.ParserCombinators.ReadPrec qualified as ReadPrec (lift)
 import Text.Regex.TDFA.Text (Regex, regexec)
-import Text.URI (Authority (..), ParseExceptionBs, URI (..), mkURIBs)
+import Text.URI (Authority (..), ParseExceptionBs, URI (..), mkURIBs, unRText)
 import Time (RatioNat, Second, Time (..), ms, sec, threadDelay, timeout, (+:+), (-:-))
 import URI.ByteString qualified as URIBS
 
@@ -91,9 +92,6 @@ newtype VerifyResult e = VerifyResult [e]
 
 deriving newtype instance Semigroup (VerifyResult e)
 deriving newtype instance Monoid (VerifyResult e)
-
-verifyOk :: VerifyResult e -> Bool
-verifyOk (VerifyResult errors) = null errors
 
 verifyErrors :: VerifyResult e -> Maybe (NonEmpty e)
 verifyErrors (VerifyResult errors) = nonEmpty errors
@@ -121,6 +119,13 @@ instance (Given ColorMode, Buildable a) => Buildable (WithReferenceLoc a) where
     #{wrlItem}
     |]
 
+-- | Contains a name of a domain, examples:
+-- @DomainName "github.com"@,
+-- @DomainName "localhost"@,
+-- @DomainName "192.168.0.104"@
+newtype DomainName = DomainName { unDomainName :: Text }
+  deriving stock (Show, Eq, Ord)
+
 data VerifyError
   = LocalFileDoesNotExist FilePath
   | LocalFileOutsideRepo FilePath
@@ -132,7 +137,8 @@ data VerifyError
   | ExternalResourceInvalidUrl (Maybe Text)
   | ExternalResourceUnknownProtocol
   | ExternalHttpResourceUnavailable Status
-  | ExternalHttpTooManyRequests (Maybe RetryAfter)
+  | ExternalHttpTooManyRequests (Maybe RetryAfter) (Maybe DomainName)
+  | ExternalHttpTimeout (Maybe DomainName)
   | ExternalFtpResourceUnavailable FTPResponse
   | ExternalFtpException FTPException
   | FtpEntryDoesNotExist FilePath
@@ -214,9 +220,14 @@ instance Given ColorMode => Buildable VerifyError where
       Resource unavailable (#{statusCode status} #{decodeUtf8 @Text (statusMessage status)})
       |]
 
-    ExternalHttpTooManyRequests retryAfter ->
+    ExternalHttpTooManyRequests retryAfter _ ->
       [int||
       Resource unavailable (429 Too Many Requests; retry after #{maybeF retryAfter})
+      |]
+
+    ExternalHttpTimeout _ ->
+      [int||
+      Response timeout
       |]
 
     ExternalFtpResourceUnavailable response ->
@@ -255,6 +266,21 @@ instance Given ColorMode => Buildable VerifyError where
         #{redirectedUrl}
       |]
 
+data RetryCounter = RetryCounter
+  { rcTotalRetries   :: Int
+  , rcTimeoutRetries :: Int
+  } deriving stock (Show)
+
+errorsOccured :: RetryCounter -> Bool
+errorsOccured rc = rcTotalRetries rc > 0
+
+incTotalCounter :: RetryCounter -> RetryCounter
+incTotalCounter rc = rc {rcTotalRetries = rcTotalRetries rc + 1}
+
+incTimeoutCounter :: RetryCounter -> RetryCounter
+incTimeoutCounter rc = rc {rcTimeoutRetries = rcTimeoutRetries rc + 1}
+
+
 reportVerifyErrs
   :: Given ColorMode => NonEmpty (WithReferenceLoc VerifyError) -> IO ()
 reportVerifyErrs errs = fmt
@@ -278,11 +304,6 @@ instance Buildable RetryAfter where
   build (Date d) = nameF "date" $
     fromString $ formatTime defaultTimeLocale rfc822DateFormat d
   build (Seconds s) = nameF "seconds" $ show s
-
--- | Determine whether the verification result contains a fixable error.
-isFixable :: VerifyError -> Bool
-isFixable (ExternalHttpTooManyRequests _) = True
-isFixable _ = False
 
 data NeedsCaching key
   = NoCaching
@@ -373,10 +394,10 @@ verifyRepo
                                  -- added to Git while gathering RepoInfo.
 
   progressRef <- newIORef $ initVerifyProgress (map snd toScan)
-
+  domainsReturned429Ref <- newIORef S.empty
   accumulated <- loopAsyncUntil (printer progressRef) do
     forConcurrentlyCaching toScan ifExternalThenCache $ \(file, ref) ->
-      verifyReference config mode progressRef repoInfo file ref
+      verifyReference config mode domainsReturned429Ref progressRef repoInfo file ref
   case accumulated of
     Right res -> return $ fold res
     Left (exception, partialRes) -> do
@@ -384,7 +405,7 @@ verifyRepo
       let errs = verifyErrors (fold partialRes)
           total = length toScan
           checked = length partialRes
-      whenJust errs $ reportVerifyErrs
+      whenJust errs reportVerifyErrs
       fmt [int|A|
           Interrupted (#s{exception}), checked #{checked} out of #{total} references.
           |]
@@ -419,6 +440,7 @@ shouldCheckLocType mode locType
 verifyReference
   :: Config
   -> VerifyMode
+  -> IORef (S.Set DomainName)
   -> IORef VerifyProgress
   -> RepoInfo
   -> CanonicalPath
@@ -427,109 +449,132 @@ verifyReference
 verifyReference
   config@Config{..}
   mode
+  domainsReturned429Ref
   progressRef
   repoInfo@RepoInfo{..}
   file
   ref@Reference{..}
-    = retryVerification 0 $
+    = fmap (fmap addReference . toVerifyRes) $
+      retryVerification (RetryCounter 0 0) $ runExceptT $
         if shouldCheckLocType mode rInfo
         then case rInfo of
           RIFileLocal -> checkRef rAnchor riRoot file ""
           RIFileRelative -> do
             let shownFilepath = getPosixRelativeOrAbsoluteChild riRoot (takeDirectory file)
                   </> toString rLink
-            canonicalPath <- takeDirectory file </ toString rLink
+            canonicalPath <- liftIO $ takeDirectory file </ toString rLink
             checkRef rAnchor riRoot canonicalPath shownFilepath
           RIFileAbsolute -> do
             let shownFilepath = dropWhile isPathSeparator (toString rLink)
-            canonicalPath <- riRoot </ shownFilepath
+            canonicalPath <- liftIO $ riRoot </ shownFilepath
             checkRef rAnchor riRoot canonicalPath shownFilepath
           RIExternal -> checkExternalResource config rLink
-          RIOtherProtocol -> verifying pass
-        else return mempty
+          RIOtherProtocol -> pass
+        else pass
   where
+    addReference :: VerifyError -> WithReferenceLoc VerifyError
+    addReference = WithReferenceLoc (getPosixRelativeOrAbsoluteChild riRoot file) ref
+
     retryVerification
-      :: Int
-      -> IO (VerifyResult VerifyError)
-      -> IO (VerifyResult $ WithReferenceLoc VerifyError)
-    retryVerification numberOfRetries resIO = do
-      res@(VerifyResult ves) <- resIO
-
+      :: RetryCounter
+      -> IO (Either VerifyError ())
+      -> IO (Either VerifyError ())
+    retryVerification rc resIO = do
+      let errorsOccured_ = errorsOccured rc
+      res <- resIO
       now <- getPOSIXTime <&> posixTimeToTimeSecond
+      case res of
+        -- Success
+        Right () -> do
+          let moveProgressOnSuccess =
+                if errorsOccured_
+                then decProgressFixableErrors
+                else incProgress
+          modifyProgressRef now Nothing moveProgressOnSuccess
+          pure res
+        Left err -> do
+          setOfReturned429 <- addDomainIf429 domainsReturned429Ref err
+          case decideWhetherToRetry setOfReturned429 rc err of
+            -- Unfixable
+            Nothing -> do
+              let moveProgressOnUnfixable = composeFuncList
+                    [ unlessFunc errorsOccured_ incProgress
+                    , if errorsOccured_
+                      then fixableToUnfixable
+                      else incProgressUnfixableErrors
+                    ]
+              modifyProgressRef now Nothing moveProgressOnUnfixable
+              pure res
+            -- Fixable, retry
+            Just (mbCurrentRetryAfter, counterModifier) -> do
+              let toSeconds = \case
+                    Seconds s -> s
+                    -- Calculates the seconds left until @Retry-After@ date.
+                    -- Defaults to 0 if the date has already passed.
+                    Date date | utcTimeToTimeSecond date >= now -> utcTimeToTimeSecond date -:- now
+                    _ -> sec 0
 
-      let toSeconds = \case
-            Seconds s -> s
-            -- Calculates the seconds left until @Retry-After@ date.
-            -- Defaults to 0 if the date has already passed.
-            Date date | utcTimeToTimeSecond date >= now -> utcTimeToTimeSecond date -:- now
-            _ -> sec 0
+              let currentRetryAfter = fromMaybe (ncDefaultRetryAfter cNetworking) $
+                    fmap toSeconds mbCurrentRetryAfter
 
-      let toRetry = any isFixable ves && numberOfRetries < ncMaxRetries cNetworking
-          currentRetryAfter = fromMaybe (ncDefaultRetryAfter cNetworking) $
-            extractRetryAfterInfo res <&> toSeconds
+              let moveProgressOnFixable = whenFunc (not errorsOccured_) $
+                    composeFuncList
+                    [ incProgressFixableErrors
+                    , incProgress
+                    ]
+              modifyProgressRef now (Just currentRetryAfter) moveProgressOnFixable
+              threadDelay currentRetryAfter
+              retryVerification
+                (counterModifier rc)
+                resIO
 
-      let moveProgress = alterOverallProgress numberOfRetries
-                       . alterProgressErrors res numberOfRetries
+    modifyProgressRef :: Time Second -> Maybe (Time Second) -> (Progress Int -> Progress Int) -> IO ()
+    modifyProgressRef now mbRetryAfter moveProgress = atomicModifyIORef' progressRef $ \VerifyProgress{..} ->
+      ( if isExternal rInfo
+        then VerifyProgress{ vrExternal =
+          let vrExternalAdvanced = moveProgress vrExternal
+          in case mbRetryAfter of
+             Just retryAfter -> case pTaskTimestamp vrExternal of
+                    Just (TaskTimestamp ttc start)
+                      | retryAfter +:+ now <= ttc +:+ start -> vrExternalAdvanced
+                    _ -> setTaskTimestamp retryAfter now vrExternalAdvanced
+             Nothing -> vrExternalAdvanced, .. }
+        else VerifyProgress{ vrLocal = moveProgress vrLocal, .. }
+      , ()
+      )
 
-      atomicModifyIORef' progressRef $ \VerifyProgress{..} ->
-        ( if isExternal rInfo
-          then VerifyProgress{ vrExternal =
-            let vrExternalAdvanced = moveProgress vrExternal
-            in if toRetry
-               then case pTaskTimestamp vrExternal of
-                      Just (TaskTimestamp ttc start)
-                        | currentRetryAfter +:+ now <= ttc +:+ start -> vrExternalAdvanced
-                      _ -> setTaskTimestamp currentRetryAfter now vrExternalAdvanced
-               else vrExternalAdvanced, .. }
-          else VerifyProgress{ vrLocal = moveProgress vrLocal, .. }
-        , ()
-        )
-      if toRetry
-      then do
-        threadDelay currentRetryAfter
-        retryVerification (numberOfRetries + 1) resIO
-      else return . (<$> res) $
-        WithReferenceLoc (getPosixRelativeOrAbsoluteChild riRoot file) ref
+    addDomainIf429 :: IORef (S.Set DomainName) -> VerifyError -> IO (S.Set DomainName)
+    addDomainIf429 setRef err = atomicModifyIORef' setRef $ \s ->
+      (\x -> (x, x)) $ case err of
+      ExternalHttpTooManyRequests _ mbDomain ->
+        maybe s (flip S.insert s) mbDomain
+      _ -> s
 
-    alterOverallProgress
-      :: (Num a)
-      => Int
-      -> Progress a
-      -> Progress a
-    alterOverallProgress retryNumber
-      | retryNumber > 0 = id
-      | otherwise = incProgress
+    decideWhetherToRetry
+      :: S.Set DomainName
+      -> RetryCounter
+      -> VerifyError
+      -> Maybe (Maybe RetryAfter, RetryCounter -> RetryCounter)
+    decideWhetherToRetry setOfReturned429 rc = \case
+      ExternalHttpTooManyRequests retryAfter _
+        | totalRetriesNotExceeded -> Just (retryAfter, incTotalCounter)
+      ExternalHttpTimeout (Just domain)
+        | totalRetriesNotExceeded && timeoutRetriesNotExceeded ->
+          -- If a given domain ever returned 429 error, we assume that getting timeout from
+          -- the domain can be considered as a 429-like error, and hence we retry.
+          -- If there was no 429 responses from this domain, then getting timeout from
+          -- it probably means that this site is not working at all.
+          -- Also, there always remains a possibility that we just didn't get the response
+          -- in time, but we can't avoid this case here, the only thing that can help
+          -- is to increase the allowed timeout in the config.
 
-    alterProgressErrors
-      :: (Num a)
-      => VerifyResult VerifyError
-      -> Int
-      -> Progress a
-      -> Progress a
-    alterProgressErrors res@(VerifyResult ves) retryNumber
-      | (ncMaxRetries cNetworking) == 0 =
-          if ok then id
-          else incProgressUnfixableErrors
-      | retryNumber == 0 =
-          if ok then id
-          else if fixable then incProgressFixableErrors
-          else incProgressUnfixableErrors
-      | retryNumber == (ncMaxRetries cNetworking) =
-          if ok then decProgressFixableErrors
-          else fixableToUnfixable
-      -- 0 < retryNumber < ncMaxRetries
-      | otherwise =
-          if ok then decProgressFixableErrors
-          else if fixable then id
-          else fixableToUnfixable
-      where
-        ok = verifyOk res
-        fixable = any isFixable ves
-
-    extractRetryAfterInfo :: VerifyResult VerifyError -> Maybe RetryAfter
-    extractRetryAfterInfo = \case
-      VerifyResult [ExternalHttpTooManyRequests retryAfter] -> retryAfter
+          if S.member domain setOfReturned429
+          then Just (Just (Seconds $ sec 0), incTimeoutCounter . incTotalCounter)
+          else Nothing
       _ -> Nothing
+      where
+        totalRetriesNotExceeded = rcTotalRetries rc < ncMaxRetries cNetworking
+        timeoutRetriesNotExceeded = rcTimeoutRetries rc < ncMaxTimeoutRetries cNetworking
 
     isVirtual canonicalRoot = matchesGlobPatterns canonicalRoot (ecIgnoreLocalRefsTo cExclusions)
 
@@ -540,7 +585,8 @@ verifyReference
     -- so it allows indirections and should be suitable for being shown to
     -- the user. Also, it will be considered as outside the repository if
     -- it is relative and its idirections pass through the repository root.
-    checkRef mAnchor canonicalRoot referredFile shownFilepath = verifying $
+    checkRef :: Maybe Text -> CanonicalPath -> CanonicalPath -> FilePath -> ExceptT VerifyError IO ()
+    checkRef mAnchor canonicalRoot referredFile shownFilepath =
       unless (isVirtual canonicalRoot referredFile) do
         when (hasIndirectionThroughParent shownFilepath) $
           throwError $ LocalFileOutsideRepo shownFilepath
@@ -642,10 +688,10 @@ parseUri link = do
            & handleJust (fromException @ParseExceptionBs)
            (throwError . ExternalResourceUriConversionError)
 
-checkExternalResource :: Config -> Text -> IO (VerifyResult VerifyError)
+checkExternalResource :: Config -> Text -> ExceptT VerifyError IO ()
 checkExternalResource Config{..} link
-  | isIgnored = return mempty
-  | otherwise = fmap toVerifyRes $ runExceptT $ do
+  | isIgnored = pass
+  | otherwise = do
       uri <- parseUri link
       case toString <$> uriScheme uri of
         Just "http" -> checkHttp uri
@@ -670,7 +716,7 @@ checkExternalResource Config{..} link
 
     checkHttp :: URI -> ExceptT VerifyError IO ()
     checkHttp uri = makeHttpRequest uri HEAD 0.3 `catchError` \case
-      e | isFixable e -> throwError e
+      e@(ExternalHttpTooManyRequests _ _) -> throwError e
       _ -> makeHttpRequest uri GET 0.7
 
     httpConfig :: HttpConfig
@@ -700,8 +746,12 @@ checkExternalResource Config{..} link
       let maxTime = Time @Second $ unTime ncExternalRefCheckTimeout * timeoutFrac
 
       mres <- liftIO (timeout maxTime $ void reqLink) `catch`
-        (either throwError (\() -> return (Just ())) . interpretErrors)
-      maybe (throwError $ ExternalResourceSomeError "Response timeout") pure mres
+        (either throwError (\() -> return (Just ())) . interpretErrors uri)
+      maybe (throwError $ ExternalHttpTimeout $ extractHost uri) pure mres
+
+    extractHost :: URI -> Maybe DomainName
+    extractHost =
+      either (const Nothing) (Just . DomainName . unRText . authHost) . uriAuthority
 
     isTemporaryRedirectCode :: Int -> Bool
     isTemporaryRedirectCode = flip elem [302, 303, 307]
@@ -719,7 +769,7 @@ checkExternalResource Config{..} link
       , (405 ==)  -- method mismatch
       ]
 
-    interpretErrors = \case
+    interpretErrors uri = \case
       JsonHttpException _ -> error "External link JSON parse exception"
       VanillaHttpException err -> case err of
         InvalidUrlException{} -> error "External link URL invalid exception"
@@ -733,7 +783,7 @@ checkExternalResource Config{..} link
             | isTemporaryRedirectCode code -> Right ()
             | isAllowedErrorCode code -> Right ()
             | otherwise -> case statusCode (responseStatus resp) of
-              429 -> Left . ExternalHttpTooManyRequests $ retryAfterInfo resp
+              429 -> Left $ ExternalHttpTooManyRequests (retryAfterInfo resp) (extractHost uri)
               _ -> Left . ExternalHttpResourceUnavailable $ responseStatus resp
             where
               code = statusCode $ responseStatus resp

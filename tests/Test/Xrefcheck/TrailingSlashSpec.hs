@@ -23,13 +23,13 @@ import Xrefcheck.Util
 test_slash :: TestTree
 test_slash = testGroup "Trailing forward slash detection" $
   let config = defConfig GitHub
-      format = specificFormatsSupport [markdownSupport (scMarkdown (cScanners config))]
+      fileSupport = firstFileSupport [markdownSupport (scMarkdown (cScanners config))]
   in roots <&> \root ->
     testCase ("All the files within the root \"" <>
       root <>
       "\" should exist") $ do
         (ScanResult _ RepoInfo{..}) <- allowRewrite False $ \rw ->
-          scanRepo OnlyTracked rw format (cExclusions config & ecIgnoreL .~ []) root
+          scanRepo OnlyTracked rw fileSupport (cExclusions config & ecIgnoreL .~ []) root
         nonExistentFiles <- lefts <$> forM (fst . snd <$> toPairs riFiles) (\file -> do
           predicate <- doesFileExist . filePathFromRoot root $ file
           return $ if predicate

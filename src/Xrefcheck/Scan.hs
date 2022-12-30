@@ -10,26 +10,25 @@
 module Xrefcheck.Scan
   ( ExclusionConfig
   , ExclusionConfig' (..)
-  , Extension
-  , ScanAction
-  , FormatsSupport
+  , FileSupport
   , ReadDirectoryMode(..)
+  , ScanAction
   , ScanError (..)
   , ScanErrorDescription (..)
   , ScanResult (..)
   , ScanStage (..)
 
-  , mkParseScanError
-  , mkGatherScanError
-  , scanRepo
-  , specificFormatsSupport
   , defaultCompOption
   , defaultExecOption
   , ecIgnoreL
   , ecIgnoreLocalRefsToL
   , ecIgnoreRefsFromL
   , ecIgnoreExternalRefsToL
+  , firstFileSupport
+  , mkGatherScanError
+  , mkParseScanError
   , reportScanErrs
+  , scanRepo
   ) where
 
 import Universum
@@ -70,11 +69,14 @@ makeLensesWith postfixFields ''ExclusionConfig'
 -- | File extension, dot included.
 type Extension = String
 
+-- | Whether the file is a symlink.
+type IsSymlink = Bool
+
 -- | Way to parse a file.
 type ScanAction = FilePath -> RelPosixLink -> IO (FileInfo, [ScanError 'Parse])
 
 -- | All supported ways to parse a file.
-type FormatsSupport = Extension -> Maybe ScanAction
+type FileSupport = IsSymlink -> Extension -> Maybe ScanAction
 
 data ScanResult = ScanResult
   { srScanErrors :: [ScanError 'Gather]
@@ -153,14 +155,9 @@ instance Buildable ScanErrorDescription where
     UnrecognisedErr txt -> [int||Unrecognised option "#{txt}" perhaps you meant \
                                  <"ignore link"|"ignore paragraph"|"ignore all">|]
 
-specificFormatsSupport :: [([Extension], ScanAction)] -> FormatsSupport
-specificFormatsSupport formats = \ext -> M.lookup ext formatsMap
-  where
-    formatsMap = M.fromList
-        [ (extension, parser)
-        | (extensions, parser) <- formats
-        , extension <- extensions
-        ]
+firstFileSupport :: [FileSupport] -> FileSupport
+firstFileSupport fs isSymlink =
+  safeHead . catMaybes <$> traverse ($ isSymlink) fs
 
 data ReadDirectoryMode
   = RdmTracked
@@ -211,7 +208,7 @@ scanRepo
   :: MonadIO m
   => ScanPolicy
   -> Rewrite
-  -> FormatsSupport
+  -> FileSupport
   -> ExclusionConfig
   -> FilePath
   -> m ScanResult
@@ -228,12 +225,13 @@ scanRepo scanMode rw formatsSupport config root = do
     in  liftIO $ (gatherScanErrs &&& gatherFileStatuses)
           <$> readDirectoryWith mode config processFile root
 
-  notProcessedFiles <-  case scanMode of
+  notProcessedFiles <- case scanMode of
     OnlyTracked -> liftIO $
       readDirectoryWith RdmUntracked config (const $ pure NotAddedToGit) root
     IncludeUntracked -> pure []
 
-  let scannableNotProcessedFiles = filter (isJust . mscanner . fst) notProcessedFiles
+  scannableNotProcessedFiles <- liftIO $
+    filterM (fmap isJust . fileScanner . fst) notProcessedFiles
 
   whenJust (nonEmpty $ map fst scannableNotProcessedFiles) $ \files -> hPutStrLn @Text stderr
     [int|A|
@@ -252,8 +250,10 @@ scanRepo scanMode rw formatsSupport config root = do
         <> fmap (, UntrackedDirectory) untrackedDirs)
     }
   where
-    mscanner :: RelPosixLink -> Maybe ScanAction
-    mscanner = formatsSupport . takeExtension
+    fileScanner :: RelPosixLink -> IO (Maybe ScanAction)
+    fileScanner file = do
+      isSymlink <- pathIsSymbolicLink (filePathFromRoot root file)
+      pure $ formatsSupport isSymlink $ takeExtension file
 
     gatherScanErrs
       :: [(RelPosixLink, (FileStatus, [ScanError 'Parse]))]
@@ -267,10 +267,9 @@ scanRepo scanMode rw formatsSupport config root = do
     gatherFileStatuses = map (second fst)
 
     processFile :: RelPosixLink -> IO (FileStatus, [ScanError 'Parse])
-    processFile file =
-      ifM (pathIsSymbolicLink (filePathFromRoot root file))
-      (pure (NotScannable, []))
-      case mscanner file of
+    processFile file = do
+      mScanner <- fileScanner file
+      case mScanner of
         Nothing -> pure (NotScannable, [])
         Just scanner -> scanner root file <&> _1 %~ Scanned
 

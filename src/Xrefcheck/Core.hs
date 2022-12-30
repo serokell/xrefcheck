@@ -235,36 +235,41 @@ instance Given ColorMode => Buildable Reference where
         case rifLink of
           FLLocal ->
             [int||
-            reference #{paren $ colorIfNeeded Green "file-local"} #{rPos}:
+            reference #{paren $ colorIfNeeded Green "file-local"}#{posSep}#{rPos}:
               - text: #s{rName}
               - anchor: #{rifAnchor ?: styleIfNeeded Faint "-"}
             |]
           FLRelative link ->
             [int||
-            reference #{paren $ colorIfNeeded Yellow "relative"} #{rPos}:
+            reference #{paren $ colorIfNeeded Yellow "relative"}#{posSep}#{rPos}:
               - text: #s{rName}
               - link: #{link}
               - anchor: #{rifAnchor ?: styleIfNeeded Faint "-"}
             |]
           FLAbsolute link ->
             [int||
-            reference #{paren $ colorIfNeeded Yellow "absolute"} #{rPos}:
+            reference #{paren $ colorIfNeeded Yellow "absolute"}#{posSep}#{rPos}:
               - text: #s{rName}
               - link: /#{link}
               - anchor: #{rifAnchor ?: styleIfNeeded Faint "-"}
             |]
       RIExternal (ELUrl url) ->
         [int||
-        reference #{paren $ colorIfNeeded Red "external"} #{rPos}:
+        reference #{paren $ colorIfNeeded Red "external"}#{posSep}#{rPos}:
           - text: #s{rName}
           - link: #{url}
         |]
       RIExternal (ELOther url) ->
         [int||
-        reference (other) #{rPos}:
+        reference (other)#{posSep}#{rPos}:
           - text: #s{rName}
           - link: #{url}
         |]
+    where
+      posSep :: Text
+      posSep = case rPos of
+        Position Nothing -> ""
+        _ -> " "
 
 instance Given ColorMode => Buildable AnchorType where
   build = styleIfNeeded Faint . \case

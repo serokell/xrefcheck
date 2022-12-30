@@ -6,6 +6,4 @@
 
 [Empty file](a)
 
-[Symlink ref](../s.md)
-
-[Symlink ref with anchor](../s.md#a)
+[Some symlink](../ok.md)

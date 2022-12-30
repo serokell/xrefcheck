@@ -7,6 +7,7 @@
 
 module Xrefcheck.Config
   ( module Xrefcheck.Config
+  , module Xrefcheck.Data.Redirect
   , defConfigText
   ) where
 
@@ -15,11 +16,12 @@ import Universum
 import Control.Lens (makeLensesWith)
 import Data.Aeson (genericParseJSON)
 import Data.Yaml (FromJSON (..), decodeEither', prettyPrintParseException, withText)
-
+import Text.Regex.TDFA.Text ()
 import Time (KnownRatName, Second, Time (..), unitsP)
 
 import Xrefcheck.Config.Default
 import Xrefcheck.Core
+import Xrefcheck.Data.Redirect
 import Xrefcheck.Scan
 import Xrefcheck.Scanners.Markdown
 import Xrefcheck.Util (Field, aesonConfigOption, postfixFields)
@@ -78,7 +80,15 @@ data NetworkingConfig' f = NetworkingConfig
     -- this `maxTimeoutRetries` option limits only the number of retries
     -- caused by timeouts, and `maxRetries` limits the number of retries
     -- caused both by 429s and timeouts.
+  , ncMaxRedirectFollows        :: Field f Int
+    -- ^ Maximum number of links that can be followed in a single redirect
+    -- chain.
+  , ncExternalRefRedirects      :: Field f RedirectConfig
+    -- ^  Rules to override the redirect behavior for external references.
   } deriving stock (Generic)
+
+-- | A list of custom redirect rules.
+type RedirectConfig = [RedirectRule]
 
 -- | Type alias for ScannersConfig' with all required fields.
 type ScannersConfig = ScannersConfig' Identity
@@ -118,7 +128,8 @@ overrideConfig config
 
     defScanners = cScanners $ defConfig flavor
     defExclusions = cExclusions $ defConfig flavor
-    defNetworking = cNetworking $ defConfig flavor
+    defNetworking = cNetworking (defConfig flavor)
+      & ncExternalRefRedirectsL .~ []
 
     overrideExclusions exclusionConfig
       = ExclusionConfig
@@ -138,6 +149,8 @@ overrideConfig config
         , ncDefaultRetryAfter         = overrideField ncDefaultRetryAfter
         , ncMaxRetries                = overrideField ncMaxRetries
         , ncMaxTimeoutRetries         = overrideField ncMaxTimeoutRetries
+        , ncMaxRedirectFollows        = overrideField ncMaxRedirectFollows
+        , ncExternalRefRedirects      = overrideField ncExternalRefRedirects
         }
       where
         overrideField :: (forall f. NetworkingConfig' f -> Field f a) -> a

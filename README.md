@@ -141,8 +141,36 @@ There are several ways to fix this:
     * This behavior can be disabled by setting `ignoreAuthFailures: false` in the config file.
 
 1. How does `xrefcheck` handle redirects?
-    * Permanent redirects (i.e. 301 and 308) are reported as errors.
-    * Temporary redirects (i.e. 302, 303 and 307) are assumed to be valid.
+    * The rules from the default configuration are as follows:
+      * Permanent redirects (i.e. 301 and 308) are reported as errors.
+      * Temporary redirects (i.e. 302, 303 and 307) are assumed to be valid.
+    * Redirect rules can be specified with the `externalRefRedirects` parameter within `networking`, which accepts an array of
+      rules with keys `from`, `to`, `on` and `outcome`. The rule applied is the first one that matches with
+      the `from`, `to` and `on` fields, if any, where
+      * `from` is a regular expression, as in `ignoreExternalRefsTo`, for the source link in a single redirection step. Its absence means that
+        every link matches.
+      * `to` is a regular expression for the target link in a single redirection step. Its absence also means that every link matches.
+      * `on` accepts `temporary`, `permanent` or a specific redirect HTTP code. Its absence also means that
+        every response code matches.
+      * The `outcome` parameter accepts `valid`, `invalid` or `follow`. The last one follows the redirect by applying the
+        same configuration rules.
+
+      For example, this configuration forbids 307 redirects to a specific domain and makes redirections from HTTP to HTTPS to be followed:
+
+      ```
+      externalRefRedirects:
+        - to: "https?://forbidden.com.*"
+          on: 307
+          outcome: invalid
+        - from: "http://.*"
+          to: "https://.*"
+          outcome: follow
+      ```
+
+      The first one applies if both of them match.
+
+    * The number of redirects allowed in a single redirect chain is limited and can be configured with the
+      `maxRedirectFollows` parameter, also within `networking`. A number smaller than 0 disables the limit.
 
 1. How does `xrefcheck` handle localhost links?
     * By default, `xrefcheck` will ignore links to localhost.

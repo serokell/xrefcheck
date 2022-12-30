@@ -35,10 +35,10 @@ assert_diff - <<EOF
        - link: http://www.commonmark.org
        - anchor: -
 
-     Permanent redirect found. Perhaps you want to replace the link:
-       http://www.commonmark.org
-     by:
-       https://commonmark.org/
+     Permanent redirect found:
+       -| http://www.commonmark.org
+       -> https://commonmark.org/
+          ^-- stopped before this one
 
 Invalid references dumped, 1 in total.
 EOF

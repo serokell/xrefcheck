@@ -18,7 +18,6 @@ import Test.Tasty.HUnit (assertFailure, testCase, (@?=))
 import Test.Tasty.QuickCheck (ioProperty, testProperty)
 
 import Xrefcheck.Config
-  (Config, cExclusionsL, cNetworkingL, defConfig, defConfigText, ncIgnoreAuthFailuresL)
 import Xrefcheck.Core (Flavor (GitHub), allFlavors)
 import Xrefcheck.Scan (ecIgnoreExternalRefsToL)
 import Xrefcheck.Verify (VerifyError (..), checkExternalResource)
@@ -31,7 +30,6 @@ test_config =
       testProperty (show flavor) $
         ioProperty $ evaluateWHNF_ @_ @Config (defConfig flavor)
         | flavor <- allFlavors]
-
   , testGroup "Filled default config matches the expected format"
     -- The config we match against can be regenerated with
     -- stack exec xrefcheck -- dump-config -t GitHub -o tests/configs/github-config.yaml --force
@@ -84,5 +82,5 @@ test_config =
   where
     checkLinkWithServer config link expectation =
       E.bracket (forkIO mockServer) killThread $ \_ -> do
-        result <- runExceptT $ checkExternalResource config link
+        result <- runExceptT $ checkExternalResource emptyChain config link
         result @?= expectation

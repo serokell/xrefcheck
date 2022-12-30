@@ -9,8 +9,8 @@ Unreleased
 
 * [#176](https://github.com/serokell/xrefcheck/pull/176)
   + Enabled `autolink` extension for `cmark-gfm`, so now we're finding strings
-  like `www.google.com` or `https://google.com`, treating them as links
-  and checking.
+    like `www.google.com` or `https://google.com`, treating them as links
+    and checking.
 * [#175](https://github.com/serokell/xrefcheck/pull/175)
   + Reorganize top-level config keys.
 * [#178](https://github.com/serokell/xrefcheck/pull/178)
@@ -19,13 +19,13 @@ Unreleased
   + Add support for image links.
 * [#199](https://github.com/serokell/xrefcheck/pull/199)
   + Now annotation
-  `<!-- xrefcheck: ignore all -->` instead of `<!-- xrefcheck: ignore file -->`
-  should be used to disable checking for links in file, so it's clearer that
-  file itself is not ignored (and links can target it).
+    `<!-- xrefcheck: ignore all -->` instead of `<!-- xrefcheck: ignore file -->`
+    should be used to disable checking for links in file, so it's clearer that
+    file itself is not ignored (and links can target it).
 * [#215](https://github.com/serokell/xrefcheck/pull/215)
   + Now we notify user when there are scannable files that were not added to Git
-  yet. Also added CLI option `--include-untracked` to scan such files and treat
-  as existing.
+    yet. Also added CLI option `--include-untracked` to scan such files and treat
+    as existing.
 * [#191](https://github.com/serokell/xrefcheck/pull/191)
   + Now we consider slash `/` (and only it) as path separator in local links for all OS,
     so xrefcheck's report is OS-independent
@@ -40,10 +40,14 @@ Unreleased
     redirect responses (i.e. 301 and 308) and passes for temporary ones (i.e. 302, 303, 307).
 * [#231](https://github.com/serokell/xrefcheck/pull/231)
   + Anchor analysis takes now into account the appropriate case-sensitivity depending on
-  the configured Markdown flavour.
+    the configured Markdown flavour.
 * [#254](https://github.com/serokell/xrefcheck/pull/254)
   + Now the `dump-config` command does not overwrite a file unless explicitly told with a
     `--force` flag. Also, a `--stdout` flag allows to print the config to stdout instead.
+    the configured Markdown flavour.
+* [#250](https://github.com/serokell/xrefcheck/pull/250)
+  + Now the redirect behavior for external references can be modified via rules in the
+    configuration file with the `externalRefRedirects` parameter.
 
 0.2.2
 ==========
@@ -95,7 +99,7 @@ Unreleased
   + Make possible to specify whether ignore localhost links, use
   `check-localhost` CLA argument (by default localhost links will not be checked).
   + Make possible to ignore auth failures (assume 'protected' links
-  valid), use `ignoreAuthFailures` parameter of config.
+    valid), use `ignoreAuthFailures` parameter of config.
 * [#66](https://github.com/serokell/xrefcheck/pull/66)
   + Added support for ftp links.
 * [#74](https://github.com/serokell/xrefcheck/pull/83)
@@ -144,10 +148,10 @@ Unreleased
   + Switch to lts-17.3.
 * [#53](https://github.com/serokell/xrefcheck/pull/53)
   + Make possible to include a regular expression in
-  `ignoreRefs` parameter of config to ignore external
-  references.
+    `ignoreRefs` parameter of config to ignore external
+    references.
   + Add support of right in-place ignoring annotations
-  such as `ignore file`, `ignore paragraph` and `ignore link`.
+    such as `ignore file`, `ignore paragraph` and `ignore link`.
 
 0.1.2
 =======

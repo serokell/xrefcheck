@@ -11,6 +11,7 @@ module Xrefcheck.Progress
     -- * Progress
   , Progress
   , initProgress
+  , initProgressWitnessed
   , reportSuccess
   , reportError
   , reportRetry
@@ -76,6 +77,20 @@ data Progress a w = Progress
 initProgress :: Num a => a -> Progress a w
 initProgress a = Progress
   { pTotal = a
+  , pSuccess = 0
+  , pError = 0
+  , pRetrying = S.empty
+  , pTaskTimestamp = Nothing
+  }
+
+-- | Initialise null progress from a given list of witnesses.
+--
+-- This just initializes it with as many work to do as witnesses are in the list, so you can be
+-- more confident regarding the progress initialization because you actualy provided data that
+-- represents each unit of work to do.
+initProgressWitnessed :: [w] -> Progress Int w
+initProgressWitnessed ws = Progress
+  { pTotal = length ws
   , pSuccess = 0
   , pError = 0
   , pRetrying = S.empty

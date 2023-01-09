@@ -10,15 +10,13 @@ import Universum
 import Network.HTTP.Types (forbidden403, unauthorized401)
 import Web.Firefly (ToResponse (..), route, run)
 
-import Xrefcheck.Core (FileInfo, Flavor)
-import Xrefcheck.Scan (ScanError, ScanStage (..))
+import Xrefcheck.Core (Flavor)
+import Xrefcheck.Scan (ScanAction)
 import Xrefcheck.Scanners.Markdown (MarkdownConfig (MarkdownConfig, mcFlavor), markdownScanner)
-import Xrefcheck.System (canonicalizePath)
 
-parse :: Flavor -> FilePath -> IO (FileInfo, [ScanError 'Parse])
-parse fl path = do
-  canonicalPath <- canonicalizePath path
-  markdownScanner MarkdownConfig { mcFlavor = fl } canonicalPath
+parse :: Flavor -> ScanAction
+parse fl path =
+  markdownScanner MarkdownConfig { mcFlavor = fl } path
 
 mockServer :: IO ()
 mockServer = run 3000 $ do

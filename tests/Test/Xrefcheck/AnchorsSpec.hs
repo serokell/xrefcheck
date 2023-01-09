@@ -3,7 +3,7 @@
  - SPDX-License-Identifier: MPL-2.0
  -}
 
-module Test.Xrefcheck.AnchorsSpec (test_anchors) where
+module Test.Xrefcheck.AnchorsSpec where
 
 import Universum
 
@@ -12,6 +12,7 @@ import Test.Tasty.HUnit (testCase, (@?=))
 
 import Test.Xrefcheck.Util
 import Xrefcheck.Core
+import Xrefcheck.System
 
 checkHeaderConversions :: Flavor -> [(Text, Text)] -> TestTree
 checkHeaderConversions fl suites =
@@ -19,7 +20,7 @@ checkHeaderConversions fl suites =
     [testCase (show a <> " == " <> show b) $ headerToAnchor fl a @?= b | (a,b) <- suites]
     ++
     [ testCase "Non-stripped header name should be stripped" $ do
-        (fi, errs) <- parse fl "tests/markdowns/without-annotations/non_stripped_spaces.md"
+        (fi, errs) <- parse fl "" $ mkRelPosixLink "tests/markdowns/without-annotations/non_stripped_spaces.md"
         getAnchors fi @?= [ case fl of GitHub -> "header--with-leading-spaces"
                                        GitLab -> "header-with-leading-spaces"
                           , "edge-case"

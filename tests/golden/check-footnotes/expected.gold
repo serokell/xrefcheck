@@ -7,6 +7,6 @@
        - anchor: -
 
      File does not exist:
-       notExists
+       ./notExists
 
 Invalid references dumped, 1 in total.

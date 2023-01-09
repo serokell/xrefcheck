@@ -4,7 +4,6 @@
     - references:
         - reference (file-local) at src:9:1-15:
             - text: "Color"
-            - link: -
             - anchor: Color
     - anchors:
         - color (header I) at src:7:1-7

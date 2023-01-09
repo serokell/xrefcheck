@@ -4,44 +4,37 @@
  -}
 
 module Xrefcheck.System
-  ( readingSystem
-  , askWithinCI
+  ( askWithinCI
 
-  , CanonicalPath
-  , canonicalizePath
-  , unCanonicalPath
-  , getDirsBetweenRootAndFile
-  , getPosixRelativeChild
-  , getPosixRelativeOrAbsoluteChild
-  , hasIndirectionThroughParent
-  , pathIsSymbolicLink
+  , RelPosixLink (..)
+  , (</>)
+  , mkRelPosixLink
+  , filePathFromRoot
+  , getIntermediateDirs
   , takeDirectory
   , takeExtension
-  , (</)
 
-  , RelGlobPattern (unRelGlobPattern)
-  , mkGlobPattern
-  , bindGlobPattern
+  , CanonicalRelPosixLink (unCanonicalRelPosixLink)
+  , hasUnexpanededParentIndirections
+  , canonicalizeRelPosixLink
+
+  , CanonicalRelGlobPattern (unCanonicalRelGlobPattern)
   , matchesGlobPatterns
+  , mkCanonicalRelGlobPattern
   ) where
 
 import Universum
 
 import Data.Aeson (FromJSON (..), withText)
 import Data.Char qualified as C
-import Data.List (stripPrefix)
-import GHC.IO.Unsafe (unsafePerformIO)
-import System.Directory qualified as Directory
+import Data.Text qualified as T
+import Fmt (Buildable)
+import System.Console.Pretty (Pretty)
 import System.Environment (lookupEnv)
 import System.FilePath qualified as FP
 import System.FilePath.Glob qualified as Glob
 import System.FilePath.Posix qualified as FPP
 import Text.Interpolation.Nyan (int, rmode')
-
--- | We can quite safely treat surrounding filesystem as frozen,
--- so IO reading operations can be turned into pure values.
-readingSystem :: IO a -> a
-readingSystem = unsafePerformIO
 
 -- | Heuristics to check whether we are running within CI.
 -- Check the respective env variable which is usually set in all CIs.
@@ -51,125 +44,128 @@ askWithinCI = lookupEnv "CI" <&> \case
   Just (map C.toLower -> "true") -> True
   _ -> False
 
--- | A FilePath that has been canonicalized.
+-- | Relative file path with POSIX path separators.
 --
--- It should be created via 'canonicalizePath'.
+-- This type exist in contrast to 'FilePath' which, in this project,
+-- is used for platform-dependent file paths and related filesystem
+-- IO operations.
 --
--- Currently, canonical paths have been made absolute, normalised
--- regarding the running platform (e.g. Posix or Windows), with
--- indirections syntactically expanded as much as possible and
--- with no trailing path separator. All this results in a weaker
--- version than that provided by 'System.Directory.canonicalizePath'.
-newtype CanonicalPath = UnsafeCanonicalPath
-  { unCanonicalPath :: FilePath
-  } deriving newtype (Show, Eq, Ord)
+-- Note that `RelPosixLink` may contain `\` characters, but they are
+-- considered as part of the filename instead of denoting a path
+-- separator.
+newtype RelPosixLink = RelPosixLink
+  { unRelPosixLink :: Text
+  } deriving newtype (Show, Eq, Ord, NFData, Buildable, Pretty)
 
-canonicalizePath :: FilePath -> IO CanonicalPath
-canonicalizePath = fmap canonicalize . Directory.makeAbsolute
-  where
-    canonicalize :: FilePath -> CanonicalPath
-    canonicalize = UnsafeCanonicalPath
-      . expandIndirections
-      . FP.normalise
-      . FP.dropTrailingPathSeparator
+-- | Create a POSIX file path from a platform-dependent one.
+mkRelPosixLink :: FilePath -> RelPosixLink
+mkRelPosixLink = RelPosixLink
+  . withPathSeparator FPP.pathSeparator
+  . fromString
 
-    expandIndirections :: FilePath -> FilePath
-    expandIndirections = FP.joinPath
-      . reverse
-      . expand 0
-      . reverse
-      . FP.splitDirectories
+-- | Join two 'RelPosixLink's.
+(</>) :: RelPosixLink -> RelPosixLink -> RelPosixLink
+RelPosixLink a </> RelPosixLink b =
+  let a' = fromMaybe a $ T.stripSuffix "/" a
+      b' = fromMaybe b $ T.stripPrefix "./" a
+  in case (a', b') of
+        ("", _) -> RelPosixLink b
+        (".", _) -> RelPosixLink b
+        _ -> RelPosixLink $ a' <> "/" <> b'
 
-    expand :: Int -> [FilePath] -> [FilePath]
-    expand acc (".." : xs) = expand (acc + 1) xs
-    expand acc ("." : xs) = expand acc xs
-    expand 0 (x : xs) = x : expand 0 xs
-    expand acc (_ : xs) = expand (acc - 1) xs
-    expand acc [] = replicate acc ".."
-
--- | 'FilePath.takeDirectory' version for 'CanonicalPath'.
-takeDirectory :: CanonicalPath -> CanonicalPath
-takeDirectory (UnsafeCanonicalPath p) = UnsafeCanonicalPath $ FP.takeDirectory p
-
--- | 'FilePath.takeExtension' version for 'CanonicalPath'.
-takeExtension :: CanonicalPath -> String
-takeExtension (UnsafeCanonicalPath p) = FP.takeExtension p
-
--- | 'System.Directory.pathIsSymbolicLink' version for 'CanonicalPath'.
-pathIsSymbolicLink :: CanonicalPath -> IO Bool
-pathIsSymbolicLink (UnsafeCanonicalPath p) = Directory.pathIsSymbolicLink p
-
--- | Get the list of directories, canonicalized, between two given paths.
-getDirsBetweenRootAndFile :: CanonicalPath -> CanonicalPath -> [CanonicalPath]
-getDirsBetweenRootAndFile (UnsafeCanonicalPath rootPath) file =
-  case stripPrefix rootPath (unCanonicalPath (takeDirectory file)) of
-    Just path -> UnsafeCanonicalPath <$> scanl (FP.</>) rootPath directories
-      where
-        directories = FP.splitDirectories $ dropWhile FP.isPathSeparator path
-    Nothing -> []
-
--- | Get a relative 'FilePath' from the second given path (child) with
--- respect to the first one (root).
+-- Get the platform-dependent file path from a 'RelPosixLink'
+-- considered as relative to another given platform-dependent
+-- 'FilePath'.
 --
--- It returns Nothing if child cannot be reached from root downwards
--- in the filesystem tree.
+-- In Windows, every `\` occurrence will be replaced by `/`.
+filePathFromRoot :: FilePath -> RelPosixLink -> FilePath
+filePathFromRoot rootPath = (rootPath FP.</>)
+  . toString
+  . withPathSeparator FP.pathSeparator
+  . unRelPosixLink
+
+-- | 'FilePath.takeDirectory' version for 'RelPosixLink'.
+takeDirectory :: RelPosixLink -> RelPosixLink
+takeDirectory = RelPosixLink
+  . fromString
+  . FPP.takeDirectory
+  . toString
+  . unRelPosixLink
+
+-- | 'FilePath.takeExtension' version for 'RelPosixLink'.
+takeExtension :: RelPosixLink -> String
+takeExtension = FPP.takeExtension
+  . toString
+  . unRelPosixLink
+
+-- | Get the list of directories between a 'RelPosixLink' and its
+-- relative root.
+getIntermediateDirs :: RelPosixLink -> [RelPosixLink]
+getIntermediateDirs link = fmap RelPosixLink $
+  case T.splitOn "/" $ unRelPosixLink $ takeDirectory link of
+    [] -> []
+    ["."] -> [""]
+    [".."] -> ["", ".."]
+    d : ds -> scanl (\a b -> a <> "/" <> b) d ds
+
+-- | Relative POSIX file path with some normalizations applied.
 --
--- The resulting `FilePath` uses POSIX path separators.
-getPosixRelativeChild :: CanonicalPath -> CanonicalPath -> Maybe FilePath
-getPosixRelativeChild (UnsafeCanonicalPath root) (UnsafeCanonicalPath child) =
-  dropLeadingSepAndEmptyCase . fmap replaceSeparator <$> stripPrefix root child
-  where
-    replaceSeparator :: Char -> Char
-    replaceSeparator c
-      | FP.isPathSeparator c = FPP.pathSeparator
-      | otherwise = c
+-- It should be created from a 'RelPosixLink' via
+-- 'canonicalizeRelPosixLink'.
+newtype CanonicalRelPosixLink = UnsafeCanonicalRelPosixLink
+  { unCanonicalRelPosixLink :: RelPosixLink
+  } deriving newtype (Show, Eq, Ord, NFData, Buildable, Pretty)
 
-    dropLeadingSepAndEmptyCase :: FilePath -> FilePath
-    dropLeadingSepAndEmptyCase path = case dropWhile FP.isPathSeparator path of
-      "" -> "."
-      other -> other
+-- | Canonicalize a 'RelPosixLink'.
+--
+-- Applies the following normalizations:
+--
+--  * Drop trailing path separator.
+--
+--  * Expand '.' and '..' indirections syntactically.
+--
+canonicalizeRelPosixLink :: RelPosixLink -> CanonicalRelPosixLink
+canonicalizeRelPosixLink = UnsafeCanonicalRelPosixLink
+  . RelPosixLink
+  . expandPosixIndirections
+  . dropTrailingPosixPathSeparator
+  . withPathSeparator FPP.pathSeparator
+  . unRelPosixLink
 
--- | Get the relative 'FilePath' using 'getPosixRelativeChild', but
--- return the same passed absolute path instead of 'Nothing'.
-getPosixRelativeOrAbsoluteChild :: CanonicalPath -> CanonicalPath -> FilePath
-getPosixRelativeOrAbsoluteChild root child =
-  fromMaybe (unCanonicalPath child) (getPosixRelativeChild root child)
-
--- | Check if some 'FilePath' passes through its parent while
+-- | Check if a 'CanonicalRelPosixLink' passes through its relative root when
 -- expanding indirections.
-hasIndirectionThroughParent :: FilePath -> Bool
-hasIndirectionThroughParent = go 0 . FP.splitDirectories
-  where
-    go :: Int -> [FilePath] -> Bool
-    go _ [] = False
-    go 0 (".." : _) = True
-    go acc (".." : xs) = go (acc - 1) xs
-    go acc ("." : xs) = go acc xs
-    go acc (_ : xs) = go (acc + 1) xs
+hasUnexpanededParentIndirections :: CanonicalRelPosixLink -> Bool
+hasUnexpanededParentIndirections = elem ".."
+  . T.splitOn "/"
+  . unRelPosixLink
+  . unCanonicalRelPosixLink
 
--- | Extend some 'CanonicalPath' with a given relative 'FilePath'.
+-- | Relative Glob pattern with some normalizations applied.
 --
--- The right-hand side 'FilePath' can use both Posix and Windows
--- path separators.
-(</) :: CanonicalPath -> FilePath -> IO CanonicalPath
-UnsafeCanonicalPath p </ f = canonicalizePath $ p FP.</> f
-infixr 5 </
-
--- | Glob pattern relative to repository root.
---
--- It should be created via 'mkGlobPattern'.
-newtype RelGlobPattern = UnsafeRelGlobPattern
-  { unRelGlobPattern :: FilePath
+-- It should be created via 'mkCanonicalRelGlobPattern'.
+newtype CanonicalRelGlobPattern = UnsafeCanonicalRelGlobPattern
+  { unCanonicalRelGlobPattern :: Glob.Pattern
   }
 
-mkGlobPattern :: ToString s => s -> Either String RelGlobPattern
-mkGlobPattern path = do
+-- | Create a CanonicalRelGlobPattern from a 'ToString' instance value that
+-- represents a POSIX glob pattern.
+--
+-- Applies the following normalizations:
+--
+--  * Drop trailing path separator.
+--
+--  * FilePath.Posix.normalise.
+--
+--  * Expand '.' and '..' indirections syntactically.
+--
+mkCanonicalRelGlobPattern :: ToString s => s -> Either String CanonicalRelGlobPattern
+mkCanonicalRelGlobPattern path = do
   let spath = toString path
   unless (FPP.isRelative spath) $ Left $
     "Expected a relative glob pattern, but got " <> spath
   -- Checking correctness of glob, e.g. "a[b" is incorrect
-  case Glob.tryCompileWith globCompileOptions spath of
-    Right _ -> return (UnsafeRelGlobPattern spath)
+  case Glob.tryCompileWith globCompileOptions (normalise spath) of
+    Right pat -> return $ UnsafeCanonicalRelGlobPattern pat
     Left err -> Left
         [int||
         Glob pattern compilation failed.
@@ -179,27 +175,53 @@ mkGlobPattern path = do
         https://hackage.haskell.org/package/Glob/docs/System-FilePath-Glob.html#v:compile
         Special characters in file names can be escaped using square brackets, e.g. <a> -> [<]a[>].
         |]
+  where
+    normalise = toString
+      . expandPosixIndirections
+      . fromString
+      . FPP.normalise
+      . FPP.dropTrailingPathSeparator
 
-bindGlobPattern :: CanonicalPath -> RelGlobPattern -> Glob.Pattern
-bindGlobPattern root (UnsafeRelGlobPattern relPat) = readingSystem $ do
-  UnsafeCanonicalPath absPat <- root </ relPat
-  case Glob.tryCompileWith globCompileOptions absPat of
-    Left err -> error $
-      "Glob pattern compilation failed after canonicalization: " <> toText err
-    Right pat ->
-      return pat
-
-matchesGlobPatterns :: CanonicalPath -> [RelGlobPattern] -> CanonicalPath -> Bool
-matchesGlobPatterns root globPatterns file = or
-  [ Glob.match pat $ unCanonicalPath file
-  | globPattern <- globPatterns
-  , let pat = bindGlobPattern root globPattern
+-- Checks if a 'CanonicalRelPosixLink' matches some of the given
+-- 'CanonicalRelGlobPattern's.
+--
+-- They are considered as relative to the same root.
+matchesGlobPatterns :: [CanonicalRelGlobPattern] -> CanonicalRelPosixLink -> Bool
+matchesGlobPatterns globPatterns file = or
+  [ Glob.match pat . toString . unRelPosixLink . unCanonicalRelPosixLink $ file
+  | UnsafeCanonicalRelGlobPattern pat <- globPatterns
   ]
 
-instance FromJSON RelGlobPattern where
+instance FromJSON CanonicalRelGlobPattern where
   parseJSON = withText "Repo-relative glob pattern" $
-    either fail pure . mkGlobPattern
+    either fail pure . mkCanonicalRelGlobPattern
 
 -- | Glob compilation options we use.
 globCompileOptions :: Glob.CompOptions
 globCompileOptions = Glob.compDefault{Glob.errorRecovery = False}
+
+dropTrailingPosixPathSeparator :: Text -> Text
+dropTrailingPosixPathSeparator p = fromMaybe p
+  $ T.stripSuffix "/" p
+
+expandPosixIndirections :: Text -> Text
+expandPosixIndirections = T.intercalate "/"
+    . reverse
+    . expand 0
+    . reverse
+    . T.split (FPP.isPathSeparator)
+  where
+    expand :: Int -> [Text] -> [Text]
+    expand acc (".." : xs) = expand (acc + 1) xs
+    expand acc ("." : xs) = expand acc xs
+    expand 0 (x : xs) = x : expand 0 xs
+    expand acc (_ : xs) = expand (acc - 1) xs
+    expand acc [] = replicate acc ".."
+
+withPathSeparator :: Char -> Text -> Text
+withPathSeparator pathSep = T.map replaceSeparator
+  where
+    replaceSeparator :: Char -> Char
+    replaceSeparator c
+      | FP.isPathSeparator c = pathSep
+      | otherwise = c

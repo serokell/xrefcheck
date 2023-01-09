@@ -3,7 +3,6 @@
   ➥  In file a.md
      bad reference (file-local) at src:16:1-37:
        - text: "Mixing case reference"
-       - link: -
        - anchor: SomE-HEADer
 
      Anchor 'SomE-HEADer' is not present, did you mean:
@@ -16,7 +15,6 @@
   ➥  In file a.md
      bad reference (file-local) at src:18:1-36:
        - text: "Mixing case reference"
-       - link: -
        - anchor: SomE-HEADr
 
      Anchor 'SomE-HEADr' is not present, did you mean:
@@ -29,7 +27,6 @@
   ➥  In file a.md
      bad reference (file-local) at src:22:1-36:
        - text: "Reference lowered"
-       - link: -
        - anchor: uppercase-name
 
      Anchor 'uppercase-name' is not present, did you mean:

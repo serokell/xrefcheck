@@ -264,7 +264,10 @@ scanRepo scanMode rw formatsSupport config root = do
     gatherFileStatuses = map (second fst)
 
     processFile :: CanonicalPath -> IO (FileStatus, [ScanError 'Parse])
-    processFile canonicalFile = case mscanner canonicalFile of
+    processFile canonicalFile =
+      ifM (pathIsSymbolicLink canonicalFile)
+      (pure (NotScannable, []))
+      case mscanner canonicalFile of
         Nothing -> pure (NotScannable, [])
         Just scanner -> scanner canonicalFile <&> _1 %~ Scanned
 

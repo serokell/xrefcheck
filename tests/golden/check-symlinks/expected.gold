@@ -1,0 +1,20 @@
+=== Repository data ===
+
+  dir/b.md:
+    - references:
+        - reference (relative) at src:7:1-15:
+            - text: "Empty file"
+            - link: a
+            - anchor: -
+        - reference (relative) at src:9:1-22:
+            - text: "Symlink ref"
+            - link: ../s.md
+            - anchor: -
+        - reference (relative) at src:11:1-36:
+            - text: "Symlink ref with anchor"
+            - link: ../s.md
+            - anchor: a
+    - anchors:
+        none
+
+All repository links are valid.

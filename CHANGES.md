@@ -47,6 +47,8 @@ Unreleased
 * [#250](https://github.com/serokell/xrefcheck/pull/250)
   + Now the redirect behavior for external references can be modified via rules in the
     configuration file with the `externalRefRedirects` parameter.
+* [#261](https://github.com/serokell/xrefcheck/pull/261)
+  + Symlinks are now not processed by the scanner.
 
 0.2.2
 ==========

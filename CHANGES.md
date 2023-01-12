@@ -44,7 +44,6 @@ Unreleased
 * [#254](https://github.com/serokell/xrefcheck/pull/254)
   + Now the `dump-config` command does not overwrite a file unless explicitly told with a
     `--force` flag. Also, a `--stdout` flag allows to print the config to stdout instead.
-    the configured Markdown flavour.
 * [#250](https://github.com/serokell/xrefcheck/pull/250)
   + Now the redirect behavior for external references can be modified via rules in the
     configuration file with the `externalRefRedirects` parameter.

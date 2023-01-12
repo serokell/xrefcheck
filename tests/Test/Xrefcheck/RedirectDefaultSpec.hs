@@ -71,13 +71,8 @@ test_redirectRequests = testGroup "Redirect response defaults"
         setRef
         (mockRedirect expectedLocation expectedStatus)
         url
-        (Progress
-          { pTotal = 1
-          , pCurrent = 1
-          , pErrorsUnfixable = length $ maybeToList expectedError
-          , pErrorsFixable = 0
-          , pTaskTimestamp = Nothing
-          }
+        ( (if isNothing expectedError then reportSuccess else reportError) "" $
+            initProgress 1
         )
         (VerifyResult $ maybeToList expectedError)
 

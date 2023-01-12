@@ -95,14 +95,12 @@ test_timeout = testGroup "Timeout tests"
   where
     setAllowedTimeout = cNetworkingL . ncExternalRefCheckTimeoutL .~ (sec 0.25)
 
-    mkProgressWithOneTask shouldSucceed =
-      Progress
-        { pTotal = 1
-        , pCurrent = 1
-        , pErrorsUnfixable = if shouldSucceed then 0 else 1
-        , pErrorsFixable = 0
-        , pTaskTimestamp = Nothing
-        }
+    mkProgressWithOneTask shouldSucceed = report "" $ initProgress 1
+      where
+        report =
+          if shouldSucceed
+          then reportSuccess
+          else reportError
 
     timeoutTestCase mockResponses shouldSucceed configModifier = do
       let prog = mkProgressWithOneTask shouldSucceed

@@ -31,22 +31,12 @@ test_tooManyRequests :: TestTree
 test_tooManyRequests = testGroup "429 response tests"
   [ testCase "Returns 200 eventually" $ do
       setRef <- newIORef S.empty
-      let prog = Progress{ pTotal = 1
-                          , pCurrent = 1
-                          , pErrorsUnfixable = 0
-                          , pErrorsFixable = 0
-                          , pTaskTimestamp = Nothing
-                          }
+      let prog = reportSuccess "" $ initProgress 1
       checkLinkAndProgressWithServerDefault setRef (mock429 "1" ok200)
         "http://127.0.0.1:5000/429" prog $ VerifyResult []
   , testCase "Returns 503 eventually" $ do
       setRef <- newIORef S.empty
-      let prog = Progress{ pTotal = 1
-                         , pCurrent = 1
-                         , pErrorsUnfixable = 1
-                         , pErrorsFixable = 0
-                         , pTaskTimestamp = Nothing
-                         }
+      let prog = reportError "" $ initProgress 1
       checkLinkAndProgressWithServerDefault setRef (mock429 "1" serviceUnavailable503)
         "http://127.0.0.1:5000/429" prog $ VerifyResult
           [ ExternalHttpResourceUnavailable $
@@ -58,20 +48,16 @@ test_tooManyRequests = testGroup "429 response tests"
         setRef <- newIORef S.empty
         progressRef <- newIORef VerifyProgress
               { vrLocal = initProgress 0
-              , vrExternal = Progress
-                  { pTotal = 2
-                  , pCurrent = 1
-                  , pErrorsUnfixable = 0
-                  , pErrorsFixable = 0
-                  , pTaskTimestamp = Just (TaskTimestamp (sec 3) (now -:- sec 1.5))
-                  }
+              , vrExternal = setTaskTimestamp "" (sec 3) (now -:- sec 1.5)
+                  . reportSuccess ""
+                  $ initProgress 2
               }
         _ <- verifyReferenceWithProgressDefault
           (Reference "" "http://127.0.0.1:5000/429" Nothing (Position Nothing) RIExternal)
           setRef
           progressRef
-        Progress{..} <- vrExternal <$> readIORef progressRef
-        let ttc = ttTimeToCompletion <$> pTaskTimestamp
+        progress <- vrExternal <$> readIORef progressRef
+        let ttc = ttTimeToCompletion <$> getTaskTimestamp "" progress
         flip assertBool (ttc == Just (sec 2)) $
           "Expected time to completion be equal to " ++ show (Just $ sec 2) ++
           ", but instead it's " ++ show ttc
@@ -85,20 +71,16 @@ test_tooManyRequests = testGroup "429 response tests"
         setRef <- newIORef S.empty
         progressRef <- newIORef VerifyProgress
               { vrLocal = initProgress 0
-              , vrExternal = Progress
-                  { pTotal = 2
-                  , pCurrent = 1
-                  , pErrorsUnfixable = 0
-                  , pErrorsFixable = 0
-                  , pTaskTimestamp = Just (TaskTimestamp (sec 2) (now -:- sec 1.5))
-                  }
+              , vrExternal = setTaskTimestamp "" (sec 2) (now -:- sec 1.5)
+                  . reportSuccess ""
+                  $ initProgress 2
               }
         _ <- verifyReferenceWithProgressDefault
           (Reference "" "http://127.0.0.1:5000/429" Nothing (Position Nothing) RIExternal)
           setRef
           progressRef
-        Progress{..} <- vrExternal <$> readIORef progressRef
-        let ttc = fromMaybe (sec 0) $ ttTimeToCompletion <$> pTaskTimestamp
+        progress <- vrExternal <$> readIORef progressRef
+        let ttc = fromMaybe (sec 0) $ ttTimeToCompletion <$> getTaskTimestamp "" progress
         flip assertBool (sec 3 <= ttc && ttc <= sec 4) $
           "Expected time to completion be within range (seconds): 3 <= x <= 4" ++
           ", but instead it's " ++ show ttc
@@ -113,20 +95,16 @@ test_tooManyRequests = testGroup "429 response tests"
         setRef <- newIORef S.empty
         progressRef <- newIORef VerifyProgress
               { vrLocal = initProgress 0
-              , vrExternal = Progress
-                  { pTotal = 2
-                  , pCurrent = 1
-                  , pErrorsUnfixable = 0
-                  , pErrorsFixable = 0
-                  , pTaskTimestamp = Just (TaskTimestamp (sec 1) (now -:- sec 1.5))
-                  }
+              , vrExternal = setTaskTimestamp "" (sec 1) (now -:- sec 1.5)
+                  . reportSuccess ""
+                  $ initProgress 2
               }
         _ <- verifyReferenceWithProgressDefault
           (Reference "" "http://127.0.0.1:5000/429" Nothing (Position Nothing) RIExternal)
           setRef
           progressRef
-        Progress{..} <- vrExternal <$> readIORef progressRef
-        let ttc = ttTimeToCompletion <$> pTaskTimestamp
+        progress <- vrExternal <$> readIORef progressRef
+        let ttc = ttTimeToCompletion <$> getTaskTimestamp "" progress
         flip assertBool (ttc == Just (sec 0)) $
           "Expected time to completion be 0 seconds" ++
           ", but instead it's " ++ show ttc

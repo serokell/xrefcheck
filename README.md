@@ -6,7 +6,7 @@
 
 # Xrefcheck
 
-[![Build status](https://badge.buildkite.com/75461331a6058b334383cdfca1071dc1f908b70cf069d857b7.svg?branch=master)](https://buildkite.com/serokell/xrefcheck)
+![Build status](https://github.com/serokell/xrefcheck/actions/workflows/ci.yml/badge.svg)
 
 Xrefcheck is a tool for verifying local and external references in a repository's documentation that is quick, easy to setup, and suitable to be run on a CI pipeline.
 

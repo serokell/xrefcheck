@@ -23,8 +23,9 @@ import Xrefcheck.Verify
 
 test_redirectRequests :: TestTree
 test_redirectRequests = testGroup "Redirect response defaults"
-  [ testGroup "Temporary" $ temporaryRedirectTests <$> [302, 303, 307]
+  [ testGroup "Temporary" $ allowedRedirectTests <$> [302, 303, 307]
   , testGroup "Permanent" $ permanentRedirectTests <$> [301, 308]
+  , testGroup "304 Not Modified" $ allowedRedirectTests <$> [304]
   ]
   where
     url :: Text
@@ -33,11 +34,11 @@ test_redirectRequests = testGroup "Redirect response defaults"
     location :: Maybe Text
     location = Just "http://127.0.0.1:5000/other"
 
-    temporaryRedirectTests :: Int -> TestTree
-    temporaryRedirectTests statusCode =
+    allowedRedirectTests :: Int -> TestTree
+    allowedRedirectTests statusCode =
       redirectTests
         (show statusCode <> " passes by default")
-        (mkStatus statusCode "Temporary redirect")
+        (mkStatus statusCode "Allowed redirect")
         (\case
           Nothing -> Just $ RedirectMissingLocation $ fromList [url]
           Just _ -> Nothing

@@ -143,7 +143,7 @@ There are several ways to fix this:
 1. How does `xrefcheck` handle redirects?
     * The rules from the default configuration are as follows:
       * Permanent redirects (i.e. 301 and 308) are reported as errors.
-      * Temporary redirects (i.e. 302, 303 and 307) are assumed to be valid.
+      * There are no rules for other redirects, except for a special GitLab case, so they are assumed to be valid.
     * Redirect rules can be specified with the `externalRefRedirects` parameter within `networking`, which accepts an array of
       rules with keys `from`, `to`, `on` and `outcome`. The rule applied is the first one that matches with
       the `from`, `to` and `on` fields, if any, where

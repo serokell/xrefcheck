@@ -48,8 +48,14 @@ findFirstExistingFile = \case
 
 defaultAction :: Options -> IO ()
 defaultAction Options{..} = do
+  withinCI <- askWithinCI
   coloringSupported <- supportsPretty
-  give (if coloringSupported then oColorMode else WithoutColors) $ do
+  let colorMode = oColorMode ?:
+        if withinCI || coloringSupported
+        then WithColors
+        else WithoutColors
+
+  give colorMode $ do
     config <- case oConfigPath of
       Just configPath -> readConfig configPath
       Nothing -> do
@@ -64,7 +70,6 @@ defaultAction Options{..} = do
               |]
             pure $ defConfig GitHub
 
-    withinCI <- askWithinCI
     let showProgressBar = oShowProgressBar ?: not withinCI
 
     (ScanResult scanErrs repoInfo) <- allowRewrite showProgressBar $ \rw -> do

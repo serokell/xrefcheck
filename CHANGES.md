@@ -49,6 +49,9 @@ Unreleased
     configuration file with the `externalRefRedirects` parameter.
 * [#261](https://github.com/serokell/xrefcheck/pull/261)
   + Symlinks are now not processed by the scanner.
+* [#268](https://github.com/serokell/xrefcheck/pull/268)
+  + Added CLI option `--color` that enables ANSI colors in output.
+  + Changed the output coloring defaults to show colors when `CI` env variable is `true`.
 
 0.2.2
 ==========

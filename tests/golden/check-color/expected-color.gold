@@ -1,0 +1,12 @@
+=== Repository data ===
+
+  [96mcolor.md[0m:
+    - references:
+        - reference ([92mfile-local[0m) [2mat src:9:1-15[0m:
+            - text: "Color"
+            - link: -
+            - anchor: Color
+    - anchors:
+        - color ([2m[92mheader I[0m[0m) [2mat src:7:1-7[0m
+
+All repository links are valid.

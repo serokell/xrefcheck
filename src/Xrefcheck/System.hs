@@ -14,6 +14,7 @@ module Xrefcheck.System
   , getPosixRelativeChild
   , getPosixRelativeOrAbsoluteChild
   , hasIndirectionThroughParent
+  , pathIsSymbolicLink
   , takeDirectory
   , takeExtension
   , (</)
@@ -93,6 +94,10 @@ takeDirectory (UnsafeCanonicalPath p) = UnsafeCanonicalPath $ FP.takeDirectory p
 -- | 'FilePath.takeExtension' version for 'CanonicalPath'.
 takeExtension :: CanonicalPath -> String
 takeExtension (UnsafeCanonicalPath p) = FP.takeExtension p
+
+-- | 'System.Directory.pathIsSymbolicLink' version for 'CanonicalPath'.
+pathIsSymbolicLink :: CanonicalPath -> IO Bool
+pathIsSymbolicLink (UnsafeCanonicalPath p) = Directory.pathIsSymbolicLink p
 
 -- | Get the list of directories, canonicalized, between two given paths.
 getDirsBetweenRootAndFile :: CanonicalPath -> CanonicalPath -> [CanonicalPath]

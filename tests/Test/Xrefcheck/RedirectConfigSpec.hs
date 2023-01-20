@@ -33,7 +33,7 @@ test_redirectRequests = testGroup "Redirect config tests"
                 setRef
                 mockRedirect
                 (link "/temporary-redirect")
-                (progress 1)
+                (progress False)
                 (VerifyResult [RedirectRuleError (chain ["/temporary-redirect", "/ok"]) (Just RROTemporary)])
           , testCase "Do not match" $ do
               setRef <- newIORef mempty
@@ -42,7 +42,7 @@ test_redirectRequests = testGroup "Redirect config tests"
                 setRef
                 mockRedirect
                 (link "/temporary-redirect")
-                (progress 0)
+                (progress True)
                 (VerifyResult [])
           ]
       , testGroup "By \"to\""
@@ -53,7 +53,7 @@ test_redirectRequests = testGroup "Redirect config tests"
                 setRef
                 mockRedirect
                 (link "/permanent-redirect")
-                (progress 0)
+                (progress True)
                 (VerifyResult [])
           , testCase "Do not match" $ do
               setRef <- newIORef mempty
@@ -62,7 +62,7 @@ test_redirectRequests = testGroup "Redirect config tests"
                 setRef
                 mockRedirect
                 (link "/permanent-redirect")
-                (progress 1)
+                (progress False)
                 (VerifyResult [RedirectRuleError (chain ["/permanent-redirect", "/ok"]) (Just RROPermanent)])
           ]
       , testGroup "By \"from\""
@@ -73,7 +73,7 @@ test_redirectRequests = testGroup "Redirect config tests"
                 setRef
                 mockRedirect
                 (link "/permanent-redirect")
-                (progress 0)
+                (progress True)
                 (VerifyResult [])
           , testCase "Do not match" $ do
               setRef <- newIORef mempty
@@ -82,7 +82,7 @@ test_redirectRequests = testGroup "Redirect config tests"
                 setRef
                 mockRedirect
                 (link "/permanent-redirect")
-                (progress 1)
+                (progress False)
                 (VerifyResult [RedirectRuleError (chain ["/permanent-redirect", "/ok"]) (Just RROPermanent)])
           ]
       , testGroup "By \"from\", \"to\" and \"on\""
@@ -93,7 +93,7 @@ test_redirectRequests = testGroup "Redirect config tests"
               setRef
               mockRedirect
               (link "/follow3")
-              (progress 1)
+              (progress False)
               (VerifyResult [RedirectRuleError (chain ["/follow3", "/ok"]) (Just (RROCode 307))])
         , testCase "Do not match" $ do
             setRef <- newIORef mempty
@@ -102,7 +102,7 @@ test_redirectRequests = testGroup "Redirect config tests"
               setRef
               mockRedirect
               (link "/follow2")
-              (progress 0)
+              (progress True)
               (VerifyResult [])
         ]
       , testCase "By any" $ do
@@ -112,7 +112,7 @@ test_redirectRequests = testGroup "Redirect config tests"
             setRef
             mockRedirect
             (link "/follow1")
-            (progress 0)
+            (progress True)
             (VerifyResult [])
       ]
   , testGroup "Chain"
@@ -123,7 +123,7 @@ test_redirectRequests = testGroup "Redirect config tests"
             setRef
             mockRedirect
             (link "/follow1")
-            (progress 0)
+            (progress True)
             (VerifyResult [])
       , testCase "End invalid" $ do
           setRef <- newIORef mempty
@@ -132,7 +132,7 @@ test_redirectRequests = testGroup "Redirect config tests"
             setRef
             mockRedirect
             (link "/follow1")
-            (progress 1)
+            (progress False)
             (VerifyResult [RedirectRuleError (chain ["/follow1", "/follow2", "/follow3", "/ok"]) (Just (RROCode 307))])
       , testCase "Mixed with ignore" $ do
           setRef <- newIORef mempty
@@ -141,7 +141,7 @@ test_redirectRequests = testGroup "Redirect config tests"
             setRef
             mockRedirect
             (link "/follow1")
-            (progress 0)
+            (progress True)
             (VerifyResult [])
       ]
   ]
@@ -170,14 +170,13 @@ test_redirectRequests = testGroup "Redirect config tests"
       , M.fromList [(CI.map (decodeUtf8 @Text) hLocation, fmap link $ maybeToList to)]
       )
 
-    progress :: Int -> Progress Int
-    progress errors = Progress
-      { pTotal = 1
-      , pCurrent = 1
-      , pErrorsUnfixable = errors
-      , pErrorsFixable = 0
-      , pTaskTimestamp = Nothing
-      }
+    progress :: Bool -> Progress Int Text
+    progress shouldSucceed = report "" $ initProgress 1
+      where
+        report =
+          if shouldSucceed
+          then reportSuccess
+          else reportError
 
     mockRedirect :: IO ()
     mockRedirect =

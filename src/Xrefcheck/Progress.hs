@@ -9,16 +9,16 @@ module Xrefcheck.Progress
     TaskTimestamp (..)
 
     -- * Progress
-  , Progress (..)
+  , Progress
   , initProgress
-  , incProgress
-  , incProgressUnfixableErrors
-  , incProgressFixableErrors
-  , decProgressFixableErrors
-  , fixableToUnfixable
+  , reportSuccess
+  , reportError
+  , reportRetry
+  , getTaskTimestamp
   , setTaskTimestamp
   , removeTaskTimestamp
   , checkTaskTimestamp
+  , sameProgress
   , showProgress
 
     -- * Printing
@@ -31,6 +31,7 @@ import Universum
 
 import Data.Ratio ((%))
 import Data.Reflection (Given)
+import Data.Set qualified as S
 import Time (Second, Time, sec, unTime, (-:-))
 
 import Xrefcheck.Util
@@ -44,7 +45,7 @@ import Xrefcheck.Util
 data TaskTimestamp = TaskTimestamp
   { ttTimeToCompletion :: Time Second
     -- ^ The amount of time required for the task to be completed.
-  , ttStart            :: Time Second
+  , ttStart :: Time Second
     -- ^ The timestamp of when the task had started, represented by the number of seconds
     -- since the Unix epoch.
   } deriving stock (Show)
@@ -53,72 +54,73 @@ data TaskTimestamp = TaskTimestamp
 -- Progress
 -----------------------------------------------------------
 
--- | Processing progress of any thing.
-data Progress a = Progress
-  { pTotal         :: a
+-- | Processing progress of any thing, measured with type @a@, where progress units have witnesses
+-- of type @w@ that can be retried.
+--
+-- The () type can be used as a trivial witness if the retry logic is not going to be used.
+data Progress a w = Progress
+  { pTotal :: !a
     -- ^ Overall amount of work.
-  , pCurrent           :: a
-    -- ^ How much has been completed.
-  , pErrorsUnfixable :: !a
-    -- ^ How much of the completed work finished with an unfixable error.
-  , pErrorsFixable   :: !a
-    -- ^ How much of the completed work finished with an error that can be
-    -- eliminated upon further verification.
-  , pTaskTimestamp   :: Maybe TaskTimestamp
+  , pSuccess :: !a
+    -- ^ How much has been completed with success.
+  , pError :: !a
+    -- ^ How much has been completed with error.
+  , pRetrying :: !(S.Set w)
+    -- ^ Witnesses of items that have been completed with error but are being retried.
+  , pTaskTimestamp :: !(Maybe TaskTimestamp)
     -- ^ A timestamp of an anonymous timer task, where its time to completion is
     -- the time needed to pass for the action to be retried immediately after.
   } deriving stock (Show)
 
 -- | Initialise null progress.
-initProgress :: Num a => a -> Progress a
-initProgress a = Progress{ pTotal = a
-                         , pCurrent = 0
-                         , pErrorsUnfixable = 0
-                         , pErrorsFixable = 0
-                         , pTaskTimestamp = Nothing
-                         }
+initProgress :: Num a => a -> Progress a w
+initProgress a = Progress
+  { pTotal = a
+  , pSuccess = 0
+  , pError = 0
+  , pRetrying = S.empty
+  , pTaskTimestamp = Nothing
+  }
 
--- | Increase progress amount.
-incProgress :: (Num a) => Progress a -> Progress a
-incProgress Progress{..} = Progress{ pCurrent = pCurrent + 1, .. }
+-- | Report a unit of success with witness @item@.
+reportSuccess :: (Num a, Ord w) => w -> Progress a w -> Progress a w
+reportSuccess item Progress{..} = Progress
+  { pSuccess = pSuccess + 1
+  , pRetrying = S.delete item pRetrying
+  , ..
+  }
 
--- | Increase the number of unfixable errors.
-incProgressUnfixableErrors :: (Num a) => Progress a -> Progress a
-incProgressUnfixableErrors Progress{..} = Progress{ pErrorsUnfixable = pErrorsUnfixable + 1
-                                                  , ..
-                                                  }
+-- | Report a unit of failure with witness @item@.
+reportError :: (Num a, Ord w) => w -> Progress a w -> Progress a w
+reportError item Progress{..} = Progress
+  { pError = pError + 1
+  , pRetrying = S.delete item pRetrying
+  , ..
+  }
 
--- | Increase the number of fixable errors.
-incProgressFixableErrors :: (Num a) => Progress a -> Progress a
-incProgressFixableErrors Progress{..} = Progress{ pErrorsFixable = pErrorsFixable + 1
-                                                , ..
-                                                }
+-- | Report a unit of failure and retry intention with witness @item@.
+reportRetry :: Ord w => w -> Progress a w -> Progress a w
+reportRetry item Progress{..} = Progress
+  { pRetrying = S.insert item pRetrying
+  , ..
+  }
 
--- | Decrease the number of fixable errors. This function indicates the situation where one of
--- such errors had been successfully eliminated.
-decProgressFixableErrors :: (Num a) => Progress a -> Progress a
-decProgressFixableErrors Progress{..} = Progress{ pErrorsFixable = pErrorsFixable - 1
-                                                , ..
-                                                }
+setTaskTimestamp :: w -> Time Second -> Time Second -> Progress a w -> Progress a w
+setTaskTimestamp _ ttc startTime Progress{..} = Progress
+  { pTaskTimestamp = Just (TaskTimestamp ttc startTime)
+  , ..
+  }
 
-fixableToUnfixable :: (Num a) => Progress a -> Progress a
-fixableToUnfixable Progress{..} = Progress{ pErrorsFixable = pErrorsFixable - 1
-                                          , pErrorsUnfixable = pErrorsUnfixable + 1
-                                          , ..
-                                          }
+getTaskTimestamp :: w -> Progress a w -> Maybe TaskTimestamp
+getTaskTimestamp _ = pTaskTimestamp
 
-setTaskTimestamp :: Time Second -> Time Second -> Progress a -> Progress a
-setTaskTimestamp ttc startTime Progress{..} = Progress{ pTaskTimestamp =
-                                                          Just $ TaskTimestamp ttc startTime
-                                                      , ..
-                                                      }
+removeTaskTimestamp :: Progress a w -> Progress a w
+removeTaskTimestamp Progress{..} = Progress
+  { pTaskTimestamp = Nothing
+  , ..
+  }
 
-removeTaskTimestamp :: Progress a -> Progress a
-removeTaskTimestamp Progress{..} = Progress{ pTaskTimestamp = Nothing
-                                           , ..
-                                           }
-
-checkTaskTimestamp :: Time Second -> Progress a -> Progress a
+checkTaskTimestamp :: Time Second -> Progress a w -> Progress a w
 checkTaskTimestamp posixTime p@Progress{..} =
   case pTaskTimestamp of
     Nothing -> p
@@ -127,8 +129,21 @@ checkTaskTimestamp posixTime p@Progress{..} =
       then p
       else removeTaskTimestamp p
 
+-- | Check whether the two @Progress@ values are equal up to similarity of their essential
+-- components, ignoring the comparison of @pTaskTimestamp@s, which is done to prevent test
+-- failures when comparing the resulting progress, gotten from running the link
+-- verification algorithm, with the expected one, where @pTaskTimestamp@ is hardcoded
+-- as @Nothing@.
+sameProgress :: (Eq a, Eq w) => Progress a w -> Progress a w -> Bool
+sameProgress p1 p2 = and
+  [ ((==) `on` pTotal) p1 p2
+  , ((==) `on` pSuccess) p1 p2
+  , ((==) `on` pError) p1 p2
+  , ((==) `on` pRetrying) p1 p2
+  ]
+
 -- | Visualise progress bar.
-showProgress :: Given ColorMode => Text -> Int -> Color -> Time Second -> Progress Int -> Text
+showProgress :: Given ColorMode => Text -> Int -> Color -> Time Second -> Progress Int w -> Text
 showProgress name width col posixTime Progress{..} = mconcat
   [ colorIfNeeded col (name <> ": [")
   , toText bar
@@ -143,10 +158,10 @@ showProgress name width col posixTime Progress{..} = mconcat
     -- containing a fixable error.
     --
     -- The current overall number of proccessed errors.
-    done = floor $ (pCurrent % pTotal) * fromIntegral @Int @(Ratio Int) width
+    done = floor $ (current % pTotal) * fromIntegral @Int @(Ratio Int) width
 
     -- The current number of the invalid references.
-    errsU = ceiling $ (pErrorsUnfixable % pTotal) * fromIntegral @Int @(Ratio Int) width
+    errsU = ceiling $ (pError % pTotal) * fromIntegral @Int @(Ratio Int) width
 
     -- The current number of (fixable) errors that may be eliminated during further
     -- verification.
@@ -157,7 +172,7 @@ showProgress name width col posixTime Progress{..} = mconcat
     --      to be visible in the progress bar visualization.
     --   2. @errsF@ is bounded from above by @width - errsU@ to prevent an overflow in the
     --      number of the progress bar cells that could be caused by the two @ceilings@s.
-    errsF = min (width - errsU) . ceiling $ (pErrorsFixable % pTotal) *
+    errsF = min (width - errsU) . ceiling $ (fixable % pTotal) *
       fromIntegral @Int @(Ratio Int) width
 
     -- The number of valid references.
@@ -186,15 +201,21 @@ showProgress name width col posixTime Progress{..} = mconcat
         $ ttTimeToCompletion -:- (posixTime -:- ttStart)
         ]
     status = mconcat
-      [ if pCurrent == pTotal && pErrorsFixable == 0 && pErrorsUnfixable == 0
+      [ if current == pTotal && fixable == 0 && pError == 0
         then styleIfNeeded Faint $ colorIfNeeded White "✓"
         else ""
-      , if pErrorsFixable /= 0 then colorIfNeeded Blue "!" else ""
-      , if pErrorsUnfixable /= 0 then colorIfNeeded Red "!" else ""
+      , if fixable /= 0 then colorIfNeeded Blue "!" else ""
+      , if pError /= 0 then colorIfNeeded Red "!" else ""
       ]
 
     timeSecondCeiling :: Time Second -> Time Second
     timeSecondCeiling = sec . fromInteger . ceiling . unTime
+
+    fixable :: Int
+    fixable = S.size pRetrying
+
+    current :: Int
+    current = pSuccess + pError + fixable
 
 -----------------------------------------------------------
 -- Rewritable output

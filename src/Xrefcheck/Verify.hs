@@ -299,9 +299,6 @@ data RetryCounter = RetryCounter
   , rcTimeoutRetries :: Int
   } deriving stock (Show)
 
-errorsOccured :: RetryCounter -> Bool
-errorsOccured rc = rcTotalRetries rc > 0
-
 incTotalCounter :: RetryCounter -> RetryCounter
 incTotalCounter rc = rc {rcTotalRetries = rcTotalRetries rc + 1}
 
@@ -507,33 +504,23 @@ verifyReference
       -> IO (Either VerifyError ())
       -> IO (Either VerifyError ())
     retryVerification rc resIO = do
-      let errorsOccured_ = errorsOccured rc
       res <- resIO
-      now <- getPOSIXTime <&> posixTimeToTimeSecond
       case res of
         -- Success
         Right () -> do
-          let moveProgressOnSuccess =
-                if errorsOccured_
-                then decProgressFixableErrors
-                else incProgress
-          modifyProgressRef now Nothing moveProgressOnSuccess
+          modifyProgressRef Nothing $ reportSuccess rLink
           pure res
         Left err -> do
           setOfReturned429 <- addDomainIf429 domainsReturned429Ref err
           case decideWhetherToRetry setOfReturned429 rc err of
             -- Unfixable
             Nothing -> do
-              let moveProgressOnUnfixable = composeFuncList
-                    [ unlessFunc errorsOccured_ incProgress
-                    , if errorsOccured_
-                      then fixableToUnfixable
-                      else incProgressUnfixableErrors
-                    ]
-              modifyProgressRef now Nothing moveProgressOnUnfixable
+              modifyProgressRef Nothing $ reportError rLink
               pure res
             -- Fixable, retry
             Just (mbCurrentRetryAfter, counterModifier) -> do
+              now <- getPOSIXTime <&> posixTimeToTimeSecond
+
               let toSeconds = \case
                     Seconds s -> s
                     -- Calculates the seconds left until @Retry-After@ date.
@@ -544,28 +531,23 @@ verifyReference
               let currentRetryAfter = fromMaybe (ncDefaultRetryAfter cNetworking) $
                     fmap toSeconds mbCurrentRetryAfter
 
-              let moveProgressOnFixable = whenFunc (not errorsOccured_) $
-                    composeFuncList
-                    [ incProgressFixableErrors
-                    , incProgress
-                    ]
-              modifyProgressRef now (Just currentRetryAfter) moveProgressOnFixable
+              modifyProgressRef (Just (now, currentRetryAfter)) $ reportRetry rLink
               threadDelay currentRetryAfter
               retryVerification
                 (counterModifier rc)
                 resIO
 
-    modifyProgressRef :: Time Second -> Maybe (Time Second) -> (Progress Int -> Progress Int) -> IO ()
-    modifyProgressRef now mbRetryAfter moveProgress = atomicModifyIORef' progressRef $ \VerifyProgress{..} ->
+    modifyProgressRef :: Maybe (Time Second, Time Second) -> (Progress Int Text -> Progress Int Text) -> IO ()
+    modifyProgressRef mbRetryData moveProgress = atomicModifyIORef' progressRef $ \VerifyProgress{..} ->
       ( if isExternal rInfo
         then VerifyProgress{ vrExternal =
           let vrExternalAdvanced = moveProgress vrExternal
-          in case mbRetryAfter of
-             Just retryAfter -> case pTaskTimestamp vrExternal of
-                    Just (TaskTimestamp ttc start)
-                      | retryAfter +:+ now <= ttc +:+ start -> vrExternalAdvanced
-                    _ -> setTaskTimestamp retryAfter now vrExternalAdvanced
-             Nothing -> vrExternalAdvanced, .. }
+          in  case mbRetryData of
+                Just (now, retryAfter) -> case getTaskTimestamp rLink vrExternal of
+                  Just (TaskTimestamp ttc start)
+                    | retryAfter +:+ now <= ttc +:+ start -> vrExternalAdvanced
+                  _ -> setTaskTimestamp rLink retryAfter now vrExternalAdvanced
+                Nothing -> vrExternalAdvanced, .. }
         else VerifyProgress{ vrLocal = moveProgress vrLocal, .. }
       , ()
       )

@@ -77,14 +77,8 @@ test_redirectRequests = testGroup "Redirect chain tests"
     chain :: [Text] -> RedirectChain
     chain = fromList . fmap link
 
-    progress :: Progress Int
-    progress = Progress
-      { pTotal = 1
-      , pCurrent = 1
-      , pErrorsUnfixable = 1
-      , pErrorsFixable = 0
-      , pTaskTimestamp = Nothing
-      }
+    progress :: Progress Int Text
+    progress = reportError "" $ initProgress 1
 
     configMod :: Int -> Config -> Config
     configMod limit config = config

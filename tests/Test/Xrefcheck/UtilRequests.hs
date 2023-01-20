@@ -51,7 +51,7 @@ checkLinkAndProgressWithServer
   -> IORef (Set DomainName)
   -> IO ()
   -> Text
-  -> Progress Int
+  -> Progress Int Text
   -> VerifyResult VerifyError
   -> IO ()
 checkLinkAndProgressWithServer configModifier setRef mock link progress vrExpectation =
@@ -62,7 +62,7 @@ checkLinkAndProgress
   :: (Config -> Config)
   -> IORef (Set DomainName)
   -> Text
-  -> Progress Int
+  -> Progress Int Text
   -> VerifyResult VerifyError
   -> IO ()
 checkLinkAndProgress configModifier setRef link progress vrExpectation = do
@@ -74,7 +74,7 @@ checkLinkAndProgress configModifier setRef link progress vrExpectation = do
     but got
     #{interpolateIndentF 2 (show result)}
     |]
-  flip assertBool (progRes `progEquiv` progress)
+  flip assertBool (progRes `sameProgress` progress)
     [int||
     Expected the progress bar state to be
     #{interpolateIndentF 2 (show progress)}
@@ -82,24 +82,11 @@ checkLinkAndProgress configModifier setRef link progress vrExpectation = do
     #{interpolateIndentF 2 (show progRes)}
     |]
 
-  where
-    -- Check whether the two @Progress@ values are equal up to similarity of their essential
-    -- components, ignoring the comparison of @pTaskTimestamp@s, which is done to prevent test
-    -- failures when comparing the resulting progress, gotten from running the link
-    -- verification algorithm, with the expected one, where @pTaskTimestamp@ is hardcoded
-    -- as @Nothing@.
-    progEquiv :: Eq a => Progress a -> Progress a -> Bool
-    progEquiv p1 p2 = and [ ((==) `on` pCurrent) p1 p2
-                          , ((==) `on` pTotal) p1 p2
-                          , ((==) `on` pErrorsUnfixable) p1 p2
-                          , ((==) `on` pErrorsFixable) p1 p2
-                          ]
-
 checkLinkAndProgressWithServerDefault
   :: IORef (Set DomainName)
   -> IO ()
   -> Text
-  -> Progress Int
+  -> Progress Int Text
   -> VerifyResult VerifyError
   -> IO ()
 checkLinkAndProgressWithServerDefault = checkLinkAndProgressWithServer id
@@ -108,7 +95,7 @@ verifyLink
   :: (Config -> Config)
   -> IORef (S.Set DomainName)
   -> Text
-  -> IO (VerifyResult VerifyError, Progress Int)
+  -> IO (VerifyResult VerifyError, Progress Int Text)
 verifyLink configModifier setRef link = do
   let reference = Reference "" link Nothing (Position Nothing) RIExternal
   progRef <- newIORef $ initVerifyProgress [reference]
@@ -119,7 +106,7 @@ verifyLink configModifier setRef link = do
 verifyLinkDefault
   :: IORef (Set DomainName)
   -> Text
-  -> IO (VerifyResult VerifyError, Progress Int)
+  -> IO (VerifyResult VerifyError, Progress Int Text)
 verifyLinkDefault = verifyLink id
 
 verifyReferenceWithProgress
@@ -146,6 +133,6 @@ verifyReferenceWithProgressDefault = verifyReferenceWithProgress id
 data VerifyLinkTestEntry = VerifyLinkTestEntry
   { vlteConfigModifier    :: Config -> Config
   , vlteLink              :: Text
-  , vlteExpectedProgress  :: Progress Int
+  , vlteExpectedProgress  :: Progress Int Text
   , vlteExpectationErrors :: VerifyResult VerifyError
   }

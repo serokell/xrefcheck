@@ -357,8 +357,8 @@ stripAnchorDupNo t = do
 -----------------------------------------------------------
 
 data VerifyProgress = VerifyProgress
-  { vrLocal    :: !(Progress Int)
-  , vrExternal :: !(Progress Int)
+  { vrLocal    :: !(Progress Int Text)
+  , vrExternal :: !(Progress Int Text)
   } deriving stock (Show)
 
 initVerifyProgress :: [Reference] -> VerifyProgress

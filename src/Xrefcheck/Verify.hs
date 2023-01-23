@@ -3,9 +3,6 @@
  - SPDX-License-Identifier: MPL-2.0
  -}
 
-{-# LANGUAGE DeriveFunctor         #-}
-{-# LANGUAGE PartialTypeSignatures #-}
-
 module Xrefcheck.Verify
   ( -- * General verification
     VerifyResult (..)

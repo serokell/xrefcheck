@@ -27,9 +27,9 @@ module Xrefcheck.Verify
 
 import Universum
 
-import Control.Concurrent.Async (Async, async, cancel, poll, wait, withAsync)
+import Control.Concurrent.Async (Async, cancel, poll, wait, withAsync)
 import Control.Exception (AsyncException (..), throwIO)
-import Control.Exception.Safe (handleAsync)
+import Control.Exception.Safe (handleAsync, uninterruptibleMask_)
 import Control.Monad.Except (MonadError (..))
 import Data.Bits (toIntegralSized)
 import Data.ByteString qualified as BS
@@ -415,7 +415,7 @@ verifyRepo
 
   progressRef <- newIORef $ initVerifyProgress (map snd toScan)
   domainsReturned429Ref <- newIORef S.empty
-  accumulated <- loopAsyncUntil (printer progressRef) do
+  accumulated <- withAsync (printer progressRef) $ \_ ->
     forConcurrentlyCaching toScan ifExternalThenCache $ \(file, ref) ->
       verifyReference config mode domainsReturned429Ref progressRef repoInfo file ref
   case accumulated of
@@ -436,14 +436,15 @@ verifyRepo
     printer progressRef = do
       posixTime <- getPOSIXTime <&> posixTimeToTimeSecond
       progress <- atomicModifyIORef' progressRef $ \VerifyProgress{..} ->
-        let prog = VerifyProgress{ vrExternal =
-          checkTaskTimestamp posixTime vrExternal
-                                 , ..
-                                 }
+        let prog = VerifyProgress
+              { vrExternal = checkTaskTimestamp posixTime vrExternal
+              , ..
+              }
         in (prog, prog)
-      reprintAnalyseProgress rw mode posixTime progress
+      uninterruptibleMask_ $ reprintAnalyseProgress rw mode posixTime progress
       -- Slight pause so we're not refreshing the progress bar more often than needed.
       threadDelay (ms 100)
+      printer progressRef
 
     ifExternalThenCache :: (a, Reference) -> NeedsCaching Text
     ifExternalThenCache (_, Reference{..}) =
@@ -825,28 +826,3 @@ checkExternalResource followed config@Config{..} link
           pure ()
       where
         handler = if secure then withFTPS else withFTP
-
-----------------------------------------------------------------------------
--- Helpers
-----------------------------------------------------------------------------
-
--- | @loopAsyncUntil ma mb@ will continually run @ma@ until @mb@ throws an exception or returns.
--- Once it does, it'll wait for @ma@ to finish running one last time and then return.
---
--- See #163 to read more on why it's important to let @ma@ finish cleanly.
--- * https://github.com/serokell/xrefcheck/issues/162
--- * https://github.com/serokell/xrefcheck/pull/163
-loopAsyncUntil :: forall a b. IO a -> IO b -> IO b
-loopAsyncUntil loopingAction action =
-  mask $ \restore -> do
-    shouldLoop <- newIORef True
-    loopingActionAsync <- async $ restore $ loopingAction' shouldLoop
-    restore action `finally` do
-      writeIORef shouldLoop False
-      wait loopingActionAsync
-  where
-    loopingAction' :: IORef Bool -> IO ()
-    loopingAction' shouldLoop = do
-      whenM (readIORef shouldLoop) do
-        void loopingAction
-        loopingAction' shouldLoop

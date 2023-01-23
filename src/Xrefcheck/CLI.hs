@@ -83,7 +83,7 @@ data Options = Options
   , oMode              :: VerifyMode
   , oVerbose           :: Bool
   , oShowProgressBar   :: Maybe Bool
-  , oColorMode         :: ColorMode
+  , oColorMode         :: Maybe ColorMode
   , oExclusionOptions  :: ExclusionOptions
   , oNetworkingOptions :: NetworkingOptions
   , oScanPolicy        :: ScanPolicy
@@ -185,9 +185,17 @@ optionsParser = do
         help "Do not display progress bar during verification."
     , pure Nothing
     ]
-  oColorMode <- flag WithColors WithoutColors $
-    long "no-color" <>
-    help "Disable ANSI coloring of output."
+  oColorMode <- asum
+    [ flag' (Just WithColors) $
+        long "color" <>
+        help "Enable ANSI coloring of output. \
+            \When `CI` env var is set to true or the command output corresponds to a terminal, \
+            \this option will be enabled by default."
+    , flag' (Just WithoutColors) $
+        long "no-color" <>
+        help "Disable ANSI coloring of output."
+    , pure Nothing
+    ]
   oExclusionOptions <- exclusionOptionsParser
   oNetworkingOptions <- networkingOptionsParser
   oScanPolicy <- flag OnlyTracked IncludeUntracked $

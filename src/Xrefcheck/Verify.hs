@@ -155,7 +155,11 @@ instance Given ColorMode => Buildable VerifyError where
     LocalFileDoesNotExist file ->
       [int||
       File does not exist:
-        #{file}
+        #{file}#l{
+          if hasBackslash file
+          then "\\n  Its reference contains a backslash. Maybe it uses the wrong path separator."
+          else ""
+        }
       |]
 
     LocalFileOutsideRepo file ->

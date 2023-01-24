@@ -36,7 +36,6 @@ import Universum
 
 import Control.Lens (makeLensesWith)
 import Data.Aeson (FromJSON (..), genericParseJSON, withText)
-import Data.List qualified as L
 import Data.Map qualified as M
 import Data.Reflection (Given)
 import Fmt (Buildable (..), fmt)
@@ -181,7 +180,7 @@ readDirectoryWith
   -> FilePath
   -> IO [(RelPosixLink, a)]
 readDirectoryWith mode config scanner root = do
-  relativeFiles <- fmap mkRelPosixLink . L.lines <$> getFiles
+  relativeFiles <- fmap mkRelPosixLink . fileLines <$> getFiles
   traverse scanFile $ filter (not . isIgnored) relativeFiles
 
   where
@@ -192,9 +191,15 @@ readDirectoryWith mode config scanner root = do
       RdmBothTrackedAndUtracked -> liftA2 (<>) getTrackedFiles getUntrackedFiles
 
     getTrackedFiles = readCreateProcess
-      (shell "git ls-files"){cwd = Just root} ""
+      (shell "git ls-files -z"){cwd = Just root} ""
     getUntrackedFiles = readCreateProcess
-      (shell "git ls-files --others --exclude-standard"){cwd = Just root} ""
+      (shell "git ls-files -z --others --exclude-standard"){cwd = Just root} ""
+
+    fileLines :: String -> [String]
+    fileLines (dropWhile (== '\0') -> ls) =
+      case break (== '\0') ls of
+        ([], _) -> []
+        (f, ls') -> f : fileLines ls'
 
     scanFile :: RelPosixLink -> IO (RelPosixLink, a)
     scanFile c = (c,) <$> scanner c

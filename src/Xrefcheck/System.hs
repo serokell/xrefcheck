@@ -11,6 +11,7 @@ module Xrefcheck.System
   , mkRelPosixLink
   , filePathFromRoot
   , getIntermediateDirs
+  , hasBackslash
   , takeDirectory
   , takeExtension
 
@@ -96,6 +97,11 @@ takeDirectory = RelPosixLink
 takeExtension :: RelPosixLink -> String
 takeExtension = FPP.takeExtension
   . toString
+  . unRelPosixLink
+
+-- | 'Check if a 'RelPosixLink' contains any backslash.
+hasBackslash :: RelPosixLink -> Bool
+hasBackslash = ('\\' `elem`)
   . unRelPosixLink
 
 -- | Get the list of directories between a 'RelPosixLink' and its

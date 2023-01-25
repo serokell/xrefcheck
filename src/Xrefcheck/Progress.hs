@@ -120,14 +120,23 @@ reportRetry item Progress{..} = Progress
   , ..
   }
 
+-- | Set the current `TaskTimestamp`.
+--
+-- It does require a witness because, although the `TaskTimestamp` is
+-- anonymous, at this point an actual task should be responsible for
+-- registering this timestamp.
 setTaskTimestamp :: w -> Time Second -> Time Second -> Progress a w -> Progress a w
 setTaskTimestamp _ ttc startTime Progress{..} = Progress
   { pTaskTimestamp = Just (TaskTimestamp ttc startTime)
   , ..
   }
 
-getTaskTimestamp :: w -> Progress a w -> Maybe TaskTimestamp
-getTaskTimestamp _ = pTaskTimestamp
+-- | Get the current `TaskTimestamp`.
+--
+-- It does not require a witness because the `TaskTimestamp` is anonymous
+-- and anyone should be able to observe it.
+getTaskTimestamp :: Progress a w -> Maybe TaskTimestamp
+getTaskTimestamp = pTaskTimestamp
 
 removeTaskTimestamp :: Progress a w -> Progress a w
 removeTaskTimestamp Progress{..} = Progress

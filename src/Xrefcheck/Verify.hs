@@ -543,7 +543,7 @@ verifyReference
           RIExternal (ELUrl url) -> VerifyProgress{ vrExternal =
             let vrExternalAdvanced = moveProgress url vrExternal
             in  case mbRetryData of
-                  Just (now, retryAfter) -> case getTaskTimestamp url vrExternal of
+                  Just (now, retryAfter) -> case getTaskTimestamp vrExternal of
                     Just (TaskTimestamp ttc start)
                       | retryAfter +:+ now <= ttc +:+ start -> vrExternalAdvanced
                     _ -> setTaskTimestamp url retryAfter now vrExternalAdvanced

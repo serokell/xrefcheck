@@ -40,6 +40,35 @@ test_redirectRequests = testGroup "Redirect chain tests"
         (link "/cycle1")
         progress
         (VerifyResult [RedirectChainCycle $ chain ["/cycle1", "/cycle2", "/cycle3", "/cycle4", "/cycle2"]])
+  , testGroup "Relative redirect"
+      [ testCase "Host" $ do
+          setRef <- newIORef mempty
+          checkLinkAndProgressWithServer
+            (configMod 1)
+            setRef
+            mockRedirect
+            (link "/relative/host")
+            progress
+            (VerifyResult [RedirectChainLimit $ chain ["/relative/host", "/cycle2", "/cycle3"]])
+      , testCase "Path" $ do
+          setRef <- newIORef mempty
+          checkLinkAndProgressWithServer
+            (configMod 1)
+            setRef
+            mockRedirect
+            (link "/relative/path")
+            progress
+            (VerifyResult [RedirectChainLimit $ chain ["/relative/path", "/relative/host", "/cycle2"]])
+      ]
+  , testCase "Other host redirect" $ withServer otherMockRedirect $ do
+      setRef <- newIORef mempty
+      checkLinkAndProgressWithServer
+        (configMod 1)
+        setRef
+        mockRedirect
+        "http://127.0.0.1:5001/other/host"
+        progress
+        (VerifyResult [RedirectChainLimit $ fromList ["http://127.0.0.1:5001/other/host", link "/relative/host", link "/cycle2"]])
   , testGroup "Limit"
       [ testCase "Takes effect" $ do
           setRef <- newIORef mempty
@@ -89,19 +118,28 @@ test_redirectRequests = testGroup "Redirect chain tests"
     redirectRoute name to = route name $ pure $ toResponse
       ( "" :: Text
       , mkStatus 301 "Permanent redirect"
-      , M.fromList [(CI.map (decodeUtf8 @Text) hLocation, fmap link $ maybeToList to)]
+      , M.fromList [(CI.map (decodeUtf8 @Text) hLocation, maybeToList to)]
       )
 
     mockRedirect :: IO ()
-    mockRedirect =
+    mockRedirect = do
       run 5000 do
         -- A set of redirect routes that correspond to a broken chain.
-        redirectRoute "/broken1" $ Just "/broken2"
-        redirectRoute "/broken2" $ Just "/broken3"
+        redirectRoute "/broken1" $ Just $ link "/broken2"
+        redirectRoute "/broken2" $ Just $ link "/broken3"
         redirectRoute "/broken3" Nothing
 
         -- A set of redirect routes that correspond to a cycle.
-        redirectRoute "/cycle1" $ Just "/cycle2"
-        redirectRoute "/cycle2" $ Just "/cycle3"
-        redirectRoute "/cycle3" $ Just "/cycle4"
-        redirectRoute "/cycle4" $ Just "/cycle2"
+        redirectRoute "/cycle1" $ Just $ link "/cycle2"
+        redirectRoute "/cycle2" $ Just $ link "/cycle3"
+        redirectRoute "/cycle3" $ Just $ link "/cycle4"
+        redirectRoute "/cycle4" $ Just $ link "/cycle2"
+
+        -- Relative redirects.
+        redirectRoute "/relative/host" $ Just "/cycle2"
+        redirectRoute "/relative/path" $ Just "host"
+
+    -- To other host
+    otherMockRedirect :: IO ()
+    otherMockRedirect =
+      run 5001 $ redirectRoute "/other/host" $ Just $ link "/relative/host"

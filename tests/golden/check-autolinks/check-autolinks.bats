@@ -34,7 +34,7 @@ assert_diff - <<EOF
 
      Permanent redirect found:
        -| http://www.commonmark.org
-       -> https://commonmark.org/
+       -> https://commonmark.org
           ^-- stopped before this one
 
 Invalid references dumped, 1 in total.

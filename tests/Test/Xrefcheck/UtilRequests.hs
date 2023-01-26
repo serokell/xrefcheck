@@ -11,6 +11,7 @@ module Test.Xrefcheck.UtilRequests
   , checkLinkAndProgressWithServerDefault
   , verifyLinkDefault
   , verifyReferenceWithProgressDefault
+  , withServer
   , VerifyLinkTestEntry (..)
   ) where
 
@@ -31,13 +32,16 @@ import Xrefcheck.System
 import Xrefcheck.Util
 import Xrefcheck.Verify
 
+withServer :: IO () -> IO () -> IO ()
+withServer mock = E.bracket (forkIO mock) killThread . const
+
 checkMultipleLinksWithServer
   :: IO ()
   -> IORef (S.Set DomainName)
   -> [VerifyLinkTestEntry]
   -> IO ()
 checkMultipleLinksWithServer mock setRef entries =
-  E.bracket (forkIO mock) killThread $ \_ -> do
+  withServer mock $ do
     forM_ entries $ \VerifyLinkTestEntry {..} ->
       checkLinkAndProgress
         vlteConfigModifier
@@ -55,7 +59,7 @@ checkLinkAndProgressWithServer
   -> VerifyResult VerifyError
   -> IO ()
 checkLinkAndProgressWithServer configModifier setRef mock link progress vrExpectation =
-  E.bracket (forkIO mock) killThread $ \_ -> do
+  withServer mock $
     checkLinkAndProgress configModifier setRef link progress vrExpectation
 
 checkLinkAndProgress

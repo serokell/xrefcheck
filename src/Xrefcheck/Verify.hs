@@ -25,9 +25,6 @@ module Xrefcheck.Verify
   , verifyRepo
   , verifyReference
   , checkExternalResource
-
-    -- * URI parsing
-  , parseUri
   , reportVerifyErrs
   ) where
 
@@ -35,7 +32,7 @@ import Universum
 
 import Control.Concurrent.Async (Async, async, cancel, poll, wait, withAsync)
 import Control.Exception (AsyncException (..), throwIO)
-import Control.Exception.Safe (handleAsync, handleJust)
+import Control.Exception.Safe (handleAsync)
 import Control.Monad.Except (MonadError (..))
 import Data.Bits (toIntegralSized)
 import Data.ByteString qualified as BS
@@ -64,12 +61,13 @@ import Network.HTTP.Types.Header (hRetryAfter)
 import Network.HTTP.Types.Status (Status, statusCode, statusMessage)
 import Text.Interpolation.Nyan
 import Text.ParserCombinators.ReadPrec qualified as ReadPrec (lift)
-import Text.URI (Authority (..), ParseExceptionBs, URI (..), mkURIBs, unRText)
+import Text.URI (Authority (..), URI (..), relativeTo, render, unRText)
 import Time (RatioNat, Second, Time (..), ms, sec, threadDelay, timeout, (+:+), (-:-))
-import URI.ByteString qualified as URIBS
 
+import Control.Monad.Trans.Except (withExceptT)
 import Xrefcheck.Config
 import Xrefcheck.Core
+import Xrefcheck.Data.URI
 import Xrefcheck.Orphans ()
 import Xrefcheck.Progress
 import Xrefcheck.Scan
@@ -129,8 +127,7 @@ data VerifyError
   | LinkTargetNotAddedToGit RelPosixLink
   | AnchorDoesNotExist Text [Anchor]
   | AmbiguousAnchorRef RelPosixLink Text (NonEmpty Anchor)
-  | ExternalResourceInvalidUri URIBS.URIParseError
-  | ExternalResourceUriConversionError ParseExceptionBs
+  | ExternalResourceUriParseError UriParseError
   | ExternalResourceInvalidUrl (Maybe Text)
   | ExternalResourceUnknownProtocol
   | ExternalHttpResourceUnavailable Status
@@ -196,12 +193,12 @@ instance Given ColorMode => Buildable VerifyError where
         can change silently while the document containing it evolves.
       |]
 
-    ExternalResourceInvalidUri err ->
+    ExternalResourceUriParseError (UPEInvalid err) ->
       [int||
       Invalid URI (#{err})
       |]
 
-    ExternalResourceUriConversionError err ->
+    ExternalResourceUriParseError (UPEConversion err) ->
       [int||
       Invalid URI
       #{interpolateIndentF 4 . build $ displayException err}
@@ -657,41 +654,6 @@ verifyReference
                 . aName
           in throwError $ AnchorDoesNotExist anchor similarAnchors
 
--- | Parse URI according to RFC 3986 extended by allowing non-encoded
--- `[` and `]` in query string.
-parseUri :: Text -> ExceptT VerifyError IO URI
-parseUri link = do
-      -- There exist two main standards of URL parsing: RFC 3986 and the Web
-      -- Hypertext Application Technology Working Group's URL standard. Ideally,
-      -- we want to be able to parse the URLs in accordance with the latter
-      -- standard, because it provides a much less ambiguous set of rules for
-      -- percent-encoding special characters, and is essentially a living
-      -- standard that gets updated constantly.
-      --
-      -- We have chosen the 'uri-bytestring' library for URI parsing because
-      -- of the 'laxURIParseOptions' parsing configuration. 'mkURI' from
-      -- the 'modern-uri' library parses URIs in accordance with RFC 3986 and does
-      -- not provide a means of parsing customization, which contrasts with
-      -- 'parseURI' that accepts a 'URIParserOptions'. One of the predefined
-      -- configurations of this type is 'strictURIParserOptions', which follows
-      -- RFC 3986, and the other -- 'laxURIParseOptions' -- allows brackets
-      -- in the queries, which draws us closer to the WHATWG URL standard.
-      uri' <- URIBS.parseURI URIBS.laxURIParserOptions (encodeUtf8 link)
-            & either (throwError . ExternalResourceInvalidUri) pure
-
-      -- We stick to our infrastructure by continuing to operate on the datatypes
-      -- from `modern-uri`, which are used in the 'req' library. First we
-      -- serialize our URI parsed with 'parseURI' so it becomes a 'ByteString'
-      -- with all the necessary special characters *percent-encoded*, and then
-      -- call 'mkURIBs'.
-      mkURIBs (URIBS.serializeURIRef' uri')
-           -- Ideally, this exception should never be thrown, as the URI
-           -- already *percent-encoded* with 'parseURI' from 'uri-bytestring'
-           -- and 'mkURIBs' is only used to convert to 'URI' type from
-           -- 'modern-uri' package.
-           & handleJust (fromException @ParseExceptionBs)
-           (throwError . ExternalResourceUriConversionError)
-
 checkExternalResource :: RedirectChain -> Config -> Text -> ExceptT VerifyError IO ()
 checkExternalResource followed config@Config{..} link
   | isIgnored = pass
@@ -700,7 +662,7 @@ checkExternalResource followed config@Config{..} link
   | ncMaxRedirectFollows >= 0 && totalFollowed followed > ncMaxRedirectFollows =
       throwError $ RedirectChainLimit $ followed `pushRequest` (RedirectChainLink link)
   | otherwise = do
-      uri <- parseUri link
+      uri <- ExternalResourceUriParseError `withExceptT` parseUri False link
       case toString <$> uriScheme uri of
         Just "http" -> checkHttp uri
         Just "https" -> checkHttp uri
@@ -745,10 +707,8 @@ checkExternalResource followed config@Config{..} link
 
       let maxTime = Time @Second $ unTime ncExternalRefCheckTimeout * timeoutFrac
 
-      reqRes <- catch (liftIO (timeout maxTime $ reqLink $> RRDone)) $ \httpErr ->
-        case interpretErrors uri httpErr of
-          Left err -> throwError err
-          Right res -> pure $ Just res
+      reqRes <- catch (liftIO (timeout maxTime $ reqLink $> RRDone)) $
+         (Just <$>) <$> interpretErrors uri
 
       case reqRes of
         Nothing -> throwError $ ExternalHttpTimeout $ extractHost uri
@@ -767,7 +727,7 @@ checkExternalResource followed config@Config{..} link
       [ if ncIgnoreAuthFailures -- unauthorized access
         then flip elem [403, 401]
         else const False
-      , (405 ==)  -- method mismatch
+      , (405 ==) -- method mismatch
       ]
 
     interpretErrors uri = \case
@@ -777,20 +737,26 @@ checkExternalResource followed config@Config{..} link
         HttpExceptionRequest _ exc -> case exc of
           StatusCodeException resp _
             | isRedirectCode code -> case redirectLocation of
-                Nothing -> Left $ RedirectMissingLocation $ followed `pushRequest` (RedirectChainLink link)
-                Just nextLink -> case redirectRule link nextLink code ncExternalRefRedirects of
-                  Nothing -> Right RRDone
-                  Just RedirectRule{..} ->
-                    case rrOutcome of
-                      RROValid -> Right RRDone
-                      RROInvalid -> Left $ RedirectRuleError
-                        (followed `pushRequest` (RedirectChainLink link) `pushRequest` (RedirectChainLink nextLink))
-                        rrOn
-                      RROFollow -> Right $ RRFollow nextLink
-            | isAllowedErrorCode code -> Right RRDone
+                Nothing -> throwError $ RedirectMissingLocation $ followed `pushRequest` RedirectChainLink link
+                Just nextLink -> do
+                  nextUri <- ExternalResourceUriParseError `withExceptT` parseUri True nextLink
+                  nextLinkAbsolute <- case relativeTo nextUri uri of
+                    -- This should not happen because uri has been parsed with `parseUri False`
+                    Nothing -> error "Not an absolute URL exception"
+                    Just absoluteTarget -> pure $ render absoluteTarget
+                  case redirectRule link nextLinkAbsolute code ncExternalRefRedirects of
+                    Nothing -> pure RRDone
+                    Just RedirectRule{..} ->
+                      case rrOutcome of
+                        RROValid -> pure RRDone
+                        RROInvalid -> throwError $ RedirectRuleError
+                          (followed `pushRequest` RedirectChainLink link `pushRequest` RedirectChainLink nextLinkAbsolute)
+                          rrOn
+                        RROFollow -> pure $ RRFollow nextLinkAbsolute
+            | isAllowedErrorCode code -> pure RRDone
             | otherwise -> case statusCode (responseStatus resp) of
-                429 -> Left $ ExternalHttpTooManyRequests (retryAfterInfo resp) (extractHost uri)
-                _ -> Left . ExternalHttpResourceUnavailable $ responseStatus resp
+                429 -> throwError $ ExternalHttpTooManyRequests (retryAfterInfo resp) (extractHost uri)
+                _ -> throwError $ ExternalHttpResourceUnavailable $ responseStatus resp
             where
               code :: Int
               code = statusCode $ responseStatus resp
@@ -799,7 +765,7 @@ checkExternalResource followed config@Config{..} link
               redirectLocation = fmap decodeUtf8
                 . lookup "Location"
                 $ responseHeaders resp
-          other -> Left . ExternalResourceSomeError $ show other
+          other -> throwError $ ExternalResourceSomeError $ show other
       where
         retryAfterInfo :: Response a -> Maybe RetryAfter
         retryAfterInfo = readMaybe . decodeUtf8 <=< L.lookup hRetryAfter . responseHeaders

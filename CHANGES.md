@@ -52,6 +52,8 @@ Unreleased
 * [#268](https://github.com/serokell/xrefcheck/pull/268)
   + Added CLI option `--color` that enables ANSI colors in output.
   + Changed the output coloring defaults to show colors when `CI` env variable is `true`.
+* [#271](https://github.com/serokell/xrefcheck/pull/271)
+  + Now Xrefcheck is able to follow relative redirects.
 
 0.2.2
 ==========

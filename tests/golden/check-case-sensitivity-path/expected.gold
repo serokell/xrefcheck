@@ -1,0 +1,130 @@
+=== Repository data ===
+
+  a.md:
+    - references:
+        - reference (relative) at src:8:3-11:
+            - text: "a"
+            - link: a.md
+            - anchor: -
+        - reference (relative) at src:9:3-29:
+            - text: "Header a"
+            - link: dir/b.md
+            - anchor: header
+        - reference (relative) at src:10:3-15:
+            - text: "b"
+            - link: dir/b.md
+            - anchor: -
+        - reference (relative) at src:11:3-29:
+            - text: "Header b"
+            - link: dir/b.md
+            - anchor: header
+        - reference (relative) at src:12:3-17:
+            - text: "Wrong a"
+            - link: A.md
+            - anchor: -
+        - reference (relative) at src:13:3-27:
+            - text: "Wrong a extension"
+            - link: a.Md
+            - anchor: -
+        - reference (relative) at src:14:3-21:
+            - text: "Wrong b"
+            - link: dir/B.md
+            - anchor: -
+        - reference (absolute) at src:15:3-26:
+            - text: "Wrong b dir"
+            - link: /dIr/b.md
+            - anchor: -
+        - reference (absolute) at src:16:3-32:
+            - text: "Wrong b extension"
+            - link: /dir/b.mD
+            - anchor: -
+    - anchors:
+        - header (header I) at src:6:1-8
+
+  dir/b.md:
+    - references:
+        - reference (relative) at src:8:3-20:
+            - text: "Right a"
+            - link: ../a.md
+            - anchor: -
+        - reference (relative) at src:9:3-19:
+            - text: "Right b"
+            - link: ./b.md
+            - anchor: -
+        - reference (relative) at src:10:3-20:
+            - text: "Wrong a"
+            - link: ../A.md
+            - anchor: -
+        - reference (relative) at src:11:3-19:
+            - text: "Wrong b"
+            - link: ./B.md
+            - anchor: -
+    - anchors:
+        - header (header I) at src:6:1-8
+
+=== Invalid references found ===
+
+  ➥  In file a.md
+     bad reference (relative) at src:12:3-17:
+       - text: "Wrong a"
+       - link: A.md
+       - anchor: -
+
+     File does not exist:
+       A.md
+
+  ➥  In file a.md
+     bad reference (relative) at src:13:3-27:
+       - text: "Wrong a extension"
+       - link: a.Md
+       - anchor: -
+
+     File does not exist:
+       a.Md
+
+  ➥  In file a.md
+     bad reference (relative) at src:14:3-21:
+       - text: "Wrong b"
+       - link: dir/B.md
+       - anchor: -
+
+     File does not exist:
+       dir/B.md
+
+  ➥  In file a.md
+     bad reference (absolute) at src:15:3-26:
+       - text: "Wrong b dir"
+       - link: /dIr/b.md
+       - anchor: -
+
+     File does not exist:
+       dIr/b.md
+
+  ➥  In file a.md
+     bad reference (absolute) at src:16:3-32:
+       - text: "Wrong b extension"
+       - link: /dir/b.mD
+       - anchor: -
+
+     File does not exist:
+       dir/b.mD
+
+  ➥  In file dir/b.md
+     bad reference (relative) at src:10:3-20:
+       - text: "Wrong a"
+       - link: ../A.md
+       - anchor: -
+
+     File does not exist:
+       dir/../A.md
+
+  ➥  In file dir/b.md
+     bad reference (relative) at src:11:3-19:
+       - text: "Wrong b"
+       - link: ./B.md
+       - anchor: -
+
+     File does not exist:
+       dir/./B.md
+
+Invalid references dumped, 7 in total.

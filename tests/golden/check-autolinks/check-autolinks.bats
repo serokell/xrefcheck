@@ -19,11 +19,9 @@ assert_diff - <<EOF
         - reference (external) :
             - text: "https://www.google.com/doodles"
             - link: https://www.google.com/doodles
-            - anchor: -
         - reference (external) at src:8:0-18:
             - text: "www.commonmark.org"
             - link: http://www.commonmark.org
-            - anchor: -
     - anchors:
         none
 
@@ -33,7 +31,6 @@ assert_diff - <<EOF
      bad reference (external) at src:8:0-18:
        - text: "www.commonmark.org"
        - link: http://www.commonmark.org
-       - anchor: -
 
      Permanent redirect found:
        -| http://www.commonmark.org

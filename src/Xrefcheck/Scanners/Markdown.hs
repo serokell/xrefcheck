@@ -326,17 +326,10 @@ nodeExtractInfo input@(Node _ _ nSubs) = do
         extractLink url = do
           let rName = nodeExtractText node
               rPos = toPosition pos
-              link = if null url then rName else url
-
-          let (rLink, rAnchor) = case T.splitOn "#" link of
-                [t] -> (t, Nothing)
-                t : ts -> (t, Just $ T.intercalate "#" ts)
-                [] -> error "impossible"
-
-          let rInfo = referenceInfo rLink
+              rInfo = referenceInfo $ if null url then rName else url
 
           return $ FileInfoDiff
-            (DList.singleton $ Reference {rName, rPos, rLink, rAnchor, rInfo})
+            (DList.singleton $ Reference {rName, rPos, rInfo})
             DList.empty
 
 -- | Check if there is `ignore all` at the beginning of the file,
@@ -413,9 +406,9 @@ parseFileInfo config input
   $ toStrict input
 
 markdownScanner :: MarkdownConfig -> ScanAction
-markdownScanner config canonicalFile =
+markdownScanner config root file =
   parseFileInfo config . decodeUtf8
-    <$> BSL.readFile (unCanonicalPath canonicalFile)
+    <$> BSL.readFile (filePathFromRoot root file)
 
 markdownSupport :: MarkdownConfig -> ([Extension], ScanAction)
 markdownSupport config = ([".md"], markdownScanner config)

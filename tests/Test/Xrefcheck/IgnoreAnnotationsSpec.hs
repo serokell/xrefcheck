@@ -15,6 +15,7 @@ import Test.Xrefcheck.Util
 import Xrefcheck.Core
 import Xrefcheck.Scan
 import Xrefcheck.Scanners.Markdown
+import Xrefcheck.System
 
 test_ignoreAnnotations :: [TestTree]
 test_ignoreAnnotations =
@@ -38,23 +39,25 @@ test_ignoreAnnotations =
       ]
   , testGroup "\"ignore link\" mode"
       [ testCase "Check \"ignore link\" performance" $ do
-          let file = "tests/markdowns/with-annotations/ignore_link.md"
-          (fi, errs) <- parse GitHub file
+          let file = mkRelPosixLink "tests/markdowns/with-annotations/ignore_link.md"
+          (fi, errs) <- parse GitHub "" file
           getRefs fi @?=
             ["team", "team", "team", "hire-us", "how-we-work", "privacy", "link2", "link2", "link3"]
           errs @?= makeError (Just $ PosInfo 42 1 42 31) LinkErr
       ]
   , testGroup "\"ignore paragraph\" mode"
       [ testCase "Check \"ignore paragraph\" performance" $ do
-         (fi, errs) <- parse GitHub "tests/markdowns/with-annotations/ignore_paragraph.md"
-         getRefs fi @?= ["blog", "contacts"]
-         errs @?= []
+          let file = mkRelPosixLink "tests/markdowns/with-annotations/ignore_paragraph.md"
+          (fi, errs) <- parse GitHub "" file
+          getRefs fi @?= ["blog", "contacts"]
+          errs @?= []
       ]
   , testGroup "\"ignore all\" mode"
       [ testCase "Check \"ignore all\" performance" $ do
-        (fi, errs) <- parse GitHub "tests/markdowns/with-annotations/ignore_file.md"
-        getRefs fi @?= []
-        errs @?= []
+          let file = mkRelPosixLink "tests/markdowns/with-annotations/ignore_file.md"
+          (fi, errs) <- parse GitHub "" file
+          getRefs fi @?= []
+          errs @?= []
       ]
   ]
   where
@@ -62,4 +65,4 @@ test_ignoreAnnotations =
     getRefs fi = map rName $ fi ^. fiReferences
 
     getErrs :: FilePath -> IO [ScanError 'Parse]
-    getErrs path = snd <$> parse GitHub path
+    getErrs path = snd <$> parse GitHub "" (mkRelPosixLink path)

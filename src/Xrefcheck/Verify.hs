@@ -62,8 +62,6 @@ import Network.HTTP.Req
   defaultHttpConfig, ignoreResponse, req, runReq, useURI)
 import Network.HTTP.Types.Header (hRetryAfter)
 import Network.HTTP.Types.Status (Status, statusCode, statusMessage)
-import System.FilePath (isPathSeparator)
-import System.FilePath.Posix ((</>))
 import Text.Interpolation.Nyan
 import Text.ParserCombinators.ReadPrec qualified as ReadPrec (lift)
 import Text.URI (Authority (..), ParseExceptionBs, URI (..), mkURIBs, unRText)
@@ -106,7 +104,7 @@ toVerifyRes = VerifyResult . either one (\() -> [])
 -----------------------------------------------------------
 
 data WithReferenceLoc a = WithReferenceLoc
-  { wrlFile      :: FilePath
+  { wrlFile      :: RelPosixLink
   , wrlReference :: Reference
   , wrlItem      :: a
   }
@@ -126,11 +124,11 @@ newtype DomainName = DomainName { unDomainName :: Text }
   deriving stock (Show, Eq, Ord)
 
 data VerifyError
-  = LocalFileDoesNotExist FilePath
-  | LocalFileOutsideRepo FilePath
-  | LinkTargetNotAddedToGit FilePath
+  = LocalFileDoesNotExist RelPosixLink
+  | LocalFileOutsideRepo RelPosixLink
+  | LinkTargetNotAddedToGit RelPosixLink
   | AnchorDoesNotExist Text [Anchor]
-  | AmbiguousAnchorRef FilePath Text (NonEmpty Anchor)
+  | AmbiguousAnchorRef RelPosixLink Text (NonEmpty Anchor)
   | ExternalResourceInvalidUri URIBS.URIParseError
   | ExternalResourceUriConversionError ParseExceptionBs
   | ExternalResourceInvalidUrl (Maybe Text)
@@ -157,7 +155,11 @@ instance Given ColorMode => Buildable VerifyError where
     LocalFileDoesNotExist file ->
       [int||
       File does not exist:
-        #{file}
+        #{file}#l{
+          if hasBackslash file
+          then "\\n  Its reference contains a backslash. Maybe it uses the wrong path separator."
+          else ""
+        }
       |]
 
     LocalFileOutsideRepo file ->
@@ -406,8 +408,8 @@ verifyRepo
   repoInfo@RepoInfo{..}
     = do
   let toScan = do
-        (file, fileInfo) <- toPairs riFiles
-        guard . not $ matchesGlobPatterns riRoot (ecIgnoreRefsFrom cExclusions) file
+        (canonicalFile, (file, fileInfo)) <- toPairs riFiles
+        guard . not $ matchesGlobPatterns (ecIgnoreRefsFrom cExclusions) canonicalFile
         case fileInfo of
           Scanned fi -> do
             ref <- _fiReferences fi
@@ -451,15 +453,18 @@ verifyRepo
 
     ifExternalThenCache :: (a, Reference) -> NeedsCaching Text
     ifExternalThenCache (_, Reference{..}) =
-      if isExternal rInfo
-      then CacheUnderKey rLink
-      else NoCaching
+      case rInfo of
+        RIExternal (ELUrl url) ->
+          CacheUnderKey url
+        _ ->
+          NoCaching
 
 shouldCheckLocType :: VerifyMode -> ReferenceInfo -> Bool
-shouldCheckLocType mode locType
-  | isExternal locType = shouldCheckExternal mode
-  | isLocal locType = shouldCheckLocal mode
-  | otherwise = False
+shouldCheckLocType mode rInfo =
+  case rInfo of
+    RIFile _ -> shouldCheckLocal mode
+    RIExternal (ELUrl _) -> shouldCheckExternal mode
+    RIExternal (ELOther _) -> False
 
 verifyReference
   :: Config
@@ -467,7 +472,7 @@ verifyReference
   -> IORef (S.Set DomainName)
   -> IORef VerifyProgress
   -> RepoInfo
-  -> CanonicalPath
+  -> RelPosixLink
   -> Reference
   -> IO (VerifyResult $ WithReferenceLoc VerifyError)
 verifyReference
@@ -475,29 +480,29 @@ verifyReference
   mode
   domainsReturned429Ref
   progressRef
-  repoInfo@RepoInfo{..}
+  repoInfo
   file
   ref@Reference{..}
     = fmap (fmap addReference . toVerifyRes) $
       retryVerification (RetryCounter 0 0) $ runExceptT $
         if shouldCheckLocType mode rInfo
         then case rInfo of
-          RIFileLocal -> checkRef rAnchor riRoot file ""
-          RIFileRelative -> do
-            let shownFilepath = getPosixRelativeOrAbsoluteChild riRoot (takeDirectory file)
-                  </> toString rLink
-            canonicalPath <- liftIO $ takeDirectory file </ toString rLink
-            checkRef rAnchor riRoot canonicalPath shownFilepath
-          RIFileAbsolute -> do
-            let shownFilepath = dropWhile isPathSeparator (toString rLink)
-            canonicalPath <- liftIO $ riRoot </ shownFilepath
-            checkRef rAnchor riRoot canonicalPath shownFilepath
-          RIExternal -> checkExternalResource emptyChain config rLink
-          RIOtherProtocol -> pass
+          RIFile ReferenceInfoFile{..} ->
+            case rifLink of
+              FLLocal ->
+                checkRef rifAnchor file
+              FLRelative link ->
+                checkRef rifAnchor $ takeDirectory file </> link
+              FLAbsolute link ->
+                checkRef rifAnchor link
+          RIExternal (ELUrl url) ->
+            checkExternalResource emptyChain config url
+          RIExternal (ELOther _) ->
+            pass
         else pass
   where
     addReference :: VerifyError -> WithReferenceLoc VerifyError
-    addReference = WithReferenceLoc (getPosixRelativeOrAbsoluteChild riRoot file) ref
+    addReference = WithReferenceLoc file ref
 
     retryVerification
       :: RetryCounter
@@ -507,16 +512,12 @@ verifyReference
       res <- resIO
       case res of
         -- Success
-        Right () -> do
-          modifyProgressRef Nothing $ reportSuccess rLink
-          pure res
+        Right () -> modifyProgressRef Nothing reportSuccess $> res
         Left err -> do
           setOfReturned429 <- addDomainIf429 domainsReturned429Ref err
           case decideWhetherToRetry setOfReturned429 rc err of
             -- Unfixable
-            Nothing -> do
-              modifyProgressRef Nothing $ reportError rLink
-              pure res
+            Nothing -> modifyProgressRef Nothing reportError $> res
             -- Fixable, retry
             Just (mbCurrentRetryAfter, counterModifier) -> do
               now <- getPOSIXTime <&> posixTimeToTimeSecond
@@ -531,24 +532,26 @@ verifyReference
               let currentRetryAfter = fromMaybe (ncDefaultRetryAfter cNetworking) $
                     fmap toSeconds mbCurrentRetryAfter
 
-              modifyProgressRef (Just (now, currentRetryAfter)) $ reportRetry rLink
+              modifyProgressRef (Just (now, currentRetryAfter)) reportRetry
               threadDelay currentRetryAfter
-              retryVerification
-                (counterModifier rc)
-                resIO
+              retryVerification (counterModifier rc) resIO
 
-    modifyProgressRef :: Maybe (Time Second, Time Second) -> (Progress Int Text -> Progress Int Text) -> IO ()
+    modifyProgressRef
+      :: Maybe (Time Second, Time Second)
+      -> (forall w. Ord w => w -> Progress Int w -> Progress Int w)
+      -> IO ()
     modifyProgressRef mbRetryData moveProgress = atomicModifyIORef' progressRef $ \VerifyProgress{..} ->
-      ( if isExternal rInfo
-        then VerifyProgress{ vrExternal =
-          let vrExternalAdvanced = moveProgress vrExternal
-          in  case mbRetryData of
-                Just (now, retryAfter) -> case getTaskTimestamp rLink vrExternal of
-                  Just (TaskTimestamp ttc start)
-                    | retryAfter +:+ now <= ttc +:+ start -> vrExternalAdvanced
-                  _ -> setTaskTimestamp rLink retryAfter now vrExternalAdvanced
-                Nothing -> vrExternalAdvanced, .. }
-        else VerifyProgress{ vrLocal = moveProgress vrLocal, .. }
+      ( case rInfo of
+          RIFile _ -> VerifyProgress{ vrLocal = moveProgress () vrLocal, .. }
+          RIExternal (ELOther _) -> VerifyProgress{ vrLocal = moveProgress () vrLocal, .. }
+          RIExternal (ELUrl url) -> VerifyProgress{ vrExternal =
+            let vrExternalAdvanced = moveProgress url vrExternal
+            in  case mbRetryData of
+                  Just (now, retryAfter) -> case getTaskTimestamp vrExternal of
+                    Just (TaskTimestamp ttc start)
+                      | retryAfter +:+ now <= ttc +:+ start -> vrExternalAdvanced
+                    _ -> setTaskTimestamp url retryAfter now vrExternalAdvanced
+                  Nothing -> vrExternalAdvanced, .. }
       , ()
       )
 
@@ -585,32 +588,22 @@ verifyReference
         totalRetriesNotExceeded = rcTotalRetries rc < ncMaxRetries cNetworking
         timeoutRetriesNotExceeded = rcTimeoutRetries rc < ncMaxTimeoutRetries cNetworking
 
-    isVirtual canonicalRoot = matchesGlobPatterns canonicalRoot (ecIgnoreLocalRefsTo cExclusions)
+    isVirtual = matchesGlobPatterns (ecIgnoreLocalRefsTo cExclusions)
 
     -- Checks a local file reference.
-    --
-    -- The `shownFilepath` argument is intended to be shown in the error
-    -- report when the `referredFile` path is not a child of `canonicalRoot`,
-    -- so it allows indirections and should be suitable for being shown to
-    -- the user. Also, it will be considered as outside the repository if
-    -- it is relative and its idirections pass through the repository root.
-    checkRef :: Maybe Text -> CanonicalPath -> CanonicalPath -> FilePath -> ExceptT VerifyError IO ()
-    checkRef mAnchor canonicalRoot referredFile shownFilepath =
-      unless (isVirtual canonicalRoot referredFile) do
-        when (hasIndirectionThroughParent shownFilepath) $
-          throwError $ LocalFileOutsideRepo shownFilepath
+    checkRef :: Maybe Text -> RelPosixLink -> ExceptT VerifyError IO ()
+    checkRef mAnchor referredFile = do
+      let canonicalFile = canonicalizeRelPosixLink referredFile
+      unless (isVirtual canonicalFile) do
+        when (hasUnexpanededParentIndirections canonicalFile) $
+          throwError $ LocalFileOutsideRepo referredFile
 
-        referredFileRelative <-
-          case getPosixRelativeChild canonicalRoot referredFile of
-            Just ps -> pure ps
-            Nothing -> throwError (LocalFileOutsideRepo shownFilepath)
-
-        mFileStatus <- tryGetFileStatus referredFileRelative referredFile
+        mFileStatus <- tryGetFileStatus referredFile
         case mFileStatus of
           Right (Scanned referredFileInfo) -> whenJust mAnchor $
-            checkAnchor referredFileRelative (_fiAnchors referredFileInfo)
-          Right NotAddedToGit -> throwError (LinkTargetNotAddedToGit referredFileRelative)
-          Left UntrackedDirectory -> throwError (LinkTargetNotAddedToGit referredFileRelative)
+            checkAnchor referredFile (_fiAnchors referredFileInfo)
+          Right NotAddedToGit -> throwError (LinkTargetNotAddedToGit referredFile)
+          Left UntrackedDirectory -> throwError (LinkTargetNotAddedToGit referredFile)
           Right NotScannable -> pass -- no support for such file, can do nothing
           Left TrackedDirectory -> pass -- path leads to directory, currently
                                         -- if such link contain anchor, we ignore it
@@ -618,11 +611,13 @@ verifyReference
     caseInsensitive = caseInsensitiveAnchors . mcFlavor . scMarkdown $ cScanners
 
     -- Returns `Nothing` when path corresponds to an existing (and tracked) directory
-    tryGetFileStatus :: FilePath -> CanonicalPath -> ExceptT VerifyError IO (Either DirectoryStatus FileStatus)
-    tryGetFileStatus filePath canonicalPath
-      | Just f <- lookupFile canonicalPath repoInfo = return (Right f)
-      | Just d <- lookupDirectory canonicalPath repoInfo = return (Left d)
+    tryGetFileStatus :: RelPosixLink -> ExceptT VerifyError IO (Either DirectoryStatus FileStatus)
+    tryGetFileStatus filePath
+      | Just f <- lookupFile canonicalFile repoInfo = return (Right f)
+      | Just d <- lookupDirectory canonicalFile repoInfo = return (Left d)
       | otherwise = throwError (LocalFileDoesNotExist filePath)
+      where
+        canonicalFile = canonicalizeRelPosixLink filePath
 
     checkAnchor filePath fileAnchors anchor = do
       checkAnchorReferenceAmbiguity filePath fileAnchors anchor

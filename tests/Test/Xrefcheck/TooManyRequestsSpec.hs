@@ -53,11 +53,11 @@ test_tooManyRequests = testGroup "429 response tests"
                   $ initProgress 2
               }
         _ <- verifyReferenceWithProgressDefault
-          (Reference "" "http://127.0.0.1:5000/429" Nothing (Position Nothing) RIExternal)
+          (Reference "" (Position Nothing) $ RIExternal $ ELUrl "http://127.0.0.1:5000/429")
           setRef
           progressRef
         progress <- vrExternal <$> readIORef progressRef
-        let ttc = ttTimeToCompletion <$> getTaskTimestamp "" progress
+        let ttc = ttTimeToCompletion <$> getTaskTimestamp progress
         flip assertBool (ttc == Just (sec 2)) $
           "Expected time to completion be equal to " ++ show (Just $ sec 2) ++
           ", but instead it's " ++ show ttc
@@ -76,11 +76,11 @@ test_tooManyRequests = testGroup "429 response tests"
                   $ initProgress 2
               }
         _ <- verifyReferenceWithProgressDefault
-          (Reference "" "http://127.0.0.1:5000/429" Nothing (Position Nothing) RIExternal)
+          (Reference "" (Position Nothing) $ RIExternal $ ELUrl "http://127.0.0.1:5000/429")
           setRef
           progressRef
         progress <- vrExternal <$> readIORef progressRef
-        let ttc = fromMaybe (sec 0) $ ttTimeToCompletion <$> getTaskTimestamp "" progress
+        let ttc = fromMaybe (sec 0) $ ttTimeToCompletion <$> getTaskTimestamp progress
         flip assertBool (sec 3 <= ttc && ttc <= sec 4) $
           "Expected time to completion be within range (seconds): 3 <= x <= 4" ++
           ", but instead it's " ++ show ttc
@@ -100,11 +100,11 @@ test_tooManyRequests = testGroup "429 response tests"
                   $ initProgress 2
               }
         _ <- verifyReferenceWithProgressDefault
-          (Reference "" "http://127.0.0.1:5000/429" Nothing (Position Nothing) RIExternal)
+          (Reference "" (Position Nothing) $ RIExternal $ ELUrl "http://127.0.0.1:5000/429")
           setRef
           progressRef
         progress <- vrExternal <$> readIORef progressRef
-        let ttc = ttTimeToCompletion <$> getTaskTimestamp "" progress
+        let ttc = ttTimeToCompletion <$> getTaskTimestamp progress
         flip assertBool (ttc == Just (sec 0)) $
           "Expected time to completion be 0 seconds" ++
           ", but instead it's " ++ show ttc

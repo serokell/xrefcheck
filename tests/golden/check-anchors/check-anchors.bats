@@ -17,7 +17,6 @@ assert_diff - <<EOF
   ➥  In file a.md
      bad reference (file-local) at src:16:1-43:
        - text: "ambiguous anchor in this file"
-       - link: -
        - anchor: some-text
 
      Ambiguous reference to anchor 'some-text'
@@ -56,7 +55,6 @@ assert_diff - <<EOF
   ➥  In file a.md
      bad reference (file-local) at src:12:1-13:
        - text: "broken"
-       - link: -
        - anchor: h3
 
      Anchor 'h3' is not present, did you mean:
@@ -66,7 +64,6 @@ assert_diff - <<EOF
   ➥  In file a.md
      bad reference (file-local) at src:14:1-18:
        - text: "broken"
-       - link: -
        - anchor: heading
 
      Anchor 'heading' is not present, did you mean:
@@ -75,7 +72,6 @@ assert_diff - <<EOF
   ➥  In file a.md
      bad reference (file-local) at src:16:1-31:
        - text: "broken"
-       - link: -
        - anchor: really-unique-anchor
 
      Anchor 'really-unique-anchor' is not present

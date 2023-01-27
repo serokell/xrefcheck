@@ -30,11 +30,11 @@ test_slash = testGroup "Trailing forward slash detection" $
       "\" should exist") $ do
         (ScanResult _ RepoInfo{..}) <- allowRewrite False $ \rw ->
           scanRepo OnlyTracked rw format (cExclusions config & ecIgnoreL .~ []) root
-        nonExistentFiles <- lefts <$> forM (fst <$> toPairs riFiles) (\filePath -> do
-          predicate <- doesFileExist . unCanonicalPath $ filePath
+        nonExistentFiles <- lefts <$> forM (fst . snd <$> toPairs riFiles) (\file -> do
+          predicate <- doesFileExist . filePathFromRoot root $ file
           return $ if predicate
                     then Right ()
-                    else Left . unCanonicalPath $ filePath)
+                    else Left . filePathFromRoot root $ file)
         whenJust (nonEmpty nonExistentFiles) $ \files ->
           assertFailure
             [int||

@@ -78,8 +78,14 @@ test_ignoreRegex = give WithoutColors $
       pickBrokenLinks :: VerifyResult (WithReferenceLoc VerifyError) -> [Text]
       pickBrokenLinks verifyRes =
         case verifyErrors verifyRes of
-            Just neWithRefLoc -> map (rLink . wrlReference) $ toList neWithRefLoc
+            Just neWithRefLoc -> mapMaybe (rUrl . wrlReference) $ toList neWithRefLoc
             Nothing -> []
+
+      rUrl :: Reference -> Maybe Text
+      rUrl Reference{..} =
+        case rInfo of
+          RIExternal (ELUrl url) -> Just url
+          _ -> Nothing
 
       linksToRegexs :: [Text] -> [Regex]
       linksToRegexs links =

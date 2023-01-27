@@ -3,7 +3,6 @@
   ➥  In file a.md
      bad reference (file-local) at src:18:1-36:
        - text: "Mixing case reference"
-       - link: -
        - anchor: SomE-HEADr
 
      Anchor 'SomE-HEADr' is not present, did you mean:
@@ -16,7 +15,6 @@
   ➥  In file a.md
      bad reference (file-local) at src:24:1-44:
        - text: "Maybe ambiguous reference"
-       - link: -
        - anchor: another-header
 
      Ambiguous reference to anchor 'another-header'

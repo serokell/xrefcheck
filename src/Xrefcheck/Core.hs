@@ -11,13 +11,12 @@ module Xrefcheck.Core where
 
 import Universum
 
-import Control.Lens (makeLenses)
+import Control.Lens (folded, makeLenses, makePrisms, to, united)
 import Data.Aeson (FromJSON (..), withText)
 import Data.Char (isAlphaNum)
 import Data.Char qualified as C
 import Data.DList (DList)
 import Data.DList qualified as DList
-import Data.List qualified as L
 import Data.Map qualified as M
 import Data.Reflection (Given)
 import Data.Text qualified as T
@@ -71,66 +70,67 @@ instance Given ColorMode => Buildable Position where
 
 -- | Full info about a reference.
 data Reference = Reference
-  { rName   :: Text
+  { rName :: Text
     -- ^ Text displayed as reference.
-  , rLink   :: Text
-    -- ^ File or site reference points to.
-  , rAnchor :: Maybe Text
-    -- ^ Section or custom anchor tag.
-  , rPos    :: Position
+  , rPos :: Position
     -- ^ Position in source file.
-  , rInfo   :: ReferenceInfo
-    -- ^ More info about the link.
+  , rInfo :: ReferenceInfo
+    -- ^ More info about the reference.
   } deriving stock (Show, Generic)
 
 -- | Info about the reference.
 data ReferenceInfo
-  = RIExternal
-    -- ^ Reference to a file at outer site, e.g @[d](http://www.google.com/doodles)@
-  | RIOtherProtocol
-    -- ^ Entry not to be processed, e.g. @mailto:e-mail@
-  | RIFileLocal
-    -- ^ Reference to this file, e.g. @[a](#header)@
-  | RIFileAbsolute
-    -- ^ Reference to a file absolute to the root, e.g. @[c](/folder/file#header)@
-  | RIFileRelative
-    -- ^ Reference to a file relative to given one, e.g. @[b](folder/file#header)@
+  = RIExternal ExternalLink
+  | RIFile ReferenceInfoFile
   deriving stock (Show, Generic)
+
+data ReferenceInfoFile = ReferenceInfoFile
+  { rifAnchor :: Maybe Text
+    -- ^ Section or custom anchor tag.
+  , rifLink :: FileLink
+    -- ^ More info about the link.
+  } deriving stock (Show, Generic)
+
+data ExternalLink
+  = ELUrl Text
+    -- ^ Reference to a file at outer site, e.g @[d](http://www.google.com/doodles)@.
+  | ELOther Text
+    -- ^ Entry not to be processed, e.g. @mailto:e-mail@.
+  deriving stock (Show, Generic)
+
+data FileLink
+  = FLAbsolute RelPosixLink
+    -- ^ Reference to a file or directory relative to the repository root.
+  | FLRelative RelPosixLink
+    -- ^ Reference to a file or directory relative to the given one.
+  | FLLocal
+    -- ^ Reference to this file.
+  deriving stock (Show, Generic)
+
+makePrisms ''ReferenceInfo
+makePrisms ''ExternalLink
 
 pattern PathSep :: Char
 pattern PathSep <- (isPathSeparator -> True)
 
 -- | Compute the 'ReferenceInfo' corresponding to a given link.
 referenceInfo :: Text -> ReferenceInfo
-referenceInfo link = case toString link of
-  [] -> RIFileLocal
-  PathSep : _             -> RIFileAbsolute
-  '.' : PathSep : _       -> RIFileRelative
-  '.' : '.' : PathSep : _ -> RIFileRelative
-  _ | hasUrlProtocol -> RIExternal
-    | hasProtocol -> RIOtherProtocol
-    | otherwise -> RIFileRelative
+referenceInfo url
+  | hasUrlProtocol = RIExternal $ ELUrl url
+  | hasProtocol = RIExternal $ ELOther url
+  | null link = RIFile $ ReferenceInfoFile anchor FLLocal
+  | otherwise = case T.uncons link of
+      Just (PathSep, path) ->
+        RIFile $ ReferenceInfoFile anchor $ FLAbsolute $ RelPosixLink path
+      _ ->
+        RIFile $ ReferenceInfoFile anchor $ FLRelative $ RelPosixLink link
   where
-    hasUrlProtocol = "://" `T.isInfixOf` T.take 10 link
-    hasProtocol = ":"   `T.isInfixOf` T.take 10 link
-
--- | Whether this is a link to external resource.
-isExternal :: ReferenceInfo -> Bool
-isExternal = \case
-  RIFileLocal -> False
-  RIFileRelative -> False
-  RIFileAbsolute -> False
-  RIExternal -> True
-  RIOtherProtocol -> False
-
--- | Whether this is a link to repo-local resource.
-isLocal :: ReferenceInfo -> Bool
-isLocal = \case
-  RIFileLocal -> True
-  RIFileRelative -> True
-  RIFileAbsolute -> True
-  RIExternal -> False
-  RIOtherProtocol -> False
+    hasUrlProtocol = "://" `T.isInfixOf` T.take 10 url
+    hasProtocol = ":" `T.isInfixOf` T.take 10 url
+    (link, anchor) = case T.splitOn "#" url of
+      [t] -> (t, Nothing)
+      t : ts -> (t, Just $ T.intercalate "#" ts)
+      [] -> (url, Nothing)
 
 -- | Context of anchor.
 data AnchorType
@@ -184,7 +184,7 @@ data ScanPolicy
 data FileStatus
   = Scanned FileInfo
   | NotScannable
-  -- ^ Files that are not supported by our scanners
+  -- ^ Files that are not supported by our scanners.
   | NotAddedToGit
   -- ^ We are not scanning files that are not added to git
   -- unless --include-untracked CLI option was enabled, but we're
@@ -198,51 +198,73 @@ data DirectoryStatus
 
 -- | All tracked files and directories.
 data RepoInfo = RepoInfo
-  { riFiles :: Map CanonicalPath FileStatus
+  { riFiles :: Map CanonicalRelPosixLink (RelPosixLink, FileStatus)
     -- ^ Files from the repo with `FileInfo` attached to files that we've scanned.
-  , riDirectories :: Map CanonicalPath DirectoryStatus
+  , riDirectories :: Map CanonicalRelPosixLink (RelPosixLink, DirectoryStatus)
     -- ^ Directories containing those files.
-  , riRoot :: CanonicalPath
-    -- ^ Repository root.
   }
 
 -- Search for a file in the repository.
-lookupFile :: CanonicalPath -> RepoInfo -> Maybe FileStatus
+lookupFile :: CanonicalRelPosixLink -> RepoInfo -> Maybe FileStatus
 lookupFile path RepoInfo{..} =
-  M.lookup path riFiles
+  snd <$> M.lookup path riFiles
 
 -- Search for a directory in the repository.
-lookupDirectory :: CanonicalPath -> RepoInfo -> Maybe DirectoryStatus
+lookupDirectory :: CanonicalRelPosixLink -> RepoInfo -> Maybe DirectoryStatus
 lookupDirectory path RepoInfo{..} =
-  M.lookup path riDirectories
+  snd <$> M.lookup path riDirectories
 
 -----------------------------------------------------------
 -- Instances
 -----------------------------------------------------------
 
+instance NFData ReferenceInfo
+instance NFData Anchor
+instance NFData AnchorType
+instance NFData ExternalLink
+instance NFData FileInfo
+instance NFData FileLink
 instance NFData Position
 instance NFData Reference
-instance NFData ReferenceInfo
-instance NFData AnchorType
-instance NFData Anchor
-instance NFData FileInfo
+instance NFData ReferenceInfoFile
 
 instance Given ColorMode => Buildable Reference where
   build Reference{..} =
-    [int||
-    reference #{paren . build $ rInfo} #{rPos}:
-      - text: #s{rName}
-      - link: #{if null rLink then "-" else rLink}
-      - anchor: #{rAnchor ?: styleIfNeeded Faint "-"}
-    |]
-
-instance Given ColorMode => Buildable ReferenceInfo where
-  build = \case
-    RIFileLocal -> colorIfNeeded Green "file-local"
-    RIFileRelative -> colorIfNeeded Yellow "relative"
-    RIFileAbsolute -> colorIfNeeded Blue "absolute"
-    RIExternal -> colorIfNeeded Red "external"
-    RIOtherProtocol -> ""
+    case rInfo of
+      RIFile ReferenceInfoFile{..} ->
+        case rifLink of
+          FLLocal ->
+            [int||
+            reference #{paren $ colorIfNeeded Green "file-local"} #{rPos}:
+              - text: #s{rName}
+              - anchor: #{rifAnchor ?: styleIfNeeded Faint "-"}
+            |]
+          FLRelative link ->
+            [int||
+            reference #{paren $ colorIfNeeded Yellow "relative"} #{rPos}:
+              - text: #s{rName}
+              - link: #{link}
+              - anchor: #{rifAnchor ?: styleIfNeeded Faint "-"}
+            |]
+          FLAbsolute link ->
+            [int||
+            reference #{paren $ colorIfNeeded Yellow "absolute"} #{rPos}:
+              - text: #s{rName}
+              - link: /#{link}
+              - anchor: #{rifAnchor ?: styleIfNeeded Faint "-"}
+            |]
+      RIExternal (ELUrl url) ->
+        [int||
+        reference #{paren $ colorIfNeeded Red "external"} #{rPos}:
+          - text: #s{rName}
+          - link: #{url}
+        |]
+      RIExternal (ELOther url) ->
+        [int||
+        reference (other) #{rPos}:
+          - text: #s{rName}
+          - link: #{url}
+        |]
 
 instance Given ColorMode => Buildable AnchorType where
   build = styleIfNeeded Faint . \case
@@ -276,13 +298,13 @@ instance Given ColorMode => Buildable FileInfo where
 
 instance Given ColorMode => Buildable RepoInfo where
   build RepoInfo{..}
-    | Just scanned <- nonEmpty [(name, info) | (name, Scanned info) <- toPairs riFiles]
+    | Just scanned <- nonEmpty [(name, info) | (_, (name, Scanned info)) <- toPairs riFiles]
     = interpolateUnlinesF $ buildFileReport <$> scanned
     where
-      buildFileReport :: (CanonicalPath, FileInfo) -> Builder
+      buildFileReport :: (RelPosixLink, FileInfo) -> Builder
       buildFileReport (name, info) =
         [int||
-        #{ colorIfNeeded Cyan $ getPosixRelativeOrAbsoluteChild riRoot name }:
+        #{ colorIfNeeded Cyan name }:
         #{ interpolateIndentF 2 $ build info }
         |]
   build _ = "No scannable files found."
@@ -357,17 +379,17 @@ stripAnchorDupNo t = do
 -----------------------------------------------------------
 
 data VerifyProgress = VerifyProgress
-  { vrLocal    :: !(Progress Int Text)
+  { vrLocal    :: !(Progress Int ())
   , vrExternal :: !(Progress Int Text)
   } deriving stock (Show)
 
 initVerifyProgress :: [Reference] -> VerifyProgress
 initVerifyProgress references = VerifyProgress
-  { vrLocal = initProgress (length localRefs)
-  , vrExternal = initProgress (length (ordNub $ map rLink extRefs))
+  { vrLocal = initProgressWitnessed $
+      references ^.. folded . to rInfo . (_RIFile . united <> _RIExternal . _ELOther . united)
+  , vrExternal = initProgressWitnessed . ordNub $
+      references ^.. folded . to rInfo . _RIExternal . _ELUrl
   }
-  where
-    (extRefs, localRefs) = L.partition (isExternal . rInfo) references
 
 showAnalyseProgress :: Given ColorMode => VerifyMode -> Time Second -> VerifyProgress -> Text
 showAnalyseProgress mode posixTime VerifyProgress{..} =

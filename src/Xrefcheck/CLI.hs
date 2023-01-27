@@ -39,7 +39,7 @@ import Paths_xrefcheck (version)
 import Xrefcheck.Config (NetworkingConfig, NetworkingConfig' (..))
 import Xrefcheck.Core
 import Xrefcheck.Scan
-import Xrefcheck.System (RelGlobPattern, mkGlobPattern)
+import Xrefcheck.System (CanonicalRelGlobPattern, mkCanonicalRelGlobPattern)
 import Xrefcheck.Util (ColorMode (WithColors, WithoutColors))
 
 modeReadM :: ReadM VerifyMode
@@ -90,7 +90,7 @@ data Options = Options
   }
 
 data ExclusionOptions = ExclusionOptions
-  { eoIgnore :: [RelGlobPattern]
+  { eoIgnore :: [CanonicalRelGlobPattern]
   }
 
 addExclusionOptions :: ExclusionConfig -> ExclusionOptions -> ExclusionConfig
@@ -125,8 +125,8 @@ type RepoType = Flavor
 filepathOption :: Mod OptionFields FilePath -> Parser FilePath
 filepathOption = strOption
 
-globOption :: Mod OptionFields RelGlobPattern -> Parser RelGlobPattern
-globOption = option $ eitherReader mkGlobPattern
+globOption :: Mod OptionFields CanonicalRelGlobPattern -> Parser CanonicalRelGlobPattern
+globOption = option $ eitherReader mkCanonicalRelGlobPattern
 
 repoTypeReadM :: ReadM RepoType
 repoTypeReadM = eitherReader $ \name ->

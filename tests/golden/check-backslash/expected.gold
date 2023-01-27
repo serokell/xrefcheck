@@ -1,0 +1,41 @@
+=== Repository data ===
+
+  a.md:
+    - references:
+        - reference (relative) at src:8:1-33:
+            - text: "Reference to a\\a"
+            - link: a\a.md
+            - anchor: header
+        - reference (relative) at src:10:1-30:
+            - text: "Bad reference to a\\b"
+            - link: a\b.md
+            - anchor: -
+    - anchors:
+        - header (header I) at src:6:1-8
+
+  a\a.md:
+    - references:
+        - reference (relative) at src:2:1-22:
+            - text: "Reference to a"
+            - link: a.md
+            - anchor: -
+        - reference (relative) at src:3:1-29:
+            - text: "Reference to myself"
+            - link: a\a.md
+            - anchor: -
+    - anchors:
+        - header (header I) at src:1:1-8
+
+=== Invalid references found ===
+
+  ➥  In file a.md
+     bad reference (relative) at src:10:1-30:
+       - text: "Bad reference to a\\b"
+       - link: a\b.md
+       - anchor: -
+
+     File does not exist:
+       a\b.md
+       Its reference contains a backslash. Maybe it uses the wrong path separator.
+
+Invalid references dumped, 1 in total.

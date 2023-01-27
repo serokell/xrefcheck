@@ -36,11 +36,10 @@ import Universum
 
 import Control.Lens (makeLensesWith)
 import Data.Aeson (FromJSON (..), genericParseJSON, withText)
-import Data.List qualified as L
 import Data.Map qualified as M
 import Data.Reflection (Given)
 import Fmt (Buildable (..), fmt)
-import System.Directory (doesDirectoryExist)
+import System.Directory (doesDirectoryExist, pathIsSymbolicLink)
 import System.Process (cwd, readCreateProcess, shell)
 import Text.Interpolation.Nyan
 import Text.Regex.TDFA.Common (CompOption (..), ExecOption (..), Regex)
@@ -56,11 +55,11 @@ type ExclusionConfig = ExclusionConfig' Identity
 
 -- | Config of repositry exclusions.
 data ExclusionConfig' f = ExclusionConfig
-  { ecIgnore               :: Field f [RelGlobPattern]
+  { ecIgnore               :: Field f [CanonicalRelGlobPattern]
     -- ^ Files which we completely ignore.
-  , ecIgnoreLocalRefsTo    :: Field f [RelGlobPattern]
+  , ecIgnoreLocalRefsTo    :: Field f [CanonicalRelGlobPattern]
     -- ^ Files references to which we do not verify.
-  , ecIgnoreRefsFrom       :: Field f [RelGlobPattern]
+  , ecIgnoreRefsFrom       :: Field f [CanonicalRelGlobPattern]
     -- ^ Files, references in which we should not analyze.
   , ecIgnoreExternalRefsTo :: Field f [Regex]
     -- ^ Regular expressions that match external references we should not verify.
@@ -72,7 +71,7 @@ makeLensesWith postfixFields ''ExclusionConfig'
 type Extension = String
 
 -- | Way to parse a file.
-type ScanAction = CanonicalPath -> IO (FileInfo, [ScanError 'Parse])
+type ScanAction = FilePath -> RelPosixLink -> IO (FileInfo, [ScanError 'Parse])
 
 -- | All supported ways to parse a file.
 type FormatsSupport = Extension -> Maybe ScanAction
@@ -99,7 +98,7 @@ data ScanStage = Parse | Gather
 
 type family ScanStageFile (a :: ScanStage) where
   ScanStageFile 'Parse = ()
-  ScanStageFile 'Gather = FilePath
+  ScanStageFile 'Gather = RelPosixLink
 
 deriving stock instance Show (ScanError 'Parse)
 deriving stock instance Show (ScanError 'Gather)
@@ -112,7 +111,7 @@ mkParseScanError = ScanError ()
 
 -- | Promote a 'ScanError' from the 'Parse' stage
 -- to the 'Gather' stage.
-mkGatherScanError :: FilePath ->  ScanError 'Parse -> ScanError 'Gather
+mkGatherScanError :: RelPosixLink ->  ScanError 'Parse -> ScanError 'Gather
 mkGatherScanError seFile ScanError{sePosition, seDescription} = ScanError
   { seFile
   , sePosition
@@ -177,13 +176,12 @@ data ReadDirectoryMode
 readDirectoryWith
   :: forall a. ReadDirectoryMode
   -> ExclusionConfig
-  -> (CanonicalPath -> IO a)
-  -> CanonicalPath
-  -> IO [(CanonicalPath, a)]
+  -> (RelPosixLink -> IO a)
+  -> FilePath
+  -> IO [(RelPosixLink, a)]
 readDirectoryWith mode config scanner root = do
-  relativeFiles <- L.lines <$> getFiles
-  canonicalFiles <- mapM (root </) relativeFiles
-  traverse scanFile $ filter (not . isIgnored) canonicalFiles
+  relativeFiles <- fmap mkRelPosixLink . fileLines <$> getFiles
+  traverse scanFile $ filter (not . isIgnored) relativeFiles
 
   where
 
@@ -193,37 +191,46 @@ readDirectoryWith mode config scanner root = do
       RdmBothTrackedAndUtracked -> liftA2 (<>) getTrackedFiles getUntrackedFiles
 
     getTrackedFiles = readCreateProcess
-      (shell "git ls-files"){cwd = Just $ unCanonicalPath root} ""
+      (shell "git ls-files -z"){cwd = Just root} ""
     getUntrackedFiles = readCreateProcess
-      (shell "git ls-files --others --exclude-standard"){cwd = Just $ unCanonicalPath root} ""
+      (shell "git ls-files -z --others --exclude-standard"){cwd = Just root} ""
 
-    scanFile :: CanonicalPath -> IO (CanonicalPath, a)
+    fileLines :: String -> [String]
+    fileLines (dropWhile (== '\0') -> ls) =
+      case break (== '\0') ls of
+        ([], _) -> []
+        (f, ls') -> f : fileLines ls'
+
+    scanFile :: RelPosixLink -> IO (RelPosixLink, a)
     scanFile c = (c,) <$> scanner c
 
-    isIgnored :: CanonicalPath -> Bool
-    isIgnored = matchesGlobPatterns root $ ecIgnore config
+    isIgnored :: RelPosixLink -> Bool
+    isIgnored = matchesGlobPatterns (ecIgnore config) . canonicalizeRelPosixLink
 
 scanRepo
   :: MonadIO m
-  => ScanPolicy -> Rewrite -> FormatsSupport -> ExclusionConfig -> FilePath -> m ScanResult
+  => ScanPolicy
+  -> Rewrite
+  -> FormatsSupport
+  -> ExclusionConfig
+  -> FilePath
+  -> m ScanResult
 scanRepo scanMode rw formatsSupport config root = do
   putTextRewrite rw "Scanning repository..."
 
   liftIO $ whenM (not <$> doesDirectoryExist root) $
     die $ "Repository's root does not seem to be a directory: " <> root
 
-  canonicalRoot <- liftIO $ canonicalizePath root
-
   (errs, processedFiles) <-
     let mode = case scanMode of
           OnlyTracked -> RdmTracked
           IncludeUntracked -> RdmBothTrackedAndUtracked
-    in  liftIO $ (gatherScanErrs canonicalRoot &&& gatherFileStatuses)
-          <$> readDirectoryWith mode config processFile canonicalRoot
+    in  liftIO $ (gatherScanErrs &&& gatherFileStatuses)
+          <$> readDirectoryWith mode config processFile root
 
   notProcessedFiles <-  case scanMode of
     OnlyTracked -> liftIO $
-      readDirectoryWith RdmUntracked config (const $ pure NotAddedToGit) canonicalRoot
+      readDirectoryWith RdmUntracked config (const $ pure NotAddedToGit) root
     IncludeUntracked -> pure []
 
   let scannableNotProcessedFiles = filter (isJust . mscanner . fst) notProcessedFiles
@@ -231,45 +238,46 @@ scanRepo scanMode rw formatsSupport config root = do
   whenJust (nonEmpty $ map fst scannableNotProcessedFiles) $ \files -> hPutStrLn @Text stderr
     [int|A|
     Those files are not added by Git, so we're not scanning them:
-    #{interpolateBlockListF $ getPosixRelativeOrAbsoluteChild canonicalRoot <$> files}
+    #{interpolateBlockListF files}
     Please run "git add" before running xrefcheck or enable \
     --include-untracked CLI option to check these files.
     |]
 
-  let trackedDirs = foldMap (getDirsBetweenRootAndFile canonicalRoot . fst) processedFiles
-      untrackedDirs = foldMap (getDirsBetweenRootAndFile canonicalRoot . fst) notProcessedFiles
+  let trackedDirs = foldMap (getIntermediateDirs . fst) processedFiles
+      untrackedDirs = foldMap (getIntermediateDirs . fst) notProcessedFiles
 
   return . ScanResult errs $ RepoInfo
-    { riFiles = M.fromList $ processedFiles <> notProcessedFiles
-    , riDirectories = M.fromList (fmap (, TrackedDirectory) trackedDirs
+    { riFiles = M.fromList $ fmap canonicalLinkEntry $ processedFiles <> notProcessedFiles
+    , riDirectories = M.fromList $ fmap canonicalLinkEntry (fmap (, TrackedDirectory) trackedDirs
         <> fmap (, UntrackedDirectory) untrackedDirs)
-    , riRoot = canonicalRoot
     }
   where
-    mscanner :: CanonicalPath -> Maybe ScanAction
+    mscanner :: RelPosixLink -> Maybe ScanAction
     mscanner = formatsSupport . takeExtension
 
     gatherScanErrs
-      :: CanonicalPath
-      -> [(CanonicalPath, (FileStatus, [ScanError 'Parse]))]
+      :: [(RelPosixLink, (FileStatus, [ScanError 'Parse]))]
       -> [ScanError 'Gather]
-    gatherScanErrs canonicalRoot = foldMap $ \(file, (_, errs)) ->
-      mkGatherScanError (showFilepath file) <$> errs
-      where
-        showFilepath = getPosixRelativeOrAbsoluteChild canonicalRoot
+    gatherScanErrs = foldMap $ \(file, (_, errs)) ->
+      mkGatherScanError file <$> errs
 
     gatherFileStatuses
-      :: [(CanonicalPath, (FileStatus, [ScanError 'Parse]))]
-      -> [(CanonicalPath, FileStatus)]
+      :: [(RelPosixLink, (FileStatus, [ScanError 'Parse]))]
+      -> [(RelPosixLink, FileStatus)]
     gatherFileStatuses = map (second fst)
 
-    processFile :: CanonicalPath -> IO (FileStatus, [ScanError 'Parse])
-    processFile canonicalFile =
-      ifM (pathIsSymbolicLink canonicalFile)
+    processFile :: RelPosixLink -> IO (FileStatus, [ScanError 'Parse])
+    processFile file =
+      ifM (pathIsSymbolicLink (filePathFromRoot root file))
       (pure (NotScannable, []))
-      case mscanner canonicalFile of
+      case mscanner file of
         Nothing -> pure (NotScannable, [])
-        Just scanner -> scanner canonicalFile <&> _1 %~ Scanned
+        Just scanner -> scanner root file <&> _1 %~ Scanned
+
+    canonicalLinkEntry
+      :: (RelPosixLink, a)
+      -> (CanonicalRelPosixLink, (RelPosixLink, a))
+    canonicalLinkEntry (a, b) = (canonicalizeRelPosixLink a, (a, b))
 
 -----------------------------------------------------------
 -- Yaml instances

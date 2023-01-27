@@ -56,7 +56,7 @@ load '../helpers'
        - anchor: -
 
      File does not exist:
-       a.md
+       ./a.md
 
 Invalid references dumped, 1 in total.
 EOF
@@ -83,7 +83,7 @@ EOF
        - anchor: -
 
      File does not exist:
-       a.md
+       ./a.md
 
 Invalid references dumped, 1 in total.
 EOF
@@ -113,7 +113,7 @@ EOF
        - anchor: -
 
      Link target is not tracked by Git:
-       a.md
+       ./a.md
        Please run "git add" before running xrefcheck or enable --include-untracked CLI option.
 
 Invalid references dumped, 1 in total.

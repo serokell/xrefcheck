@@ -27,7 +27,7 @@ import Xrefcheck.Config
 import Xrefcheck.Core
 import Xrefcheck.Progress
 import Xrefcheck.Scan
-import Xrefcheck.System (canonicalizePath)
+import Xrefcheck.System
 import Xrefcheck.Util
 import Xrefcheck.Verify
 
@@ -97,7 +97,7 @@ verifyLink
   -> Text
   -> IO (VerifyResult VerifyError, Progress Int Text)
 verifyLink configModifier setRef link = do
-  let reference = Reference "" link Nothing (Position Nothing) RIExternal
+  let reference = Reference "" (Position Nothing) $ RIExternal $ ELUrl link
   progRef <- newIORef $ initVerifyProgress [reference]
   result <- verifyReferenceWithProgress configModifier reference setRef progRef
   progress <- readIORef progRef
@@ -115,13 +115,11 @@ verifyReferenceWithProgress
   -> IORef (S.Set DomainName)
   -> IORef VerifyProgress
   -> IO (VerifyResult VerifyError)
-verifyReferenceWithProgress configModifier reference setRef progRef = do
-  canonicalRoot <- canonicalizePath "."
-  file <- canonicalizePath ""
+verifyReferenceWithProgress configModifier reference setRef progRef =
   fmap wrlItem <$> verifyReference
     (defConfig GitHub & cExclusionsL . ecIgnoreExternalRefsToL .~ []
                       & configModifier)
-    FullMode setRef progRef (RepoInfo M.empty mempty canonicalRoot) file reference
+    FullMode setRef progRef (RepoInfo M.empty mempty) (mkRelPosixLink "") reference
 
 verifyReferenceWithProgressDefault
   :: Reference

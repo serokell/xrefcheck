@@ -16,7 +16,7 @@ assert_diff - <<EOF
 
   file-with-autolinks.md:
     - references:
-        - reference (external) :
+        - reference (external):
             - text: "https://www.google.com/doodles"
             - link: https://www.google.com/doodles
         - reference (external) at src:8:0-18:

@@ -22,9 +22,8 @@ import Xrefcheck.Config
 import Xrefcheck.Core (Flavor (..))
 import Xrefcheck.Progress (allowRewrite)
 import Xrefcheck.Scan
-  (FormatsSupport, ScanError (..), ScanResult (..), reportScanErrs, scanRepo,
-  specificFormatsSupport)
 import Xrefcheck.Scanners.Markdown (markdownSupport)
+import Xrefcheck.Scanners.Symlink (symlinkSupport)
 import Xrefcheck.System (askWithinCI)
 import Xrefcheck.Util
 import Xrefcheck.Verify (reportVerifyErrs, verifyErrors, verifyRepo)
@@ -34,9 +33,10 @@ readConfig path = fmap overrideConfig do
   decodeFileEither path
     >>= either (error . toText . prettyPrintParseException) pure
 
-formats :: ScannersConfig -> FormatsSupport
-formats ScannersConfig{..} = specificFormatsSupport
+configuredFileSupport :: ScannersConfig -> FileSupport
+configuredFileSupport ScannersConfig{..} = firstFileSupport
     [ markdownSupport scMarkdown
+    , symlinkSupport
     ]
 
 findFirstExistingFile :: [FilePath] -> IO (Maybe FilePath)
@@ -74,8 +74,8 @@ defaultAction Options{..} = do
 
     (ScanResult scanErrs repoInfo) <- allowRewrite showProgressBar $ \rw -> do
       let fullConfig = addExclusionOptions (cExclusions config) oExclusionOptions
-          formatsSupport = formats $ cScanners config
-      scanRepo oScanPolicy rw formatsSupport fullConfig oRoot
+          fileSupport = configuredFileSupport $ cScanners config
+      scanRepo oScanPolicy rw fileSupport fullConfig oRoot
 
     when oVerbose $
       fmt [int||

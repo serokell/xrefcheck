@@ -16,16 +16,16 @@ import Text.Regex.TDFA (Regex)
 import Xrefcheck.Config
 import Xrefcheck.Core
 import Xrefcheck.Progress (allowRewrite)
-import Xrefcheck.Scan (ScanResult (..), ecIgnoreExternalRefsToL, scanRepo, specificFormatsSupport)
+import Xrefcheck.Scan
 import Xrefcheck.Scanners.Markdown
 import Xrefcheck.Util (ColorMode (WithoutColors))
-import Xrefcheck.Verify (VerifyError, VerifyResult, WithReferenceLoc (..), verifyErrors, verifyRepo)
+import Xrefcheck.Verify
 
 test_ignoreRegex :: TestTree
 test_ignoreRegex = give WithoutColors $
   let root = "tests/markdowns/without-annotations"
       showProgressBar = False
-      formats = specificFormatsSupport [markdownSupport defGithubMdConfig]
+      fileSupport = firstFileSupport [markdownSupport defGithubMdConfig]
       verifyMode = ExternalOnlyMode
 
       linksTxt =
@@ -39,7 +39,7 @@ test_ignoreRegex = give WithoutColors $
   in testGroup "Regular expressions performance"
     [ testCase "Check that only not matched links are verified" $ do
       scanResult <- allowRewrite showProgressBar $ \rw ->
-        scanRepo OnlyTracked rw formats (config ^. cExclusionsL) root
+        scanRepo OnlyTracked rw fileSupport (config ^. cExclusionsL) root
 
       verifyRes <- allowRewrite showProgressBar $ \rw ->
         verifyRepo rw config verifyMode $ srRepoInfo scanResult

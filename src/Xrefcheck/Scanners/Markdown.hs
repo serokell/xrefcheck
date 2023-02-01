@@ -5,8 +5,7 @@
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
--- | Markdown documents markdownScanner.
-
+-- | Scanner for gathering references to verify from Markdown documents.
 module Xrefcheck.Scanners.Markdown
   ( MarkdownConfig (..)
 
@@ -410,5 +409,8 @@ markdownScanner config root file =
   parseFileInfo config . decodeUtf8
     <$> BSL.readFile (filePathFromRoot root file)
 
-markdownSupport :: MarkdownConfig -> ([Extension], ScanAction)
-markdownSupport config = ([".md"], markdownScanner config)
+markdownSupport :: MarkdownConfig -> FileSupport
+markdownSupport config isSymlink extension = do
+  guard $ extension == ".md"
+  guard $ not isSymlink
+  pure $ markdownScanner config

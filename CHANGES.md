@@ -54,6 +54,8 @@ Unreleased
   + Changed the output coloring defaults to show colors when `CI` env variable is `true`.
 * [#271](https://github.com/serokell/xrefcheck/pull/271)
   + Now Xrefcheck is able to follow relative redirects.
+* [#262](https://github.com/serokell/xrefcheck/pull/262)
+  + Now Xrefcheck includes a scanner that verifies the repository symlinks.
 
 0.2.2
 ==========

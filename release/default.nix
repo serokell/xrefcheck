@@ -1,14 +1,14 @@
 # SPDX-FileCopyrightText: 2019 Serokell <https://serokell.io>
 #
 # SPDX-License-Identifier: MPL-2.0
-
-{ pkgs ? import (import ../nix/sources.nix).nixpkgs { }, timestamp }:
 let
-  xrefcheck-x86_64-linux =
-    (import ../xrefcheck.nix { linux-static = true; }).components.exes.xrefcheck;
+  defaultNix = import ../default.nix;
+in
+{ pkgs ? defaultNix.legacyPackages, timestamp }:
+let
+  xrefcheck-x86_64-linux = defaultNix.packages.xrefcheck-static;
 
-  xrefcheck-x86_64-windows =
-    (import ../xrefcheck.nix { windows = true; }).components.exes.xrefcheck;
+  xrefcheck-x86_64-windows = defaultNix.packages.xrefcheck-windows;
 
   mkZip = { name, paths, compression ? 5 }:
     pkgs.stdenvNoCC.mkDerivation {

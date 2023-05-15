@@ -17,6 +17,11 @@ load '../helpers'
 
   cd $TEST_TEMP_DIR
   touch dir/a
+
+  # Required for Git Bash on Windows to have symlinks properly working, which also requires either
+  # to be running as an admin or having developer mode turned on.
+  export MSYS=winsymlinks:nativestrict
+
   ln -s ../d.md outside.md
   ln -s dir/b.md ok.md
   ln -s dir/c.md broken.md
@@ -35,6 +40,11 @@ load '../helpers'
 
   cd $TEST_TEMP_DIR
   touch dir/a
+
+  # Required for Git Bash on Windows to have symlinks properly working, which also requires either
+  # to be running as an admin or having developer mode turned on.
+  export MSYS=winsymlinks:nativestrict
+
   ln -s ../d.md outside.md
   ln -s dir/b.md ok.md
   ln -s dir/c.md broken.md

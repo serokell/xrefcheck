@@ -31,7 +31,7 @@ import Options.Applicative
   (Mod, OptionFields, Parser, ReadM, auto, command, eitherReader, execParser, flag, flag',
   footerDoc, fullDesc, help, helpDoc, helper, hsubparser, info, infoOption, long, metavar, option,
   progDesc, short, strOption, switch, value)
-import Options.Applicative.Help.Pretty (Doc, displayS, fill, fillSep, indent, renderPretty, text)
+import Options.Applicative.Help.Pretty (Doc, fill, fillSep, indent, pretty)
 import Options.Applicative.Help.Pretty qualified as Pretty
 import Text.Interpolation.Nyan
 
@@ -289,18 +289,14 @@ getCommand = do
     footerDoc (pure ignoreModesMsg)
 
 ignoreModesMsg :: Doc
-ignoreModesMsg = text $ header <> body
+ignoreModesMsg = header <> body
   where
     header = "To ignore a link in your markdown, \
              \include \"<!-- xrefcheck: ignore <mode> -->\"\n\
              \comment with one of these modes:\n"
-    body = displayS (renderPretty pageParam pageWidth doc) ""
+    body = fillSep $ map formatDesc modeDescr
 
-    pageWidth = 80
-    pageParam = 1
-
-    doc = fillSep $ map formatDesc modeDescr
-
+    modeDescr :: [(String, [String])]
     modeDescr =
       [ ("  \"link\"",      L.words "Ignore the link right after the comment.")
       , ("  \"paragraph\"", L.words "Ignore the whole paragraph after the comment.")
@@ -312,5 +308,5 @@ ignoreModesMsg = text $ header <> body
     descrIndent = 27 - modeIndent
 
     formatDesc (mode, descr) =
-      fill modeIndent (text mode) <>
-      indent descrIndent (fillSep $ map text descr)
+      fill modeIndent (pretty mode) <>
+      indent descrIndent (fillSep $ map pretty descr)

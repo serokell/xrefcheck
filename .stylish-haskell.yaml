@@ -49,6 +49,7 @@ language_extensions:
   - OverloadedStrings
   - PatternSynonyms
   - QuantifiedConstraints
+  - QuasiQuotes
   - RebindableSyntax
   - RecordWildCards
   - RecursiveDo

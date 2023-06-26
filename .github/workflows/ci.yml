@@ -10,10 +10,36 @@
 
 name: CI
 
-on: [push]
+on: [pull_request]
 
 jobs:
-  xrefcheck-build-and-test:
+  validate:
+    runs-on: [self-hosted, nix]
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: reuse
+        run: nix build -L .#checks.x86_64-linux.reuse-lint
+        # Run step even if the previous one has failed
+        if: success() || failure()
+
+      - name: hlint
+        run: nix build -L .#checks.x86_64-linux.hlint
+        if: success() || failure()
+
+      - name: shellcheck
+        run: nix build -L .#checks.x86_64-linux.shellcheck
+        if: success() || failure()
+
+      - name: stylish-haskell
+        run: nix build -L .#checks.x86_64-linux.stylish-haskell
+        if: success() || failure()
+
+      - name: check-trailing-whitespace
+        run: nix build -L .#checks.x86_64-linux.trailing-whitespace
+        if: success() || failure()
+
+  xrefcheck-build-and-test-windows:
     runs-on: windows-latest
     strategy:
       matrix:
@@ -27,7 +53,7 @@ jobs:
       with:
         submodules: 'true'
 
-    - uses: haskell/actions/setup@v2.0.1
+    - uses: haskell/actions/setup@v2.4.3
       id: setup-haskell-stack
       name: Setup Haskell Stack
       with:
@@ -79,3 +105,47 @@ jobs:
         export PATH=$PATH:/c/Users/runneradmin/AppData/Roaming/local/bin;
         bats ./tests/golden/**
       shell: bash
+
+  xrefcheck-build-and-test-nix:
+    runs-on: [self-hosted, nix]
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+
+      - name: build
+        run: nix build -L .#xrefcheck
+
+      - name: test
+        run: nix build -L .#checks.x86_64-linux.test
+
+      - name: Golden tests (bats)
+        run: nix shell .#bats .#diffutils .#xrefcheck -c bash -c "cd tests/golden/ && bats ./**"
+
+      - name: windows cross-compilation
+        run: |
+          nix build -L .#xrefcheck-windows
+          echo "WINDOWS_BINARY_PATH=$(readlink -f result)" >> $GITHUB_ENV
+
+      - name: Upload windows executable
+        uses: actions/upload-artifact@v3
+        with:
+          name: xrefcheck-windows
+          path: ${{ env.WINDOWS_BINARY_PATH }}/bin/*
+
+      - name: docker-image
+        run: nix build -L .#docker-image
+
+      - name: static binary
+        run: |
+          nix build -L .#xrefcheck-static
+          echo "STATIC_BINARY_PATH=$(readlink -f result)" >> $GITHUB_ENV
+
+      - name: Upload static binary
+        uses: actions/upload-artifact@v3
+        with:
+          name: xrefcheck-static
+          path: ${{ env.STATIC_BINARY_PATH }}/bin/xrefcheck
+
+      - name: Xrefcheck itself
+        run: nix run . -L

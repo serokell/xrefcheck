@@ -1,0 +1,22 @@
+# SPDX-FileCopyrightText: 2023 Serokell <https://serokell.io/>
+#
+# SPDX-License-Identifier: MPL-2.0
+
+name: dockerhub-release
+
+on:
+  push:
+    tags:
+      - v[0-9]+.*
+
+jobs:
+  dockerhub-release:
+    runs-on: [self-hosted, nix]
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Push release image to dockerhub
+        run: |
+          export DOCKERHUB_PASSWORD=${{ env.DOCKERHUB_PASSWORD }}
+          nix build .#docker-image
+          nix shell .#skopeo -c ./scripts/upload-docker-image.sh "docker-archive:$(readlink result)" "docker://docker.io/serokell/xrefcheck:${{ github.ref_name }}"

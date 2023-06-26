@@ -12,7 +12,10 @@
       pkgs = haskell-nix.legacyPackages.${system}.extend serokell-nix.overlay;
 
       flake = (pkgs.haskell-nix.stackProject {
-        src = ./.;
+        src = builtins.path {
+          name = "xrefcheck";
+          path = ./.;
+        };
         modules = [{
           packages.xrefcheck = {
             ghcOptions =
@@ -84,6 +87,11 @@
           checks = {
             trailing-whitespace = pkgs.build.checkTrailingWhitespace ./.;
             reuse-lint = pkgs.build.reuseLint ./.;
+            shellcheck = pkgs.build.shellcheck ./.;
+            hlint = pkgs.build.haskell.hlint ./.;
+            stylish-haskell = pkgs.build.haskell.stylish-haskell ./.;
+
+            test = self.packages.${system}."xrefcheck:test:xrefcheck-tests";
           };
         }
       ]

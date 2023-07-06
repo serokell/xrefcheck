@@ -7,6 +7,7 @@
 # Xrefcheck
 
 ![Build status](https://github.com/serokell/xrefcheck/actions/workflows/ci.yml/badge.svg)
+<img referrerpolicy="no-referrer-when-downgrade" src="https://static.scarf.sh/a.png?x-pxid=bdf72cff-c1f1-4b3a-97f0-5083dbb77fa6" />
 
 Xrefcheck is a tool for verifying local and external references in a repository's documentation that is quick, easy to setup, and suitable to be run on a CI pipeline.
 
@@ -55,8 +56,17 @@ Xrefcheck requires you to have `git` version 2.18.0 or later in your PATH.
 We provide the following ways for you to use xrefcheck:
 
 - [GitHub Actions](https://github.com/marketplace/actions/xrefcheck)
-- [Statically linked binaries](https://github.com/serokell/xrefcheck/releases)
+- [Statically linked binaries](https://github.com/serokell/xrefcheck/releases), e. g. on Linux:
+  ```
+  mkdir -p bin/
+  wget --quiet -O bin/xrefcheck https://serokell.gateway.scarf.sh/xrefcheck/latest/xrefcheck-x86_64-linux
+  chmod +x bin/xrefcheck
+  bin/xrefcheck
+  ```
 - [Docker image](https://hub.docker.com/r/serokell/xrefcheck)
+  ```
+  docker pull serokell.docker.scarf.sh/serokell/xrefcheck
+  ```
 - [Building from source](#build-instructions-)
 - Nix
   ```

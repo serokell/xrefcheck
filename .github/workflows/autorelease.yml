@@ -16,12 +16,13 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: Create a pre-release
+        env:
+          OVERWRITE_RELEASE: true
+        # https://github.com/serokell/serokell.nix/blob/c1e2a33040438443c7721523e897db5e32a52a74/overlay/github.nix#L26
         run: |
-          export GITHUB_TOKEN=${{ env.GITHUB_TOKEN }}
-          nix shell .#curl .#gitAndTools.hub -c bash -c "curl https://raw.githubusercontent.com/serokell/scratch/release-binary/scripts/release-binary.sh | bash"
+          nix run .#github.autorelease -- "$(nix-build ./release)" "Automatic release on "$(date +\"%Y%m%d%H%M\")""
 
       - name: Push latest image to dockerhub
         run: |
-          export DOCKERHUB_PASSWORD=${{ env.DOCKERHUB_PASSWORD }}
           nix build -L .#docker-image
           nix shell .#skopeo -c ./scripts/upload-docker-image.sh "docker-archive:$(readlink result)" "docker://docker.io/serokell/xrefcheck:latest"

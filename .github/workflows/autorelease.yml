@@ -7,7 +7,7 @@ name: master-update
 on:
   push:
     branches:
-      - master
+      - rvem/fix-autoreleasing
 
 jobs:
   release:

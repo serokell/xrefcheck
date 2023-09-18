@@ -17,11 +17,9 @@ jobs:
 
       - name: Create a pre-release
         run: |
-          export GITHUB_TOKEN=${{ env.GITHUB_TOKEN }}
-          nix shell .#curl .#gitAndTools.hub -c bash -c "curl https://raw.githubusercontent.com/serokell/scratch/release-binary/scripts/release-binary.sh | bash"
+          GITHUB_TOKEN= nix run .#autorelease
 
       - name: Push latest image to dockerhub
         run: |
-          export DOCKERHUB_PASSWORD=${{ env.DOCKERHUB_PASSWORD }}
           nix build -L .#docker-image
           nix shell .#skopeo -c ./scripts/upload-docker-image.sh "docker-archive:$(readlink result)" "docker://docker.io/serokell/xrefcheck:latest"

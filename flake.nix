@@ -60,6 +60,16 @@
           apps.default = self.apps.${system}."x86_64-unknown-linux-musl:xrefcheck:exe:xrefcheck";
 
           packages = {
+            autorelease = pkgs.runCommand "autorelease" {
+              buildInputs = [ pkgs.makeWrapper ];
+              name = "autorelease";
+              src = ./scripts/autorelease.sh;
+            } ''
+              mkdir -p $out/bin
+              cp $src $out/bin/autorelease
+              patchShebangs $out/bin/autorelease
+              wrapProgram "$out/bin/autorelease" --prefix PATH : ${pkgs.lib.makeBinPath [ pkgs.git pkgs.gh ]}
+            '';
 
             default = self.packages.${system}.xrefcheck;
 

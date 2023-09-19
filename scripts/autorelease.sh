@@ -27,8 +27,6 @@ shopt -s extglob
 cp -L "$TEMPDIR"/"$project"/!(*.md) "$assets_dir"
 
 # gh expects 'GH_TOKEN' env variable to be set
-gh auth setup-git --hostname github.com
-
 # Delete release if it exists
 gh release delete auto-release || true
 

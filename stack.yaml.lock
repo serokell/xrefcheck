@@ -12,13 +12,6 @@ packages:
   original:
     hackage: firefly-0.2.1.0@sha256:e9d73486464c3e223ec457e02b30ddd5b550fdbf6292b268c64581e2b07d888b,1519
 - completed:
-    hackage: cmark-gfm-0.2.5@sha256:a53b3c6ed20b5476ae18df5f28ababbb6ec8543f9a0758f0381a532d7a879fc0,5188
-    pantry-tree:
-      sha256: 8d137f125ee673d5c6b193c85657ea94124c90869edada72633df282e33058e0
-      size: 4556
-  original:
-    hackage: cmark-gfm-0.2.5
-- completed:
     hackage: nyan-interpolation-core-0.9.2@sha256:930202fafc4e9472f9aed3d216a459e23454db500bfd0e0a5af2a4e5c5202096,4523
     pantry-tree:
       sha256: 5781e80383996a6bea95a545e4f0e70466bebf0fe2d388f334cd42e9f35469d5

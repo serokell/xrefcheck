@@ -60,7 +60,6 @@
           apps.default = self.apps.${system}."x86_64-unknown-linux-musl:xrefcheck:exe:xrefcheck";
 
           packages = {
-
             default = self.packages.${system}.xrefcheck;
 
             xrefcheck = self.packages.${system}."xrefcheck:exe:xrefcheck";

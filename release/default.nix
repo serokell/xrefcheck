@@ -4,7 +4,7 @@
 let
   defaultNix = import ../default.nix;
 in
-{ pkgs ? defaultNix.legacyPackages, timestamp }:
+{ pkgs ? defaultNix.legacyPackages }:
 let
   xrefcheck-x86_64-linux = defaultNix.packages.xrefcheck-static;
 
@@ -25,14 +25,7 @@ let
     paths = [ "${xrefcheck-x86_64-windows}/bin" ];
   };
 
-  releaseNotes = pkgs.writeText "release-notes.md" ''
-    Automatic release on ${timestamp}
-  '';
 in pkgs.linkFarm "xrefcheck-release" [
-  {
-    name = "release-notes.md";
-    path = releaseNotes;
-  }
   {
     name = "xrefcheck-x86_64-linux";
     path = "${xrefcheck-x86_64-linux}/bin/xrefcheck";

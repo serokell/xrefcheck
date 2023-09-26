@@ -9,7 +9,16 @@
   outputs = { self, flake-utils, haskell-nix, serokell-nix, ... }:
     flake-utils.lib.eachSystem [ "x86_64-linux" ] (system:
     let
-      pkgs = haskell-nix.legacyPackages.${system}.extend serokell-nix.overlay;
+      pkgs = haskell-nix.legacyPackages.${system}.extend
+        (haskell-nix.legacyPackages.${system}.lib.composeManyExtensions [
+          serokell-nix.overlay
+          # silly workaround for https://gitlab.haskell.org/ghc/ghc/-/issues/21254
+          (final: prev: prev.lib.recursiveUpdate prev {
+            haskell-nix.iserv-proxy-exes.ghc902.iserv-proxy-interpreter.override =
+              attrs: prev.haskell-nix.iserv-proxy-exes.ghc902.iserv-proxy-interpreter.override
+                (attrs // { enableDebugRTS = false; });
+          })
+        ]);
 
       flake = (pkgs.haskell-nix.stackProject {
         src = builtins.path {

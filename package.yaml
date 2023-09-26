@@ -65,6 +65,7 @@ ghc-options:
   - -Wno-all-missed-specialisations
   - -Wno-prepositive-qualified-module
   - -Wno-monomorphism-restriction
+  - -Wno-missing-kind-signatures
 
   # This option avoids a warning on case-insensitive systems:
   # https://github.com/haskell/cabal/issues/4739

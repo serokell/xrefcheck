@@ -151,6 +151,7 @@ tests:
       - directory
       - firefly
       - http-types
+      - lens
       - modern-uri
       - nyan-interpolation
       - o-clock
@@ -172,6 +173,7 @@ tests:
     generated-other-modules:
       - Paths_xrefcheck
     dependencies:
+      - lens
       - optparse-applicative
       - tagged
       - tasty

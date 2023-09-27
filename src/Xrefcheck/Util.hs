@@ -17,9 +17,9 @@ module Xrefcheck.Util
   , module Xrefcheck.Util.Interpolate
   ) where
 
-import Universum
+import Universum hiding ((.~))
 
-import Control.Lens (LensRules, lensField, lensRules, mappingNamer)
+import Control.Lens (LensRules, lensField, lensRules, mappingNamer, (.~))
 import Data.Aeson qualified as Aeson
 import Data.Aeson.Casing (aesonPrefix, camelCase)
 import Data.Fixed (Fixed (MkFixed), HasResolution (resolution))

@@ -5,9 +5,10 @@
 
 module Test.Xrefcheck.IgnoreAnnotationsSpec where
 
-import Universum
+import Universum hiding ((^.))
 
 import CMarkGFM (PosInfo (..))
+import Control.Lens ((^.))
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 

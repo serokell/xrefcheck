@@ -5,8 +5,9 @@
 
 module Test.Xrefcheck.RedirectConfigSpec where
 
-import Universum
+import Universum hiding ((%~), (.~))
 
+import Control.Lens ((%~), (.~))
 import Data.CaseInsensitive qualified as CI
 import Data.Map qualified as M
 import Network.HTTP.Types (mkStatus)

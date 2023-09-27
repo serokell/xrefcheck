@@ -5,8 +5,9 @@
 
 module Test.Xrefcheck.TrailingSlashSpec where
 
-import Universum
+import Universum hiding ((.~))
 
+import Control.Lens ((.~))
 import System.Directory (doesFileExist)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertFailure, testCase)

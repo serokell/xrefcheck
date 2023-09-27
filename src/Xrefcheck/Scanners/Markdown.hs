@@ -16,11 +16,11 @@ module Xrefcheck.Scanners.Markdown
   , makeError
   ) where
 
-import Universum
+import Universum hiding (use)
 
 import CMarkGFM
   (Node (..), NodeType (..), PosInfo (..), commonmarkToNode, extAutolink, optFootnotes)
-import Control.Lens (_Just, makeLenses, makeLensesFor, (.=))
+import Control.Lens (_Just, makeLenses, makeLensesFor, use, (.=))
 import Control.Monad.Trans.Writer.CPS (Writer, runWriter, tell)
 import Data.Aeson (FromJSON (..), genericParseJSON)
 import Data.ByteString.Lazy qualified as BSL

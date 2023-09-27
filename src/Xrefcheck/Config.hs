@@ -11,9 +11,9 @@ module Xrefcheck.Config
   , defConfigText
   ) where
 
-import Universum
+import Universum hiding ((.~))
 
-import Control.Lens (makeLensesWith)
+import Control.Lens (makeLensesWith, (.~))
 import Data.Aeson (genericParseJSON)
 import Data.Yaml (FromJSON (..), decodeEither', prettyPrintParseException, withText)
 import Text.Regex.TDFA.Text ()

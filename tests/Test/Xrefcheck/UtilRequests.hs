@@ -15,10 +15,11 @@ module Test.Xrefcheck.UtilRequests
   , VerifyLinkTestEntry (..)
   ) where
 
-import Universum
+import Universum hiding ((.~))
 
 import Control.Concurrent (forkIO, killThread)
 import Control.Exception qualified as E
+import Control.Lens ((.~))
 import Data.Map qualified as M
 import Data.Set qualified as S
 import Test.Tasty.HUnit (assertBool)

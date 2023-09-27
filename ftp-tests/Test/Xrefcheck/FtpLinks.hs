@@ -7,8 +7,9 @@ module Test.Xrefcheck.FtpLinks
   , test_FtpLinks
   ) where
 
-import Universum
+import Universum hiding ((.~))
 
+import Control.Lens ((.~))
 import Data.Tagged (untag)
 import Options.Applicative (help, long, strOption)
 import Test.Tasty (TestTree, askOption, testGroup)

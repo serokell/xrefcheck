@@ -9,9 +9,9 @@
 
 module Xrefcheck.Core where
 
-import Universum
+import Universum hiding ((^..))
 
-import Control.Lens (folded, makeLenses, makePrisms, to, united)
+import Control.Lens (folded, makeLenses, makePrisms, to, united, (^..))
 import Data.Aeson (FromJSON (..), withText)
 import Data.Char (isAlphaNum)
 import Data.Char qualified as C

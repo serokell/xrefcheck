@@ -768,7 +768,7 @@ checkExternalResource followed config@Config{..} link
           other -> throwError $ ExternalResourceSomeError $ show other
       where
         retryAfterInfo :: Response a -> Maybe RetryAfter
-        retryAfterInfo = readMaybe . decodeUtf8 <=< L.lookup hRetryAfter . responseHeaders
+        retryAfterInfo = readMaybe . decodeUtf8 @Text <=< L.lookup hRetryAfter . responseHeaders
 
     checkFtp :: URI -> Bool -> ExceptT VerifyError IO ()
     checkFtp uri secure = do

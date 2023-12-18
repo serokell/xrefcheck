@@ -13,7 +13,7 @@ jobs:
   dockerhub-release:
     runs-on: [self-hosted, nix]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Push release image to dockerhub
         run: |

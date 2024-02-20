@@ -5,9 +5,9 @@
 
 module Test.Xrefcheck.IgnoreRegexSpec where
 
-import Universum hiding ((^.))
+import Universum hiding ((.~), (^.))
 
-import Control.Lens ((^.))
+import Control.Lens ((.~), (^.))
 import Data.Reflection (give)
 import Data.Yaml (decodeEither')
 import Test.Tasty (TestTree, testGroup)

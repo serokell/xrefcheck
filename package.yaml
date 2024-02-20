@@ -171,6 +171,7 @@ tests:
     generated-other-modules:
       - Paths_xrefcheck
     dependencies:
+      - lens
       - optparse-applicative
       - tagged
       - tasty

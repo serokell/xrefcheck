@@ -19,7 +19,7 @@
           name = "xrefcheck";
           path = ./.;
         };
-        modules = [{
+        modules = [({ pkgs, ... }: {
           packages.xrefcheck = {
             ghcOptions =
               [ "-Werror" ];
@@ -51,7 +51,10 @@
               xrefcheck-tests.build-tools = [ pkgs.git ];
             };
           };
-        }];
+          # bitvec compilation on mingw64 with 'simd' flag fails with
+          # unknown symbol `__cpu_model'
+          packages.bitvec.flags.simd = !pkgs.stdenv.targetPlatform.isWindows;
+        })];
       }).flake { crossPlatforms = p: [ p.musl64 p.mingwW64 ]; };
 
     in

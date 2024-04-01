@@ -12,12 +12,6 @@
       pkgs = haskell-nix.legacyPackages.${system}.extend
         (haskell-nix.legacyPackages.${system}.lib.composeManyExtensions [
           serokell-nix.overlay
-          # silly workaround for https://gitlab.haskell.org/ghc/ghc/-/issues/21254
-          (final: prev: prev.lib.recursiveUpdate prev {
-            haskell-nix.iserv-proxy-exes.ghc902.iserv-proxy-interpreter.override =
-              attrs: prev.haskell-nix.iserv-proxy-exes.ghc902.iserv-proxy-interpreter.override
-                (attrs // { enableDebugRTS = false; });
-          })
         ]);
 
       flake = (pkgs.haskell-nix.stackProject {
@@ -25,7 +19,7 @@
           name = "xrefcheck";
           path = ./.;
         };
-        modules = [{
+        modules = [({ pkgs, ... }: {
           packages.xrefcheck = {
             ghcOptions =
               [ "-Werror" ];
@@ -57,7 +51,10 @@
               xrefcheck-tests.build-tools = [ pkgs.git ];
             };
           };
-        }];
+          # bitvec compilation on mingw64 with 'simd' flag fails with
+          # unknown symbol `__cpu_model'
+          packages.bitvec.flags.simd = !pkgs.stdenv.targetPlatform.isWindows;
+        })];
       }).flake { crossPlatforms = p: [ p.musl64 p.mingwW64 ]; };
 
     in

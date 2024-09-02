@@ -43,7 +43,7 @@ jobs:
     runs-on: windows-latest
     strategy:
       matrix:
-        stack: ["2.7.5"]
+        stack: ["2.15.7"]
         ghc: ["9.4.8"]
         include:
           - ghc: "9.4.8"

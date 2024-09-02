@@ -46,10 +46,10 @@ jobs:
     runs-on: windows-latest
     strategy:
       matrix:
-        stack: ["2.7.5"]
-        ghc: ["9.0.2"]
+        stack: ["2.15.7"]
+        ghc: ["9.4.8"]
         include:
-          - ghc: "9.0.2"
+          - ghc: "9.4.8"
             stackyaml: stack.yaml
     steps:
     - uses: actions/checkout@v4

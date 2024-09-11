@@ -34,7 +34,7 @@ packages:
     hackage: nyan-interpolation-0.9.2
 snapshots:
 - completed:
-    sha256: ef98d70e4018bf01feb00ccdcd33ab26d056dbb71b38057c78fdd0d1ec671c85
-    size: 618740
-    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/19/13.yaml
-  original: lts-19.13
+    sha256: 5a59b2a405b3aba3c00188453be172b85893cab8ebc352b1ef58b0eae5d248a2
+    size: 650475
+    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/20/26.yaml
+  original: lts-20.26

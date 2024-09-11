@@ -47,9 +47,9 @@ jobs:
     strategy:
       matrix:
         stack: ["2.7.5"]
-        ghc: ["9.0.2"]
+        ghc: ["9.2.8"]
         include:
-          - ghc: "9.0.2"
+          - ghc: "9.2.8"
             stackyaml: stack.yaml
     steps:
     - uses: actions/checkout@v4

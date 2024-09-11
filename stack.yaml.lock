@@ -32,9 +32,16 @@ packages:
       size: 662
   original:
     hackage: nyan-interpolation-0.9.2
+- completed:
+    hackage: ftp-client-0.5.1.6@sha256:fab127defe1efb165af58f84dbc0f57a39334e39cca9829946149b363a71d1ca,1694
+    pantry-tree:
+      sha256: 721799835406e36c6f14b032b1de9c95ae038261807c228a694342a1da8375bd
+      size: 322
+  original:
+    hackage: ftp-client-0.5.1.6@sha256:fab127defe1efb165af58f84dbc0f57a39334e39cca9829946149b363a71d1ca,1694
 snapshots:
 - completed:
-    sha256: ef98d70e4018bf01feb00ccdcd33ab26d056dbb71b38057c78fdd0d1ec671c85
-    size: 618740
-    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/19/13.yaml
-  original: lts-19.13
+    sha256: 417fa04a2ed8916cdae74c475ff97ac80857fed5000f19dce4f9564b5e635294
+    size: 720000
+    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/22/32.yaml
+  original: lts-22.32

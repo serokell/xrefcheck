@@ -12,12 +12,6 @@
       pkgs = haskell-nix.legacyPackages.${system}.extend
         (haskell-nix.legacyPackages.${system}.lib.composeManyExtensions [
           serokell-nix.overlay
-          # silly workaround for https://gitlab.haskell.org/ghc/ghc/-/issues/21254
-          (final: prev: prev.lib.recursiveUpdate prev {
-            haskell-nix.iserv-proxy-exes.ghc902.iserv-proxy-interpreter.override =
-              attrs: prev.haskell-nix.iserv-proxy-exes.ghc902.iserv-proxy-interpreter.override
-                (attrs // { enableDebugRTS = false; });
-          })
         ]);
 
       flake = (pkgs.haskell-nix.stackProject {

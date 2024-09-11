@@ -142,6 +142,8 @@ tests:
     generated-other-modules:
       - Paths_xrefcheck
     dependencies:
+      - optparse-applicative
+      - tagged
       - case-insensitive
       - cmark-gfm
       - containers

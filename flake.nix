@@ -62,7 +62,7 @@
 
     in
       pkgs.lib.lists.foldr pkgs.lib.recursiveUpdate {} [
-        { inherit (flake) packages apps; }
+        { inherit (flake) packages apps devShells; }
         {
           legacyPackages = pkgs;
 

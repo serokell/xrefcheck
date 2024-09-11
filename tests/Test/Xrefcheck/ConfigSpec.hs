@@ -13,7 +13,7 @@ import Control.Exception qualified as E
 import Data.List (isInfixOf)
 import Data.Yaml (ParseException (..), decodeEither')
 import Network.HTTP.Types (Status (..))
-import Test.Tasty (TestTree, testGroup)
+import Test.Tasty (TestTree, askOption, testGroup)
 import Test.Tasty.HUnit (assertFailure, testCase, (@?=))
 import Test.Tasty.QuickCheck (ioProperty, testProperty)
 
@@ -22,7 +22,7 @@ import Xrefcheck.Core (Flavor (GitHub), allFlavors)
 import Xrefcheck.Scan (ecIgnoreExternalRefsToL)
 import Xrefcheck.Verify (VerifyError (..), checkExternalResource)
 
-import Test.Xrefcheck.Util (mockServer)
+import Test.Xrefcheck.Util (mockServer, mockServerUrl)
 
 test_config :: [TestTree]
 test_config =
@@ -43,28 +43,29 @@ test_config =
             , "and verify changes"
             ]
       ]
-  , testGroup "`ignoreAuthFailures` working as expected" $
+  , askOption $ \mockServerPort ->
+    testGroup "`ignoreAuthFailures` working as expected" $
     let config = defConfig GitHub & cExclusionsL . ecIgnoreExternalRefsToL .~ []
 
         setIgnoreAuthFailures value =
           config & cNetworkingL . ncIgnoreAuthFailuresL .~ value
     in [ testCase "when True - assume 401 status is valid" $
-          checkLinkWithServer (setIgnoreAuthFailures True)
-            "http://127.0.0.1:3000/401" $ Right ()
+          checkLinkWithServer mockServerPort (setIgnoreAuthFailures True)
+            "/401" $ Right ()
 
        , testCase "when False - assume 401 status is invalid" $
-          checkLinkWithServer (setIgnoreAuthFailures False)
-            "http://127.0.0.1:3000/401" $
+          checkLinkWithServer mockServerPort (setIgnoreAuthFailures False)
+            "/401" $
                 Left $ ExternalHttpResourceUnavailable $
                   Status { statusCode = 401, statusMessage = "Unauthorized" }
 
        , testCase "when True - assume 403 status is valid" $
-          checkLinkWithServer (setIgnoreAuthFailures True)
-            "http://127.0.0.1:3000/403" $ Right ()
+          checkLinkWithServer mockServerPort (setIgnoreAuthFailures True)
+            "/403" $ Right ()
 
        , testCase "when False - assume 403 status is invalid" $
-          checkLinkWithServer (setIgnoreAuthFailures False)
-            "http://127.0.0.1:3000/403" $
+          checkLinkWithServer mockServerPort (setIgnoreAuthFailures False)
+            "/403" $
                 Left $ ExternalHttpResourceUnavailable $
                   Status { statusCode = 403, statusMessage = "Forbidden" }
        ]
@@ -80,7 +81,8 @@ test_config =
   ]
 
   where
-    checkLinkWithServer config link expectation =
-      E.bracket (forkIO mockServer) killThread $ \_ -> do
-        result <- runExceptT $ checkExternalResource emptyChain config link
+    checkLinkWithServer mockServerPort config link expectation =
+      E.bracket (forkIO (mockServer mockServerPort)) killThread $ \_ -> do
+        let url = mockServerUrl mockServerPort link
+        result <- runExceptT $ checkExternalResource emptyChain config url
         result @?= expectation

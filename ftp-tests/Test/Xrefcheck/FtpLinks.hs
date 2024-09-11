@@ -9,7 +9,7 @@ module Test.Xrefcheck.FtpLinks
 
 import Universum
 
-import Data.Tagged (Tagged, untag)
+import Data.Tagged (untag)
 import Options.Applicative (help, long, strOption)
 import Test.Tasty (TestTree, askOption, testGroup)
 import Test.Tasty.HUnit (assertBool, assertFailure, testCase, (@?=))
@@ -36,8 +36,8 @@ instance IsOption FtpHostOpt where
   optionHelp = "[Test.Xrefcheck.FtpLinks] FTP host without trailing slash"
   parseValue v = FtpHostOpt <$> safeRead v
   optionCLParser = FtpHostOpt <$> strOption
-    (  long (untag (optionName :: Tagged FtpHostOpt String))
-    <> help (untag (optionHelp :: Tagged FtpHostOpt String))
+    (  long (untag @FtpHostOpt optionName)
+    <> help (untag @FtpHostOpt optionHelp)
     )
 
 config :: Config

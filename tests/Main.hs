@@ -9,7 +9,12 @@ module Main
 import Universum
 
 import Test.Tasty
+import Test.Tasty.Ingredients (Ingredient)
+import Test.Xrefcheck.Util (mockServerOptions)
 import Tree (tests)
 
 main :: IO ()
-main = tests >>= defaultMain
+main = tests >>= defaultMainWithIngredients ingredients
+
+ingredients :: [Ingredient]
+ingredients = includingOptions mockServerOptions : defaultIngredients

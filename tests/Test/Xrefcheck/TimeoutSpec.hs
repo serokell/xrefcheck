@@ -5,8 +5,9 @@
 
 module Test.Xrefcheck.TimeoutSpec where
 
-import Universum
+import Universum hiding ((.~))
 
+import Control.Lens ((.~))
 import Data.CaseInsensitive qualified as CI
 import Data.Map qualified as M
 import Data.Set qualified as S

@@ -65,6 +65,7 @@ ghc-options:
   - -Wno-all-missed-specialisations
   - -Wno-prepositive-qualified-module
   - -Wno-monomorphism-restriction
+  - -Wno-missing-kind-signatures
 
   # This option avoids a warning on case-insensitive systems:
   # https://github.com/haskell/cabal/issues/4739
@@ -142,12 +143,15 @@ tests:
     generated-other-modules:
       - Paths_xrefcheck
     dependencies:
+      - optparse-applicative
+      - tagged
       - case-insensitive
       - cmark-gfm
       - containers
       - directory
       - firefly
       - http-types
+      - lens
       - modern-uri
       - nyan-interpolation
       - o-clock
@@ -169,6 +173,7 @@ tests:
     generated-other-modules:
       - Paths_xrefcheck
     dependencies:
+      - lens
       - optparse-applicative
       - tagged
       - tasty

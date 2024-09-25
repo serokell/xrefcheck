@@ -5,10 +5,11 @@
 
 module Test.Xrefcheck.ConfigSpec where
 
-import Universum
+import Universum hiding ((.~))
 
 import Control.Concurrent (forkIO, killThread)
 import Control.Exception qualified as E
+import Control.Lens ((.~))
 
 import Data.List (isInfixOf)
 import Data.Yaml (ParseException (..), decodeEither')

@@ -5,8 +5,9 @@
 
 module Test.Xrefcheck.AnchorsInHeadersSpec where
 
-import Universum
+import Universum hiding ((^.))
 
+import Control.Lens ((^.))
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 

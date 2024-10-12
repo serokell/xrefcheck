@@ -75,19 +75,6 @@ jobs:
         path: ~/AppData/Local/Programs/stack
         key: ${{ runner.os }}-${{ matrix.ghc }}-appdata-stack
 
-
-# When editing this action, make sure it can run without using cached folders.
-# Yes, it tries to install mingw-w64-x86_64-pcre twice
-    - name: install pacman dependencies
-      run: |
-        stack --system-ghc exec -- pacman -S --needed --noconfirm pkgconf;
-        stack --system-ghc exec -- pacman -S --needed --noconfirm msys2-keyring;
-        stack --system-ghc exec -- pacman --noconfirm -Syuu;
-        stack --system-ghc exec -- pacman -S --needed --noconfirm mingw-w64-x86_64-pcre;
-        stack --system-ghc exec -- pacman --noconfirm -Syuu;
-        stack --system-ghc exec -- pacman -S --needed --noconfirm mingw-w64-x86_64-pcre;
-        stack --system-ghc exec -- pacman -S --needed --noconfirm pcre-devel;
-
     - name: Build
       run: |
         stack build --system-ghc --stack-yaml ${{ matrix.stackyaml }} --test --bench --no-run-tests --no-run-benchmarks --ghc-options '-Werror'

@@ -10,7 +10,6 @@ packages:
 - .
 
 extra-deps:
-- firefly-0.2.1.0@sha256:e9d73486464c3e223ec457e02b30ddd5b550fdbf6292b268c64581e2b07d888b,1519
 - cmark-gfm-0.2.5
 - nyan-interpolation-core-0.9.2
 - nyan-interpolation-0.9.2

@@ -10,16 +10,17 @@ import Universum
 import Control.Concurrent (forkIO, killThread)
 import Control.Exception qualified as E
 import Data.CaseInsensitive qualified as CI
-import Data.Map qualified as M
 import Data.Set qualified as S
 import Data.Time (addUTCTime, defaultTimeLocale, formatTime, getCurrentTime, rfc822DateFormat)
 import Data.Time.Clock.POSIX (getPOSIXTime)
 import Network.HTTP.Types (Status (..), ok200, serviceUnavailable503, tooManyRequests429)
-import Network.HTTP.Types.Header (hRetryAfter)
+import Network.HTTP.Types.Header (HeaderName, hRetryAfter)
+import Network.Wai (requestMethod)
+import Network.Wai.Handler.Warp qualified as Web
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertBool, testCase, (@?=))
 import Time (sec, (-:-))
-import Web.Firefly (ToResponse (toResponse), getMethod, route, run)
+import Web.Scotty qualified as Web
 
 import Test.Xrefcheck.UtilRequests
 import Xrefcheck.Core
@@ -113,9 +114,10 @@ test_tooManyRequests = testGroup "429 response tests"
         mock429WithGlobalIORef :: IORef [(Text, Status)] -> IO ()
         mock429WithGlobalIORef infoReverseAccumulatorRef = do
           callCountRef <- newIORef @_ @Int 0
-          run 5000 $ do
-            route "/429grandfinale" $ do
-              m <- getMethod
+          Web.run 5000 <=< Web.scottyApp $
+            Web.matchAny "/429grandfinale" $ do
+              req <- Web.request
+              let m = decodeUtf8 (requestMethod req)
               callCount <- atomicModifyIORef' callCountRef $ \cc -> (cc + 1, cc)
               atomicModifyIORef' infoReverseAccumulatorRef $ \lst ->
                 ( ( m
@@ -125,14 +127,12 @@ test_tooManyRequests = testGroup "429 response tests"
                   ) : lst
                 , ()
                 )
-              pure $ if
-                | m == "GET" -> toResponse ("" :: Text, ok200)
-                | callCount == 0 -> toResponse
-                    ( "" :: Text
-                    , tooManyRequests429
-                    , M.fromList [(CI.map (decodeUtf8 @Text) hRetryAfter, ["1" :: Text])]
-                    )
-                | otherwise -> toResponse ("" :: Text, serviceUnavailable503)
+              if
+                | m == "GET"     -> Web.status ok200
+                | callCount == 0 -> do
+                    Web.status tooManyRequests429
+                    setHeader hRetryAfter "1"
+                | otherwise      -> Web.status serviceUnavailable503
       infoReverseAccumulatorRef <- newIORef []
       setRef <- newIORef S.empty
       E.bracket (forkIO $ mock429WithGlobalIORef infoReverseAccumulatorRef) killThread $ \_ -> do
@@ -150,14 +150,15 @@ test_tooManyRequests = testGroup "429 response tests"
     mock429 :: Text -> Status -> IO ()
     mock429 retryAfter status = do
       callCountRef <- newIORef @_ @Int 0
-      run 5000 $
-        route "/429" $ do
+      Web.run 5000 <=< Web.scottyApp $
+        Web.matchAny "/429" $ do
           callCount <- atomicModifyIORef' callCountRef $ \cc -> (cc + 1, cc)
-          pure $
-            if callCount == 0
-            then toResponse
-              ( "" :: Text
-              , tooManyRequests429
-              , M.fromList [(CI.map (decodeUtf8 @Text) hRetryAfter, [retryAfter])]
-              )
-            else toResponse ("" :: Text, status)
+          if callCount == 0
+          then do
+            setHeader hRetryAfter retryAfter
+            Web.status tooManyRequests429
+          else do
+            Web.status status
+
+    setHeader :: HeaderName -> Text -> Web.ActionM ()
+    setHeader hdr value = Web.setHeader (decodeUtf8 (CI.original hdr)) (fromStrict value)

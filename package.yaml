@@ -149,7 +149,9 @@ tests:
       - cmark-gfm
       - containers
       - directory
-      - firefly
+      - wai
+      - warp
+      - scotty
       - http-types
       - lens
       - modern-uri

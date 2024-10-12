@@ -5,13 +5,6 @@
 
 packages:
 - completed:
-    hackage: firefly-0.2.1.0@sha256:e9d73486464c3e223ec457e02b30ddd5b550fdbf6292b268c64581e2b07d888b,1519
-    pantry-tree:
-      sha256: 51d4bf283e1d9ae37e43cd387b112919e45f2fc088f57cbd33c8bad9b0c179f1
-      size: 600
-  original:
-    hackage: firefly-0.2.1.0@sha256:e9d73486464c3e223ec457e02b30ddd5b550fdbf6292b268c64581e2b07d888b,1519
-- completed:
     hackage: cmark-gfm-0.2.5@sha256:a53b3c6ed20b5476ae18df5f28ababbb6ec8543f9a0758f0381a532d7a879fc0,5188
     pantry-tree:
       sha256: 8d137f125ee673d5c6b193c85657ea94124c90869edada72633df282e33058e0

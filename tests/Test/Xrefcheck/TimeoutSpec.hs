@@ -12,7 +12,7 @@ import Data.CaseInsensitive qualified as CI
 import Data.Set qualified as S
 import Network.HTTP.Types (ok200, tooManyRequests429)
 import Network.HTTP.Types.Header (HeaderName, hRetryAfter)
-import Network.Wai.Handler.Warp qualified as Web
+import Network.Wai qualified as Web
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase)
 import Time (Second, Time, sec, threadDelay)
@@ -49,7 +49,7 @@ test_timeout = testGroup "Timeout tests"
   , testCase "Fails on timeout if another domain returned 429" $ do
       setRef <- newIORef S.empty
       checkMultipleLinksWithServer
-        (mockTimeout (sec 0.4) [Respond429, Ok, Delay, Delay])
+        (5000, mockTimeout (sec 0.4) [Respond429, Ok, Delay, Delay])
         setRef
         [ VerifyLinkTestEntry
             { vlteConfigModifier = \c -> c
@@ -73,7 +73,7 @@ test_timeout = testGroup "Timeout tests"
   , testCase "Succeeds on timeout if another path of this domain returned 429" $ do
       setRef <- newIORef S.empty
       checkMultipleLinksWithServer
-        (mockTimeout (sec 0.4) [Respond429, Ok, Delay, Delay])
+        (5000, mockTimeout (sec 0.4) [Respond429, Ok, Delay, Delay])
         setRef
         [ VerifyLinkTestEntry
             { vlteConfigModifier = \c -> c
@@ -111,7 +111,7 @@ test_timeout = testGroup "Timeout tests"
           & setAllowedTimeout
           & configModifier)
         setRef
-        (mockTimeout (sec 0.4) mockResponses)
+        (5000, mockTimeout (sec 0.4) mockResponses)
         "http://127.0.0.1:5000/timeout" prog $
           VerifyResult $
             [ExternalHttpTimeout $ Just (DomainName "127.0.0.1") | not shouldSucceed]
@@ -119,10 +119,10 @@ test_timeout = testGroup "Timeout tests"
     -- When called for the first (N-1) times, waits for specified
     -- amount of seconds and returns an arbitrary result.
     -- When called N time returns the result immediately.
-    mockTimeout :: Time Second -> [MockTimeoutBehaviour] -> IO ()
+    mockTimeout :: Time Second -> [MockTimeoutBehaviour] -> IO Web.Application
     mockTimeout timeout behList = do
       ref <- newIORef @_ behList
-      Web.run 5000 <=< Web.scottyApp $ do
+      Web.scottyApp $ do
         Web.matchAny "/timeout" $ handler ref
         Web.matchAny "/timeoutother" $ handler ref
       where

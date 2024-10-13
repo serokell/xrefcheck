@@ -11,7 +11,7 @@ import Control.Lens ((.~))
 import Data.CaseInsensitive qualified as CI
 import Network.HTTP.Types (movedPermanently301)
 import Network.HTTP.Types.Header (HeaderName, hLocation)
-import Network.Wai.Handler.Warp qualified as Web
+import Network.Wai qualified as Web
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase)
 import Web.Scotty qualified as Web
@@ -28,7 +28,7 @@ test_redirectRequests = testGroup "Redirect chain tests"
       checkLinkAndProgressWithServer
         (configMod 5)
         setRef
-        mockRedirect
+        (5000, mockRedirect)
         (link "/broken1")
         progress
         (VerifyResult [RedirectMissingLocation $ chain [ "/broken1", "/broken2", "/broken3"]])
@@ -37,7 +37,7 @@ test_redirectRequests = testGroup "Redirect chain tests"
       checkLinkAndProgressWithServer
         (configMod 5)
         setRef
-        mockRedirect
+        (5000, mockRedirect)
         (link "/cycle1")
         progress
         (VerifyResult [RedirectChainCycle $ chain ["/cycle1", "/cycle2", "/cycle3", "/cycle4", "/cycle2"]])
@@ -47,7 +47,7 @@ test_redirectRequests = testGroup "Redirect chain tests"
           checkLinkAndProgressWithServer
             (configMod 1)
             setRef
-            mockRedirect
+            (5000, mockRedirect)
             (link "/relative/host")
             progress
             (VerifyResult [RedirectChainLimit $ chain ["/relative/host", "/cycle2", "/cycle3"]])
@@ -56,17 +56,17 @@ test_redirectRequests = testGroup "Redirect chain tests"
           checkLinkAndProgressWithServer
             (configMod 1)
             setRef
-            mockRedirect
+            (5000, mockRedirect)
             (link "/relative/path")
             progress
             (VerifyResult [RedirectChainLimit $ chain ["/relative/path", "/relative/host", "/cycle2"]])
       ]
-  , testCase "Other host redirect" $ withServer otherMockRedirect $ do
+  , testCase "Other host redirect" $ withServer (5001, otherMockRedirect) $ do
       setRef <- newIORef mempty
       checkLinkAndProgressWithServer
         (configMod 1)
         setRef
-        mockRedirect
+        (5000, mockRedirect)
         "http://127.0.0.1:5001/other/host"
         progress
         (VerifyResult [RedirectChainLimit $ fromList ["http://127.0.0.1:5001/other/host", link "/relative/host", link "/cycle2"]])
@@ -76,7 +76,7 @@ test_redirectRequests = testGroup "Redirect chain tests"
           checkLinkAndProgressWithServer
             (configMod 2)
             setRef
-            mockRedirect
+            (5000, mockRedirect)
             (link "/cycle1")
             progress
             (VerifyResult [RedirectChainLimit $ chain ["/cycle1", "/cycle2", "/cycle3", "/cycle4"]])
@@ -85,7 +85,7 @@ test_redirectRequests = testGroup "Redirect chain tests"
           checkLinkAndProgressWithServer
             (configMod 0)
             setRef
-            mockRedirect
+            (5000, mockRedirect)
             (link "/cycle1")
             progress
             (VerifyResult [RedirectChainLimit $ chain ["/cycle1", "/cycle2"]])
@@ -94,7 +94,7 @@ test_redirectRequests = testGroup "Redirect chain tests"
           checkLinkAndProgressWithServer
             (configMod (-1))
             setRef
-            mockRedirect
+            (5000, mockRedirect)
             (link "/cycle1")
             progress
             (VerifyResult [RedirectChainCycle $ chain ["/cycle1", "/cycle2", "/cycle3", "/cycle4", "/cycle2"]])
@@ -118,9 +118,9 @@ test_redirectRequests = testGroup "Redirect chain tests"
     setHeader :: HeaderName -> Text -> Web.ActionM ()
     setHeader hdr value = Web.setHeader (decodeUtf8 (CI.original hdr)) (fromStrict value)
 
-    mockRedirect :: IO ()
+    mockRedirect :: IO Web.Application
     mockRedirect = do
-      Web.run 5000 <=< Web.scottyApp $ do
+      Web.scottyApp $ do
         -- A set of redirect routes that correspond to a broken chain.
         Web.matchAny "/broken1" $ do
           setHeader hLocation (link "/broken2")
@@ -155,8 +155,8 @@ test_redirectRequests = testGroup "Redirect chain tests"
           Web.status movedPermanently301
 
     -- To other host
-    otherMockRedirect :: IO ()
+    otherMockRedirect :: IO Web.Application
     otherMockRedirect =
-      Web.run 5001 <=< Web.scottyApp $ Web.matchAny "/other/host" $ do
+      Web.scottyApp $ Web.matchAny "/other/host" $ do
         setHeader hLocation (link "/relative/host")
         Web.status movedPermanently301

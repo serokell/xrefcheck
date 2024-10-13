@@ -11,7 +11,7 @@ import Data.CaseInsensitive qualified as CI
 import Data.Set qualified as S
 import Network.HTTP.Types (Status, mkStatus)
 import Network.HTTP.Types.Header (HeaderName, hLocation)
-import Network.Wai.Handler.Warp qualified as Web
+import Network.Wai qualified as Web
 import Test.Tasty (TestName, TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, testCase)
 import Web.Scotty qualified as Web
@@ -69,17 +69,16 @@ test_redirectRequests = testGroup "Redirect response defaults"
       setRef <- newIORef S.empty
       checkLinkAndProgressWithServerDefault
         setRef
-        (mockRedirect expectedLocation expectedStatus)
+        (5000, mockRedirect expectedLocation expectedStatus)
         url
         ( (if isNothing expectedError then reportSuccess else reportError) "" $
             initProgress 1
         )
         (VerifyResult $ maybeToList expectedError)
 
-    mockRedirect :: Maybe Text -> Status -> IO ()
+    mockRedirect :: Maybe Text -> Status -> IO Web.Application
     mockRedirect expectedLocation expectedStatus =
-      Web.run 5000 <=< Web.scottyApp $
-      Web.matchAny "/redirect" $ do
+      Web.scottyApp $ Web.matchAny "/redirect" $ do
         whenJust expectedLocation (setHeader hLocation)
         Web.status expectedStatus
 

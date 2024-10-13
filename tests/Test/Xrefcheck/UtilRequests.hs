@@ -22,6 +22,8 @@ import Control.Exception qualified as E
 import Control.Lens ((.~))
 import Data.Map qualified as M
 import Data.Set qualified as S
+import Network.Wai qualified as Web
+import Network.Wai.Handler.Warp qualified as Web
 import Test.Tasty.HUnit (assertBool)
 import Text.Interpolation.Nyan
 
@@ -33,11 +35,26 @@ import Xrefcheck.System
 import Xrefcheck.Util
 import Xrefcheck.Verify
 
-withServer :: IO () -> IO () -> IO ()
-withServer mock = E.bracket (forkIO mock) killThread . const
+withServer :: (Int, IO Web.Application) -> IO () -> IO ()
+withServer (port, createApp) act = do
+  app <- createApp
+  ready :: MVar () <- newEmptyMVar
+    -- In the forked thread: the server puts () as soon as it's ready to process requests.
+    -- In the current therad: wait for () before running the action.
+    --
+    -- This ensures that we don't encounter this error:
+    --   ConnectionFailure Network.Socket.connect: <socket: 4>: does not exist (Connection refused)
+  E.bracket (serve ready app) killThread (\_ -> takeMVar ready >> act)
+  where
+    serve ready app =
+      forkIO $ Web.runSettings settings app
+      where
+        settings =
+            Web.setBeforeMainLoop (putMVar ready ()) $
+            Web.setPort port Web.defaultSettings
 
 checkMultipleLinksWithServer
-  :: IO ()
+  :: (Int, IO Web.Application)
   -> IORef (S.Set DomainName)
   -> [VerifyLinkTestEntry]
   -> IO ()
@@ -54,7 +71,7 @@ checkMultipleLinksWithServer mock setRef entries =
 checkLinkAndProgressWithServer
   :: (Config -> Config)
   -> IORef (Set DomainName)
-  -> IO ()
+  -> (Int, IO Web.Application)
   -> Text
   -> Progress Int Text
   -> VerifyResult VerifyError
@@ -89,7 +106,7 @@ checkLinkAndProgress configModifier setRef link progress vrExpectation = do
 
 checkLinkAndProgressWithServerDefault
   :: IORef (Set DomainName)
-  -> IO ()
+  -> (Int, IO Web.Application)
   -> Text
   -> Progress Int Text
   -> VerifyResult VerifyError

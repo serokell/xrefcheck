@@ -5,16 +5,17 @@
 
 module Test.Xrefcheck.RedirectConfigSpec where
 
-import Universum
+import Universum hiding ((%~), (.~))
 
+import Control.Lens ((%~), (.~))
 import Data.CaseInsensitive qualified as CI
-import Data.Map qualified as M
-import Network.HTTP.Types (mkStatus)
-import Network.HTTP.Types.Header (hLocation)
+import Network.HTTP.Types (found302, movedPermanently301, temporaryRedirect307)
+import Network.HTTP.Types.Header (HeaderName, hLocation)
+import Network.Wai.Handler.Warp qualified as Web
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase)
 import Text.Regex.TDFA.Text qualified as R
-import Web.Firefly (App, Status, ToResponse (toResponse), route, run)
+import Web.Scotty qualified as Web
 
 import Test.Xrefcheck.UtilRequests
 import Xrefcheck.Config
@@ -155,20 +156,13 @@ test_redirectRequests = testGroup "Redirect config tests"
     regex :: Text -> Maybe R.Regex
     regex = rightToMaybe . R.compile defaultCompOption defaultExecOption
 
-    status :: Int -> Status
-    status code = mkStatus code "Redirect"
-
     configMod :: [RedirectRule] -> [R.Regex] -> Config -> Config
     configMod rules exclussions config = config
       & cNetworkingL . ncExternalRefRedirectsL %~ (rules <>)
       & cExclusionsL . ecIgnoreExternalRefsToL .~ exclussions
 
-    redirectRoute :: Text -> Int -> Maybe Text -> App ()
-    redirectRoute name code to = route name $ pure $ toResponse
-      ( "" :: Text
-      , status code
-      , M.fromList [(CI.map (decodeUtf8 @Text) hLocation, fmap link $ maybeToList to)]
-      )
+    setHeader :: HeaderName -> Text -> Web.ActionM ()
+    setHeader hdr value = Web.setHeader (decodeUtf8 (CI.original hdr)) (fromStrict value)
 
     progress :: Bool -> Progress Int Text
     progress shouldSucceed = report "" $ initProgress 1
@@ -180,10 +174,20 @@ test_redirectRequests = testGroup "Redirect config tests"
 
     mockRedirect :: IO ()
     mockRedirect =
-      run 5000 do
-        route "/ok" $ pure $ toResponse ("Ok" :: Text)
-        redirectRoute "/permanent-redirect" 301 $ Just "/ok"
-        redirectRoute "/temporary-redirect" 302 $ Just "/ok"
-        redirectRoute "/follow1" 301 $ Just "/follow2"
-        redirectRoute "/follow2" 302 $ Just "/follow3"
-        redirectRoute "/follow3" 307 $ Just "/ok"
+      Web.run 5000 <=< Web.scottyApp $ do
+        Web.matchAny "/ok" $ Web.raw "Ok"
+        Web.matchAny "/permanent-redirect" $ do
+          setHeader hLocation "/ok"
+          Web.status movedPermanently301
+        Web.matchAny "/temporary-redirect" $ do
+          setHeader hLocation "/ok"
+          Web.status found302
+        Web.matchAny "/follow1" $ do
+          setHeader hLocation "/follow2"
+          Web.status movedPermanently301
+        Web.matchAny "/follow2" $ do
+          setHeader hLocation "/follow3"
+          Web.status found302
+        Web.matchAny "/follow3" $ do
+          setHeader hLocation "/ok"
+          Web.status temporaryRedirect307

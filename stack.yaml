@@ -1,19 +1,16 @@
-# SPDX-FileCopyrightText: 2018-2020 Serokell <https://serokell.io>
+# SPDX-FileCopyrightText: 2018-2023 Serokell <https://serokell.io>
 #
 # SPDX-License-Identifier: MPL-2.0
 
 # To update hackage and stackage indexes used by CI run:
 # $ niv update hackage.nix; niv update stackage.nix
-resolver: lts-19.13
+resolver: lts-22.32
 
 packages:
 - .
 
 extra-deps:
-- firefly-0.2.1.0@sha256:e9d73486464c3e223ec457e02b30ddd5b550fdbf6292b268c64581e2b07d888b,1519
 - cmark-gfm-0.2.5
-- git: https://github.com/serokell/nyan-interpolation
-  commit: 348355385466d6d0116251b463a2842ecce0360d
-  subdirs:
-  - full
-  - core
+- nyan-interpolation-core-0.9.2
+- nyan-interpolation-0.9.2
+- ftp-client-0.5.1.6@sha256:fab127defe1efb165af58f84dbc0f57a39334e39cca9829946149b363a71d1ca,1694

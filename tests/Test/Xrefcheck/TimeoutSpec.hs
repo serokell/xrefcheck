@@ -5,17 +5,18 @@
 
 module Test.Xrefcheck.TimeoutSpec where
 
-import Universum
+import Universum hiding ((.~))
 
+import Control.Lens ((.~))
 import Data.CaseInsensitive qualified as CI
-import Data.Map qualified as M
 import Data.Set qualified as S
 import Network.HTTP.Types (ok200, tooManyRequests429)
-import Network.HTTP.Types.Header (hRetryAfter)
+import Network.HTTP.Types.Header (HeaderName, hRetryAfter)
+import Network.Wai.Handler.Warp qualified as Web
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase)
 import Time (Second, Time, sec, threadDelay)
-import Web.Firefly (ToResponse (toResponse), route, run)
+import Web.Scotty qualified as Web
 
 import Test.Xrefcheck.UtilRequests
 import Xrefcheck.Config
@@ -121,24 +122,25 @@ test_timeout = testGroup "Timeout tests"
     mockTimeout :: Time Second -> [MockTimeoutBehaviour] -> IO ()
     mockTimeout timeout behList = do
       ref <- newIORef @_ behList
-      run 5000 $ do
-        route "/timeout" $ handler ref
-        route "/timeoutother" $ handler ref
+      Web.run 5000 <=< Web.scottyApp $ do
+        Web.matchAny "/timeout" $ handler ref
+        Web.matchAny "/timeoutother" $ handler ref
       where
         handler ref = do
           mbCurrentAction <- atomicModifyIORef' ref $ \case
             b : bs -> (bs, Just b)
             [] -> ([], Nothing)
-          let success = toResponse ("" :: Text, ok200, M.empty @(CI.CI Text) @[Text])
           case mbCurrentAction of
-            Nothing -> pure success
-            Just Ok -> pure success
+            Nothing -> Web.status ok200
+            Just Ok -> Web.status ok200
             Just Delay -> do
               threadDelay timeout
-              pure $ toResponse ("" :: Text, ok200, M.empty @(CI.CI Text) @[Text])
-            Just Respond429 ->
-              pure $ toResponse
-                ("" :: Text, tooManyRequests429,
-                  M.fromList [(CI.map (decodeUtf8 @Text) hRetryAfter, ["1" :: Text])])
+              Web.status ok200
+            Just Respond429 -> do
+              setHeader hRetryAfter "1"
+              Web.status tooManyRequests429
+
+    setHeader :: HeaderName -> Text -> Web.ActionM ()
+    setHeader hdr value = Web.setHeader (decodeUtf8 (CI.original hdr)) (fromStrict value)
 
 data MockTimeoutBehaviour = Respond429 | Delay | Ok

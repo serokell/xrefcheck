@@ -5,13 +5,6 @@
 
 packages:
 - completed:
-    hackage: firefly-0.2.1.0@sha256:e9d73486464c3e223ec457e02b30ddd5b550fdbf6292b268c64581e2b07d888b,1519
-    pantry-tree:
-      sha256: 51d4bf283e1d9ae37e43cd387b112919e45f2fc088f57cbd33c8bad9b0c179f1
-      size: 600
-  original:
-    hackage: firefly-0.2.1.0@sha256:e9d73486464c3e223ec457e02b30ddd5b550fdbf6292b268c64581e2b07d888b,1519
-- completed:
     hackage: cmark-gfm-0.2.5@sha256:a53b3c6ed20b5476ae18df5f28ababbb6ec8543f9a0758f0381a532d7a879fc0,5188
     pantry-tree:
       sha256: 8d137f125ee673d5c6b193c85657ea94124c90869edada72633df282e33058e0
@@ -19,34 +12,29 @@ packages:
   original:
     hackage: cmark-gfm-0.2.5
 - completed:
-    commit: 348355385466d6d0116251b463a2842ecce0360d
-    git: https://github.com/serokell/nyan-interpolation
-    name: nyan-interpolation
+    hackage: nyan-interpolation-core-0.9.2@sha256:930202fafc4e9472f9aed3d216a459e23454db500bfd0e0a5af2a4e5c5202096,4523
     pantry-tree:
-      sha256: ede424e6010640f31a223865f2136570ca1870b5ae5ffeeebfc499c4f7043482
-      size: 714
-    subdir: full
-    version: '0.9'
+      sha256: 5781e80383996a6bea95a545e4f0e70466bebf0fe2d388f334cd42e9f35469d5
+      size: 1464
   original:
-    commit: 348355385466d6d0116251b463a2842ecce0360d
-    git: https://github.com/serokell/nyan-interpolation
-    subdir: full
+    hackage: nyan-interpolation-core-0.9.2
 - completed:
-    commit: 348355385466d6d0116251b463a2842ecce0360d
-    git: https://github.com/serokell/nyan-interpolation
-    name: nyan-interpolation-core
+    hackage: nyan-interpolation-0.9.2@sha256:fb0b07ef6a9f8ca4d2e1db2f2df841c649556d9f6cff894ebf6b9ffbb7c25003,4276
     pantry-tree:
-      sha256: 4802161ce5d38f895e3b5106c789bfbe20b8d12c2f6c5fcba3999bec105283bc
-      size: 1516
-    subdir: core
-    version: '0.9'
+      sha256: 258878b8660782bef633fe3800c08fff2fa90165fd2a0793fa73836d8ff274c3
+      size: 662
   original:
-    commit: 348355385466d6d0116251b463a2842ecce0360d
-    git: https://github.com/serokell/nyan-interpolation
-    subdir: core
+    hackage: nyan-interpolation-0.9.2
+- completed:
+    hackage: ftp-client-0.5.1.6@sha256:fab127defe1efb165af58f84dbc0f57a39334e39cca9829946149b363a71d1ca,1694
+    pantry-tree:
+      sha256: 721799835406e36c6f14b032b1de9c95ae038261807c228a694342a1da8375bd
+      size: 322
+  original:
+    hackage: ftp-client-0.5.1.6@sha256:fab127defe1efb165af58f84dbc0f57a39334e39cca9829946149b363a71d1ca,1694
 snapshots:
 - completed:
-    sha256: ef98d70e4018bf01feb00ccdcd33ab26d056dbb71b38057c78fdd0d1ec671c85
-    size: 618740
-    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/19/13.yaml
-  original: lts-19.13
+    sha256: 417fa04a2ed8916cdae74c475ff97ac80857fed5000f19dce4f9564b5e635294
+    size: 720000
+    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/22/32.yaml
+  original: lts-22.32

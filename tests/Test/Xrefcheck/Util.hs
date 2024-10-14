@@ -9,9 +9,10 @@ import Universum
 
 import Data.Tagged (untag)
 import Network.HTTP.Types (forbidden403, unauthorized401)
+import Network.Wai.Handler.Warp qualified as Web
 import Options.Applicative (auto, help, long, option)
 import Test.Tasty.Options as Tasty (IsOption (..), OptionDescription (Option), safeRead)
-import Web.Firefly (ToResponse (..), route, run)
+import Web.Scotty qualified as Web
 
 import Xrefcheck.Core (Flavor)
 import Xrefcheck.Scan (ScanAction)
@@ -25,9 +26,10 @@ mockServerUrl :: MockServerPort -> Text -> Text
 mockServerUrl (MockServerPort port) s = toText ("http://127.0.0.1:" <> show port <> s)
 
 mockServer :: MockServerPort -> IO ()
-mockServer (MockServerPort port) = run port $ do
-  route "/401" $ pure $ toResponse ("" :: Text, unauthorized401)
-  route "/403" $ pure $ toResponse ("" :: Text, forbidden403)
+mockServer (MockServerPort port) =
+  Web.run port <=< Web.scottyApp $ do
+    Web.matchAny "/401" $ Web.status unauthorized401
+    Web.matchAny "/403" $ Web.status forbidden403
 
 -- | All options needed to configure the mock server.
 mockServerOptions :: [OptionDescription]

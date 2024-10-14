@@ -31,9 +31,9 @@ module Xrefcheck.Scan
   , scanRepo
   ) where
 
-import Universum
+import Universum hiding (_1, (%~))
 
-import Control.Lens (makeLensesWith)
+import Control.Lens (_1, makeLensesWith, (%~))
 import Data.Aeson (FromJSON (..), genericParseJSON, withText)
 import Data.Map qualified as M
 import Data.Reflection (Given)

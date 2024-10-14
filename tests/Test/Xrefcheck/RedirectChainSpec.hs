@@ -5,15 +5,16 @@
 
 module Test.Xrefcheck.RedirectChainSpec where
 
-import Universum
+import Universum hiding ((.~))
 
+import Control.Lens ((.~))
 import Data.CaseInsensitive qualified as CI
-import Data.Map qualified as M
-import Network.HTTP.Types (mkStatus)
-import Network.HTTP.Types.Header (hLocation)
+import Network.HTTP.Types (movedPermanently301)
+import Network.HTTP.Types.Header (HeaderName, hLocation)
+import Network.Wai.Handler.Warp qualified as Web
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase)
-import Web.Firefly (App, ToResponse (toResponse), route, run)
+import Web.Scotty qualified as Web
 
 import Test.Xrefcheck.UtilRequests
 import Xrefcheck.Config
@@ -114,32 +115,48 @@ test_redirectRequests = testGroup "Redirect chain tests"
       & cNetworkingL . ncExternalRefRedirectsL .~ [RedirectRule Nothing Nothing Nothing RROFollow]
       & cNetworkingL . ncMaxRedirectFollowsL .~ limit
 
-    redirectRoute :: Text -> Maybe Text -> App ()
-    redirectRoute name to = route name $ pure $ toResponse
-      ( "" :: Text
-      , mkStatus 301 "Permanent redirect"
-      , M.fromList [(CI.map (decodeUtf8 @Text) hLocation, maybeToList to)]
-      )
+    setHeader :: HeaderName -> Text -> Web.ActionM ()
+    setHeader hdr value = Web.setHeader (decodeUtf8 (CI.original hdr)) (fromStrict value)
 
     mockRedirect :: IO ()
     mockRedirect = do
-      run 5000 do
+      Web.run 5000 <=< Web.scottyApp $ do
         -- A set of redirect routes that correspond to a broken chain.
-        redirectRoute "/broken1" $ Just $ link "/broken2"
-        redirectRoute "/broken2" $ Just $ link "/broken3"
-        redirectRoute "/broken3" Nothing
+        Web.matchAny "/broken1" $ do
+          setHeader hLocation (link "/broken2")
+          Web.status movedPermanently301
+        Web.matchAny "/broken2" $ do
+          setHeader hLocation (link "/broken3")
+          Web.status movedPermanently301
+        Web.matchAny "/broken3" $ do
+          -- hLocation: no value
+          Web.status movedPermanently301
 
         -- A set of redirect routes that correspond to a cycle.
-        redirectRoute "/cycle1" $ Just $ link "/cycle2"
-        redirectRoute "/cycle2" $ Just $ link "/cycle3"
-        redirectRoute "/cycle3" $ Just $ link "/cycle4"
-        redirectRoute "/cycle4" $ Just $ link "/cycle2"
+        Web.matchAny "/cycle1" $ do
+          setHeader hLocation (link "/cycle2")
+          Web.status movedPermanently301
+        Web.matchAny "/cycle2" $ do
+          setHeader hLocation (link "/cycle3")
+          Web.status movedPermanently301
+        Web.matchAny "/cycle3" $ do
+          setHeader hLocation (link "/cycle4")
+          Web.status movedPermanently301
+        Web.matchAny "/cycle4" $ do
+          setHeader hLocation (link "/cycle2")
+          Web.status movedPermanently301
 
         -- Relative redirects.
-        redirectRoute "/relative/host" $ Just "/cycle2"
-        redirectRoute "/relative/path" $ Just "host"
+        Web.matchAny "/relative/host" $ do
+          setHeader hLocation "/cycle2"
+          Web.status movedPermanently301
+        Web.matchAny "/relative/path" $ do
+          setHeader hLocation "host"
+          Web.status movedPermanently301
 
     -- To other host
     otherMockRedirect :: IO ()
     otherMockRedirect =
-      run 5001 $ redirectRoute "/other/host" $ Just $ link "/relative/host"
+      Web.run 5001 <=< Web.scottyApp $ Web.matchAny "/other/host" $ do
+        setHeader hLocation (link "/relative/host")
+        Web.status movedPermanently301

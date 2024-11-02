@@ -63,10 +63,8 @@ instance FromJSON Flavor where
 newtype Position = Position (Maybe Text)
   deriving stock (Show, Eq, Generic)
 
-instance Given ColorMode => Buildable Position where
-  build (Position pos) = case pos of
-    Nothing -> ""
-    Just p  -> styleIfNeeded Faint $ "at src:" <> build p
+instance Buildable Position where
+  build (Position pos) = maybe "" build pos
 
 -- | Full info about a reference.
 data Reference = Reference
@@ -274,7 +272,7 @@ instance Given ColorMode => Buildable Reference where
 instance Given ColorMode => Buildable AnchorType where
   build = styleIfNeeded Faint . \case
     HeaderAnchor l -> colorIfNeeded Green ("header " <> headerLevelToRoman l)
-    HandAnchor -> colorIfNeeded Yellow "hand made"
+    HandAnchor -> colorIfNeeded Yellow "handmade"
     BiblioAnchor -> colorIfNeeded Cyan "biblio"
     where
       headerLevelToRoman = \case

@@ -28,7 +28,7 @@ EOF
   git add a.md
   git add "a\a.md"
 
-  to_temp xrefcheck -v
+  to_temp xrefcheck -u -v
 
   assert_diff
 }

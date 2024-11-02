@@ -11,6 +11,6 @@ load '../helpers'
 
 @test "We're finding and checking autolinks" {
   golden_file=$(realpath expected.gold)
-  to_temp xrefcheck -v
+  to_temp xrefcheck -u -v
   assert_diff
 }

@@ -10,7 +10,7 @@ load '../helpers/bats-file/load'
 load '../helpers'
 
 @test "No redundant slashes" {
-  run xrefcheck \
+  run xrefcheck -u \
     --ignore to-ignore/* \
     --root .
 
@@ -18,7 +18,7 @@ load '../helpers'
 }
 
 @test "Redundant slashes in root and ignore" {
-  run xrefcheck \
+  run xrefcheck -u \
     --ignore ./././././././//to-ignore/* \
     --root ./
 
@@ -26,7 +26,7 @@ load '../helpers'
 }
 
 @test "Redundant slashes in root" {
-  run xrefcheck \
+  run xrefcheck -u \
     -c config-no-scan-ignored.yaml \
     --root ./
 
@@ -34,7 +34,7 @@ load '../helpers'
 }
 
 @test "Redundant slashes in ignore" {
-  run xrefcheck \
+  run xrefcheck -u \
     --ignore ./././././././//to-ignore/* \
     --root .
 
@@ -43,24 +43,24 @@ load '../helpers'
 
 @test "Basic root, check errors report" {
   golden_file=$(realpath expected1.gold)
-  to_temp xrefcheck --root .
+  to_temp xrefcheck -u --root .
   assert_diff
 }
 
 @test "Root with redundant slashes, check errors report" {
   golden_file=$(realpath expected2.gold)
-  to_temp xrefcheck --root ././///././././//./
+  to_temp xrefcheck -u --root ././///././././//./
   assert_diff
 }
 
 @test "No root, check errors report" {
   golden_file=$(realpath expected3.gold)
-  to_temp xrefcheck
+  to_temp xrefcheck -u
   assert_diff
 }
 
 @test "Single file as root" {
-  run xrefcheck \
+  run xrefcheck -u \
     --root single-file.md
 
   assert_failure

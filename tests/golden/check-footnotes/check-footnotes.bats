@@ -12,13 +12,13 @@ load '../helpers'
 
 @test "We report broken links inside footnotes" {
   golden_file=$(realpath expected.gold)
-  to_temp xrefcheck -r broken-link-in-footnote
+  to_temp xrefcheck -u -r broken-link-in-footnote
   assert_diff
 }
 
 @test  "We're not treating footnotes as 'shortcut reference links'"  {
 # See: https://github.com/serokell/xrefcheck/issues/155
-  run xrefcheck -r one-word-footnote
+  run xrefcheck -u -r one-word-footnote
 
   assert_output --partial "All repository links are valid."
 }

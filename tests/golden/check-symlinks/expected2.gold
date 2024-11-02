@@ -2,7 +2,7 @@
 
   broken.md:
     - references:
-        - reference (relative):
+        - reference (relative) at broken.md:
             - text: "Symbolic Link"
             - link: dir/c.md
             - anchor: -
@@ -11,11 +11,11 @@
 
   dir/b.md:
     - references:
-        - reference (relative) at src:7:1-15:
+        - reference (relative) at dir/b.md:7:1-15:
             - text: "Empty file"
             - link: a
             - anchor: -
-        - reference (relative) at src:9:1-24:
+        - reference (relative) at dir/b.md:9:1-24:
             - text: "Some symlink"
             - link: ../ok.md
             - anchor: -
@@ -24,7 +24,7 @@
 
   ok.md:
     - references:
-        - reference (relative):
+        - reference (relative) at ok.md:
             - text: "Symbolic Link"
             - link: dir/b.md
             - anchor: -
@@ -33,31 +33,21 @@
 
   outside.md:
     - references:
-        - reference (relative):
+        - reference (relative) at outside.md:
             - text: "Symbolic Link"
             - link: ../d.md
             - anchor: -
     - anchors:
         none
 
-=== Invalid references found ===
+broken.md: bad reference:
+  The reference to "Symbolic Link" failed verification.
+  File does not exist:
+    dir/c.md
 
-  ➥  In file broken.md
-     bad reference (relative):
-       - text: "Symbolic Link"
-       - link: dir/c.md
-       - anchor: -
-
-     File does not exist:
-       dir/c.md
-
-  ➥  In file outside.md
-     bad reference (relative):
-       - text: "Symbolic Link"
-       - link: ../d.md
-       - anchor: -
-
-     Link targets a local file outside repository:
-       ../d.md
+outside.md: bad reference:
+  The reference to "Symbolic Link" failed verification.
+  Link (relative) targets a local file outside the repository:
+    ../d.md
 
 Invalid references dumped, 2 in total.

@@ -12,6 +12,6 @@ load '../helpers'
 
 @test "Dump all errors along with broken links" {
   golden_file=$(realpath expected.gold)
-  to_temp xrefcheck
+  to_temp xrefcheck -u
   assert_diff
 }

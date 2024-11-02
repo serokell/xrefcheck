@@ -52,7 +52,7 @@ test_tooManyRequests = testGroup "429 response tests"
                   $ initProgress 2
               }
         _ <- verifyReferenceWithProgressDefault
-          (Reference "" (Position Nothing) $ RIExternal $ ELUrl "http://127.0.0.1:5000/429")
+          (Reference "" (Position "") $ RIExternal $ ELUrl "http://127.0.0.1:5000/429")
           setRef
           progressRef
         progress <- vrExternal <$> readIORef progressRef
@@ -75,7 +75,7 @@ test_tooManyRequests = testGroup "429 response tests"
                   $ initProgress 2
               }
         _ <- verifyReferenceWithProgressDefault
-          (Reference "" (Position Nothing) $ RIExternal $ ELUrl "http://127.0.0.1:5000/429")
+          (Reference "" (Position "") $ RIExternal $ ELUrl "http://127.0.0.1:5000/429")
           setRef
           progressRef
         progress <- vrExternal <$> readIORef progressRef
@@ -99,7 +99,7 @@ test_tooManyRequests = testGroup "429 response tests"
                   $ initProgress 2
               }
         _ <- verifyReferenceWithProgressDefault
-          (Reference "" (Position Nothing) $ RIExternal $ ELUrl "http://127.0.0.1:5000/429")
+          (Reference "" (Position "") $ RIExternal $ ELUrl "http://127.0.0.1:5000/429")
           setRef
           progressRef
         progress <- vrExternal <$> readIORef progressRef

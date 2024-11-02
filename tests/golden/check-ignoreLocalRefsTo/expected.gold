@@ -1,66 +1,36 @@
-=== Invalid references found ===
+check-ignoreLocalRefsTo.md:7:1-22: bad reference:
+  The reference to "full path" failed verification.
+  File does not exist:
+    one/a.md
 
-  ➥  In file check-ignoreLocalRefsTo.md
-     bad reference (absolute) at src:7:1-22:
-       - text: "full path"
-       - link: /one/a.md
-       - anchor: -
+check-ignoreLocalRefsTo.md:9:1-26: bad reference:
+  The reference to "glob wildcard" failed verification.
+  File does not exist:
+    two/b.md
 
-     File does not exist:
-       one/a.md
+check-ignoreLocalRefsTo.md:11:1-39: bad reference:
+  The reference to "recursive directory glob" failed verification.
+  File does not exist:
+    three/c.md
 
-  ➥  In file check-ignoreLocalRefsTo.md
-     bad reference (absolute) at src:9:1-26:
-       - text: "glob wildcard"
-       - link: /two/b.md
-       - anchor: -
+check-ignoreLocalRefsTo.md:13:1-51: bad reference:
+  The reference to "recursive nested directory glob" failed verification.
+  File does not exist:
+    three/four/d.md
 
-     File does not exist:
-       two/b.md
+check-ignoreLocalRefsTo.md:15:1-59: bad reference:
+  The reference to "another recursive nested directory glob" failed verification.
+  File does not exist:
+    three/five/e.md
 
-  ➥  In file check-ignoreLocalRefsTo.md
-     bad reference (absolute) at src:11:1-39:
-       - text: "recursive directory glob"
-       - link: /three/c.md
-       - anchor: -
+one/file.md:7:1-58: bad reference:
+  The reference to "check ignoreLocalRefsTo are relative to the root" failed verification.
+  File does not exist:
+    one/./a.md
 
-     File does not exist:
-       three/c.md
-
-  ➥  In file check-ignoreLocalRefsTo.md
-     bad reference (absolute) at src:13:1-51:
-       - text: "recursive nested directory glob"
-       - link: /three/four/d.md
-       - anchor: -
-
-     File does not exist:
-       three/four/d.md
-
-  ➥  In file check-ignoreLocalRefsTo.md
-     bad reference (absolute) at src:15:1-59:
-       - text: "another recursive nested directory glob"
-       - link: /three/five/e.md
-       - anchor: -
-
-     File does not exist:
-       three/five/e.md
-
-  ➥  In file one/file.md
-     bad reference (relative) at src:7:1-58:
-       - text: "check ignoreLocalRefsTo are relative to the root"
-       - link: ./a.md
-       - anchor: -
-
-     File does not exist:
-       one/./a.md
-
-  ➥  In file one/file.md
-     bad reference (relative) at src:9:1-23:
-       - text: "one more"
-       - link: ../two/b.md
-       - anchor: -
-
-     File does not exist:
-       one/../two/b.md
+one/file.md:9:1-23: bad reference:
+  The reference to "one more" failed verification.
+  File does not exist:
+    one/../two/b.md
 
 Invalid references dumped, 7 in total.

@@ -12,12 +12,12 @@ load '../helpers'
 
 @test "GitHub paths: case-sensitive" {
   golden_file=$(realpath expected.gold)
-  to_temp xrefcheck -v -c config-github.yaml
+  to_temp xrefcheck -u -v -c config-github.yaml
   assert_diff
 }
 
 @test "GitLab paths: case-sensitive"  {
   golden_file=$(realpath expected.gold)
-  to_temp xrefcheck -v -c config-gitlab.yaml
+  to_temp xrefcheck -u -v -c config-gitlab.yaml
   assert_diff
 }

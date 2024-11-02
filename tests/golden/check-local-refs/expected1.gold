@@ -1,117 +1,64 @@
-=== Invalid references found ===
+dir1/dir2/d2f1.md:9:1-18: bad reference:
+  The reference to "bad-cf-ref" failed verification.
+  Anchor 'bad' is not present
 
-  ➥  In file dir1/dir2/d2f1.md
-     bad reference (file-local) at src:9:1-18:
-       - text: "bad-cf-ref"
-       - anchor: bad
+dir1/dir2/d2f1.md:27:1-43: bad reference:
+  The reference to "bad-file-rel" failed verification.
+  File does not exist:
+    dir1/dir2/../a/b/c/unexisting-file.md
 
-     Anchor 'bad' is not present
+dir1/dir2/d2f1.md:28:1-31: bad reference:
+  The reference to "bad-casing-file-rel" failed verification.
+  File does not exist:
+    dir1/dir2/D2F2.md/
 
-  ➥  In file dir1/dir2/d2f1.md
-     bad reference (relative) at src:27:1-43:
-       - text: "bad-file-rel"
-       - link: ../a/b/c/unexisting-file.md
-       - anchor: -
+dir1/dir2/d2f1.md:29:1-32: bad reference:
+  The reference to "bad-casing-folder-rel" failed verification.
+  File does not exist:
+    dir1/dir2/../DIR2
 
-     File does not exist:
-       dir1/dir2/../a/b/c/unexisting-file.md
+dir1/dir2/d2f1.md:31:1-38: bad reference:
+  The reference to "bad-anchor-rel-1" failed verification.
+  Anchor 'bad-anchor' is not present
 
-  ➥  In file dir1/dir2/d2f1.md
-     bad reference (relative) at src:28:1-31:
-       - text: "bad-casing-file-rel"
-       - link: D2F2.md/
-       - anchor: -
+dir1/dir2/d2f1.md:32:1-49: bad reference:
+  The reference to "bad-anchor-rel-2" failed verification.
+  File does not exist:
+    dir1/dir2/unexisting-file.md
 
-     File does not exist:
-       dir1/dir2/D2F2.md/
+dir1/dir2/d2f1.md:42:1-22: bad reference:
+  The reference to "file-abs-2" failed verification.
+  File does not exist:
+    d1f1.md
 
-  ➥  In file dir1/dir2/d2f1.md
-     bad reference (relative) at src:29:1-32:
-       - text: "bad-casing-folder-rel"
-       - link: ../DIR2
-       - anchor: -
+dir1/dir2/d2f1.md:43:1-27: bad reference:
+  The reference to "file-abs-3" failed verification.
+  File does not exist:
+    dir2/d2f2.md
 
-     File does not exist:
-       dir1/dir2/../DIR2
+dir1/dir2/d2f1.md:44:1-32: bad reference:
+  The reference to "file-abs-4" failed verification.
+  File does not exist:
+    ./dir2/../d1f1.md
 
-  ➥  In file dir1/dir2/d2f1.md
-     bad reference (relative) at src:31:1-38:
-       - text: "bad-anchor-rel-1"
-       - link: d2f2.md
-       - anchor: bad-anchor
+dir1/dir2/d2f1.md:45:1-37: bad reference:
+  The reference to "file-abs-slash" failed verification.
+  File does not exist:
+    ./dir2/../d1f1.md/
 
-     Anchor 'bad-anchor' is not present
+dir1/dir2/d2f1.md:46:1-55: bad reference:
+  The reference to "anchor-abs-3" failed verification.
+  File does not exist:
+    ./dir2/../d1f1.md
 
-  ➥  In file dir1/dir2/d2f1.md
-     bad reference (relative) at src:32:1-49:
-       - text: "bad-anchor-rel-2"
-       - link: unexisting-file.md
-       - anchor: bad-anchor
+dir1/dir2/d2f1.md:57:1-16: bad reference:
+  The reference to "A" failed verification.
+  Link (absolute) targets a local file outside the repository:
+    ../../a.md
 
-     File does not exist:
-       dir1/dir2/unexisting-file.md
-
-  ➥  In file dir1/dir2/d2f1.md
-     bad reference (absolute) at src:42:1-22:
-       - text: "file-abs-2"
-       - link: /d1f1.md
-       - anchor: -
-
-     File does not exist:
-       d1f1.md
-
-  ➥  In file dir1/dir2/d2f1.md
-     bad reference (absolute) at src:43:1-27:
-       - text: "file-abs-3"
-       - link: /dir2/d2f2.md
-       - anchor: -
-
-     File does not exist:
-       dir2/d2f2.md
-
-  ➥  In file dir1/dir2/d2f1.md
-     bad reference (absolute) at src:44:1-32:
-       - text: "file-abs-4"
-       - link: /./dir2/../d1f1.md
-       - anchor: -
-
-     File does not exist:
-       ./dir2/../d1f1.md
-
-  ➥  In file dir1/dir2/d2f1.md
-     bad reference (absolute) at src:45:1-37:
-       - text: "file-abs-slash"
-       - link: /./dir2/../d1f1.md/
-       - anchor: -
-
-     File does not exist:
-       ./dir2/../d1f1.md/
-
-  ➥  In file dir1/dir2/d2f1.md
-     bad reference (absolute) at src:46:1-55:
-       - text: "anchor-abs-3"
-       - link: /./dir2/../d1f1.md
-       - anchor: existing-anchor-d1f1
-
-     File does not exist:
-       ./dir2/../d1f1.md
-
-  ➥  In file dir1/dir2/d2f1.md
-     bad reference (absolute) at src:57:1-16:
-       - text: "A"
-       - link: /../../a.md
-       - anchor: -
-
-     Link targets a local file outside repository:
-       ../../a.md
-
-  ➥  In file dir1/dir2/d2f1.md
-     bad reference (absolute) at src:58:1-18:
-       - text: "B"
-       - link: /b/../../b.md
-       - anchor: -
-
-     Link targets a local file outside repository:
-       b/../../b.md
+dir1/dir2/d2f1.md:58:1-18: bad reference:
+  The reference to "B" failed verification.
+  Link (absolute) targets a local file outside the repository:
+    b/../../b.md
 
 Invalid references dumped, 13 in total.

@@ -2,40 +2,34 @@
 
   a.md:
     - references:
-        - reference (relative) at src:8:1-33:
+        - reference (relative) at a.md:8:1-33:
             - text: "Reference to a\\a"
             - link: a\a.md
             - anchor: header
-        - reference (relative) at src:10:1-30:
+        - reference (relative) at a.md:10:1-30:
             - text: "Bad reference to a\\b"
             - link: a\b.md
             - anchor: -
     - anchors:
-        - header (header I) at src:6:1-8
+        - header (header I) at a.md:6:1-8
 
   a\a.md:
     - references:
-        - reference (relative) at src:2:1-22:
+        - reference (relative) at a\a.md:2:1-22:
             - text: "Reference to a"
             - link: a.md
             - anchor: -
-        - reference (relative) at src:3:1-29:
+        - reference (relative) at a\a.md:3:1-29:
             - text: "Reference to myself"
             - link: a\a.md
             - anchor: -
     - anchors:
-        - header (header I) at src:1:1-8
+        - header (header I) at a\a.md:1:1-8
 
-=== Invalid references found ===
-
-  ➥  In file a.md
-     bad reference (relative) at src:10:1-30:
-       - text: "Bad reference to a\\b"
-       - link: a\b.md
-       - anchor: -
-
-     File does not exist:
-       a\b.md
-       Its reference contains a backslash. Maybe it uses the wrong path separator.
+a.md:10:1-30: bad reference:
+  The reference to "Bad reference to a\\b" failed verification.
+  File does not exist:
+    a\b.md
+    Its reference contains a backslash. Maybe it uses the wrong path separator.
 
 Invalid references dumped, 1 in total.

@@ -13,7 +13,7 @@ load '../helpers'
   cd $TEST_TEMP_DIR
 
   export LANG=en_US
-  run xrefcheck
+  run xrefcheck -u
 
   assert_output --partial "fatal: not a git repository"
 }
@@ -25,7 +25,7 @@ load '../helpers'
 
   echo "[a](/a.md)" >> "git.md"
 
-  run xrefcheck
+  run xrefcheck -u
 
   assert_success
 
@@ -46,7 +46,7 @@ load '../helpers'
 
   echo "[a](./a.md)" >> "git.md"
 
-  to_temp xrefcheck --include-untracked
+  to_temp xrefcheck -u --include-untracked
 
   assert_diff
 }
@@ -62,7 +62,7 @@ load '../helpers'
 
   git add git.md
 
-  to_temp xrefcheck
+  to_temp xrefcheck -u
 
   assert_diff
 }
@@ -81,7 +81,7 @@ load '../helpers'
 
   git add git.md
 
-  to_temp xrefcheck
+  to_temp xrefcheck -u
 
   assert_diff
 }
@@ -97,7 +97,7 @@ load '../helpers'
 
   git add git.md
 
-  run xrefcheck --include-untracked
+  run xrefcheck -u --include-untracked
 
   assert_success
 

@@ -37,7 +37,7 @@ import Control.Lens (_1, makeLensesWith, (%~))
 import Data.Aeson (FromJSON (..), genericParseJSON, withText)
 import Data.Map qualified as M
 import Data.Reflection (Given)
-import Fmt (Buildable (..), fmt)
+import Fmt (Buildable (..), Builder, fmtLn)
 import System.Directory (doesDirectoryExist, pathIsSymbolicLink)
 import System.Process (cwd, readCreateProcess, shell)
 import Text.Interpolation.Nyan
@@ -120,23 +120,20 @@ mkGatherScanError seFile ScanError{sePosition, seDescription} = ScanError
   , seDescription
   }
 
-instance Given ColorMode => Buildable (ScanError 'Gather) where
-  build ScanError{..} = [int||
-    In file #{styleIfNeeded Faint (styleIfNeeded Bold seFile)}
-    scan error #{sePosition}:
-
-    #{seDescription}
-
-    |]
+pprScanErr :: Given ColorMode => ScanError 'Gather -> Builder
+pprScanErr ScanError{..} = hdr <> "\n" <> interpolateIndentF 2 msg <> "\n"
+  where
+    hdr, msg :: Builder
+    hdr =
+      styleIfNeeded Bold (build sePosition <> ": ") <>
+      colorIfNeeded Red "scan error:"
+    msg = build seDescription
 
 reportScanErrs :: Given ColorMode => NonEmpty (ScanError 'Gather) -> IO ()
-reportScanErrs errs = fmt
-  [int||
-  === Scan errors found ===
-
-  #{interpolateIndentF 2 (interpolateBlockListF' "➥ " build errs)}
-  Scan errors dumped, #{length errs} in total.
-  |]
+reportScanErrs errs = do
+  traverse_ (fmtLn . pprScanErr) errs
+  fmtLn $ colorIfNeeded Red $
+    "Scan errors dumped, " <> build (length errs) <> " in total."
 
 data ScanErrorDescription
   = LinkErr
@@ -152,8 +149,8 @@ instance Buildable ScanErrorDescription where
                      markdown or right after comments at the top|]
     ParagraphErr txt -> [int||Expected a PARAGRAPH after \
                               "ignore paragraph" annotation, but found #{txt}|]
-    UnrecognisedErr txt -> [int||Unrecognised option "#{txt}" perhaps you meant \
-                                 <"ignore link"|"ignore paragraph"|"ignore all">|]
+    UnrecognisedErr txt -> [int||Unrecognised option "#{txt}"
+                                 Perhaps you meant <"ignore link"|"ignore paragraph"|"ignore all">|]
 
 firstFileSupport :: [FileSupport] -> FileSupport
 firstFileSupport fs isSymlink =

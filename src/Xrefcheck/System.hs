@@ -22,12 +22,16 @@ module Xrefcheck.System
   , CanonicalRelGlobPattern (unCanonicalRelGlobPattern)
   , matchesGlobPatterns
   , mkCanonicalRelGlobPattern
+
+  , PrintUnixPaths(..)
+  , mkPathForPrinting
   ) where
 
 import Universum
 
 import Data.Aeson (FromJSON (..), withText)
 import Data.Char qualified as C
+import Data.Reflection (Given (..))
 import Data.Text qualified as T
 import Fmt (Buildable)
 import System.Console.Pretty (Pretty)
@@ -210,6 +214,7 @@ dropTrailingPosixPathSeparator :: Text -> Text
 dropTrailingPosixPathSeparator p = fromMaybe p
   $ T.stripSuffix "/" p
 
+-- Expand '.' and '..' in paths with Posix path separators.
 expandPosixIndirections :: Text -> Text
 expandPosixIndirections = T.intercalate "/"
     . reverse
@@ -224,6 +229,22 @@ expandPosixIndirections = T.intercalate "/"
     expand acc (_ : xs) = expand (acc - 1) xs
     expand acc [] = replicate acc ".."
 
+-- Expand '.' and '..' in paths with system-specific path separators.
+expandPathIndirections :: FilePath -> FilePath
+expandPathIndirections = FP.joinPath
+    . reverse
+    . expand 0
+    . reverse
+    . map FP.dropTrailingPathSeparator
+    . FP.splitPath
+  where
+    expand :: Int -> [FilePath] -> [FilePath]
+    expand acc (".." : xs) = expand (acc + 1) xs
+    expand acc ("." : xs) = expand acc xs
+    expand 0 (x : xs) = x : expand 0 xs
+    expand acc (_ : xs) = expand (acc - 1) xs
+    expand acc [] = replicate acc ".."
+
 withPathSeparator :: Char -> Text -> Text
 withPathSeparator pathSep = T.map replaceSeparator
   where
@@ -231,3 +252,13 @@ withPathSeparator pathSep = T.map replaceSeparator
     replaceSeparator c
       | FP.isPathSeparator c = pathSep
       | otherwise = c
+
+newtype PrintUnixPaths = PrintUnixPaths Bool
+
+mkPathForPrinting :: Given PrintUnixPaths => FilePath -> String
+mkPathForPrinting = replaceSeparator . expandPathIndirections
+  where
+    replaceSeparator :: FilePath -> String
+    replaceSeparator = case given of
+      PrintUnixPaths True  -> map (\c -> if c == FP.pathSeparator then '/' else c)
+      PrintUnixPaths False -> id

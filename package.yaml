@@ -93,6 +93,7 @@ library:
     - filepath
     - fmt
     - ftp-client
+    - crypton-connection
     - Glob
     - http-client
     - http-types
@@ -149,6 +150,7 @@ tests:
       - cmark-gfm
       - containers
       - directory
+      - filepath
       - wai
       - warp
       - scotty

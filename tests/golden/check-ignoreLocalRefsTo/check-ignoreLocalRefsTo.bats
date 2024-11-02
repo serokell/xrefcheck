@@ -11,13 +11,13 @@ load '../helpers'
 
 
 @test "IgnoreLocalRefsTo: all references should be valid" {
-  run xrefcheck -c ./config-ignoreLocalRefsTo.yaml
+  run xrefcheck -u -c ./config-ignoreLocalRefsTo.yaml
 
   assert_output --partial "All repository links are valid."
 }
 
 @test "IgnoreLocalRefsTo: check failure" {
   golden_file=$(realpath expected.gold)
-  to_temp xrefcheck
+  to_temp xrefcheck -u
   assert_diff
 }

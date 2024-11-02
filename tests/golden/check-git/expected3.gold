@@ -1,13 +1,7 @@
-=== Invalid references found ===
-
-  ➥  In file git.md
-     bad reference (relative) at src:1:1-11:
-       - text: "a"
-       - link: ./a.md
-       - anchor: -
-
-     Link target is not tracked by Git:
-       ./a.md
-       Please run "git add" before running xrefcheck or enable --include-untracked CLI option.
+git.md:1:1-11: bad reference:
+  The reference to "a" failed verification.
+  Link (relative) targets a file not tracked by Git:
+    ./a.md
+  Please run "git add" before running xrefcheck or enable --include-untracked CLI option.
 
 Invalid references dumped, 1 in total.

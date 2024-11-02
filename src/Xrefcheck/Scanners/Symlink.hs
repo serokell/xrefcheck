@@ -13,24 +13,27 @@ module Xrefcheck.Scanners.Symlink
 
 import Universum
 
+import Data.Reflection (Given)
 import System.Directory (getSymbolicLinkTarget)
 
 import Xrefcheck.Core
 import Xrefcheck.Scan
 import Xrefcheck.System
 
-symlinkScanner :: ScanAction
-symlinkScanner root path = do
+symlinkScanner :: Given PrintUnixPaths => ScanAction
+symlinkScanner root relativePath = do
+  let rootedPath = filePathFromRoot root relativePath
+      pathForPrinting = mkPathForPrinting rootedPath
   rLink <- unRelPosixLink . mkRelPosixLink
-    <$> getSymbolicLinkTarget (filePathFromRoot root path)
+    <$> getSymbolicLinkTarget rootedPath
 
   let rName = "Symbolic Link"
-      rPos = Position Nothing
+      rPos = Position (fromString pathForPrinting)
       rInfo = referenceInfo rLink
 
   pure (FileInfo [Reference {rName, rPos, rInfo}] [], [])
 
-symlinkSupport :: FileSupport
+symlinkSupport :: Given PrintUnixPaths => FileSupport
 symlinkSupport isSymlink _ = do
   guard isSymlink
   pure symlinkScanner

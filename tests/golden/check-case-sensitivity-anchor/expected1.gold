@@ -1,28 +1,20 @@
-=== Invalid references found ===
+a.md:18:1-36: bad reference:
+  The reference to "Mixing case reference" failed verification.
+  Anchor 'SomE-HEADr' is not present, did you mean:
+    - some-header (header I) at a.md:6:1-13
+    - another-header (header I) at a.md:10:1-16
+    - custom-header (header I) at a.md:12:1-43
+    - Another-header (handmade) at a.md:12:3-27
+    - custom-header (header I) at a.md:14:1-43
 
-  ➥  In file a.md
-     bad reference (file-local) at src:18:1-36:
-       - text: "Mixing case reference"
-       - anchor: SomE-HEADr
-
-     Anchor 'SomE-HEADr' is not present, did you mean:
-         - some-header (header I) at src:6:1-13
-         - another-header (header I) at src:10:1-16
-         - custom-header (header I) at src:12:1-43
-         - Another-header (hand made) at src:12:3-27
-         - custom-header (header I) at src:14:1-43
-
-  ➥  In file a.md
-     bad reference (file-local) at src:24:1-44:
-       - text: "Maybe ambiguous reference"
-       - anchor: another-header
-
-     Ambiguous reference to anchor 'another-header'
-       In file a.md
-       It could refer to either:
-         - another-header (header I) at src:10:1-16
-         - Another-header (hand made) at src:12:3-27
-       Use of ambiguous anchors is discouraged because the target
-       can change silently while the document containing it evolves.
+a.md:24:1-44: bad reference:
+  The reference to "Maybe ambiguous reference" failed verification.
+  Ambiguous reference to anchor 'another-header'
+  in file a.md
+  It could refer to either:
+    - another-header (header I) at a.md:10:1-16
+    - Another-header (handmade) at a.md:12:3-27
+  Use of ambiguous anchors is discouraged because the target
+  can change silently while the document containing it evolves.
 
 Invalid references dumped, 2 in total.

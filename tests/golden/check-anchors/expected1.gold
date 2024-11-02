@@ -1,32 +1,23 @@
-=== Invalid references found ===
+ambiguous-anchors/a.md:16:1-43: bad reference:
+  The reference to "ambiguous anchor in this file" failed verification.
+  Ambiguous reference to anchor 'some-text'
+  in file a.md
+  It could refer to either:
+    - some-text (header I) at ambiguous-anchors/a.md:6:1-11
+    - some-text (header I) at ambiguous-anchors/a.md:8:1-15
+    - some-text (header II) at ambiguous-anchors/a.md:12:1-12
+  Use of ambiguous anchors is discouraged because the target
+  can change silently while the document containing it evolves.
 
-  ➥  In file a.md
-     bad reference (file-local) at src:16:1-43:
-       - text: "ambiguous anchor in this file"
-       - anchor: some-text
-
-     Ambiguous reference to anchor 'some-text'
-       In file a.md
-       It could refer to either:
-         - some-text (header I) at src:6:1-11
-         - some-text (header I) at src:8:1-15
-         - some-text (header II) at src:12:1-12
-       Use of ambiguous anchors is discouraged because the target
-       can change silently while the document containing it evolves.
-
-  ➥  In file b.md
-     bad reference (relative) at src:7:1-48:
-       - text: "ambiguous anchor in other file"
-       - link: a.md
-       - anchor: some-text
-
-     Ambiguous reference to anchor 'some-text'
-       In file a.md
-       It could refer to either:
-         - some-text (header I) at src:6:1-11
-         - some-text (header I) at src:8:1-15
-         - some-text (header II) at src:12:1-12
-       Use of ambiguous anchors is discouraged because the target
-       can change silently while the document containing it evolves.
+ambiguous-anchors/b.md:7:1-48: bad reference:
+  The reference to "ambiguous anchor in other file" failed verification.
+  Ambiguous reference to anchor 'some-text'
+  in file a.md
+  It could refer to either:
+    - some-text (header I) at ambiguous-anchors/a.md:6:1-11
+    - some-text (header I) at ambiguous-anchors/a.md:8:1-15
+    - some-text (header II) at ambiguous-anchors/a.md:12:1-12
+  Use of ambiguous anchors is discouraged because the target
+  can change silently while the document containing it evolves.
 
 Invalid references dumped, 2 in total.

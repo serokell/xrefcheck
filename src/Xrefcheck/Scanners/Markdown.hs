@@ -25,6 +25,7 @@ import Control.Monad.Trans.Writer.CPS (Writer, runWriter, tell)
 import Data.Aeson (FromJSON (..), genericParseJSON)
 import Data.ByteString.Lazy qualified as BSL
 import Data.DList qualified as DList
+import Data.Reflection (Given)
 import Data.Text qualified as T
 import Data.Text.Lazy qualified as LT
 import Fmt (Buildable (..), nameF)
@@ -52,17 +53,17 @@ instance Buildable Node where
   build (Node _mpos ty mSubs) = nameF (show ty) $
     maybe "[]" interpolateBlockListF (nonEmpty mSubs)
 
-toPosition :: Maybe PosInfo -> Position
-toPosition = Position . \case
-  Nothing -> Nothing
+toPosition :: FilePath -> Maybe PosInfo -> Position
+toPosition filepath = Position . \case
+  Nothing -> [int|s|#{filepath}|]
   Just PosInfo{..}
-    | startLine == endLine -> Just
+    | startLine == endLine ->
         [int|s|
-        #{startLine}:#{startColumn}-#{endColumn}
+        #{filepath}:#{startLine}:#{startColumn}-#{endColumn}
         |]
-    | otherwise -> Just
+    | otherwise ->
         [int|s|
-        #{startLine}:#{startColumn}-#{endLine}:#{endColumn}
+        #{filepath}:#{startLine}:#{startColumn}-#{endLine}:#{endColumn}
         |]
 
 -- | Extract text from the topmost node.
@@ -154,9 +155,10 @@ cataNodeWithParentNodeInfo f node = cataNode f' node
 
 -- | Find ignore annotations (ignore paragraph and ignore link)
 -- and remove nodes that should be ignored.
-removeIgnored :: Node -> Writer [ScanError 'Parse] Node
-removeIgnored = withIgnoreMode . cataNodeWithParentNodeInfo remove
-  where
+removeIgnored :: Node -> ExtractorM Node
+removeIgnored rootNode = do
+  filepath <- asks ecFilePath
+  let
     remove
       :: Maybe PosInfo
       -> NodeType
@@ -167,7 +169,7 @@ removeIgnored = withIgnoreMode . cataNodeWithParentNodeInfo remove
       scan <- use ssIgnore >>= \case
         -- When no `Ignore` state is set check next node for annotation,
         -- if found then set it as new `IgnoreMode` otherwise skip node.
-        Nothing                    -> handleIgnoreMode pos ty subs $ getIgnoreMode node
+        Nothing -> handleIgnoreMode pos ty subs $ getIgnoreMode node
         Just (Ignore mode modePos) ->
           case (mode, ty) of
             -- We expect to find a paragraph immediately after the
@@ -175,7 +177,7 @@ removeIgnored = withIgnoreMode . cataNodeWithParentNodeInfo remove
             -- found we should report an error.
             (IMSParagraph, PARAGRAPH)    -> (ssIgnore .= Nothing) $> defNode
             (IMSParagraph, x)            -> do
-              lift . tell . makeError modePos . ParagraphErr $ prettyType x
+              lift . tell $ makeError filepath modePos (ParagraphErr (prettyType x))
               ssIgnore .= Nothing
               Node pos ty <$> sequence subs
 
@@ -184,7 +186,7 @@ removeIgnored = withIgnoreMode . cataNodeWithParentNodeInfo remove
             -- the file should already be ignored when `checkIgnoreFile` is called.
             -- We should report an error if we find it anyway.
             (IMSAll, _)                 -> do
-              lift . tell $ makeError modePos FileErr
+              lift . tell $ makeError filepath modePos FileErr
               ssIgnore .= Nothing
               Node pos ty <$> sequence subs
 
@@ -202,14 +204,14 @@ removeIgnored = withIgnoreMode . cataNodeWithParentNodeInfo remove
                 currentIgnore <- use ssIgnore
                 case currentIgnore of
                   Just (Ignore {_ignoreMode = IMSLink ParentExpectsLink}) -> do
-                    lift $ tell $ makeError modePos LinkErr
+                    lift $ tell $ makeError filepath modePos LinkErr
                     ssIgnore .= Nothing
                   _ -> pass
               return node'
 
       when (ty == PARAGRAPH) $ use ssIgnore >>= \case
         Just (Ignore (IMSLink ExpectingLinkInParagraph) pragmaPos) ->
-          lift $ tell $ makeError pragmaPos LinkErr
+          lift $ tell $ makeError filepath pragmaPos LinkErr
         _ -> pass
 
       return scan
@@ -233,7 +235,7 @@ removeIgnored = withIgnoreMode . cataNodeWithParentNodeInfo remove
 
         (ssIgnore .= Just (Ignore ignoreModeState correctPos)) $> defNode
       InvalidMode msg -> do
-        lift . tell $ makeError correctPos $ UnrecognisedErr msg
+        lift . tell $ makeError filepath correctPos $ UnrecognisedErr msg
         (ssIgnore .= Nothing) $> defNode
       NotAnAnnotation -> Node pos nodeType <$> sequence subs
       where
@@ -244,24 +246,26 @@ removeIgnored = withIgnoreMode . cataNodeWithParentNodeInfo remove
       let mType = safeHead $ words $ show ty
       in fromMaybe "" mType
 
-    withIgnoreMode
-      :: ScannerM Node
-      -> Writer [ScanError 'Parse] Node
-    withIgnoreMode action = action `runStateT` initialScannerState >>= \case
-      -- We expect `Ignore` state to be `Nothing` when we reach EOF,
-      -- otherwise that means there was an annotation that didn't match
-      -- any node, so we have to report that.
-      (node, ScannerState {_ssIgnore = Just (Ignore mode pos)}) -> case mode of
+    action :: ScannerM Node
+    action = cataNodeWithParentNodeInfo remove rootNode
+
+  (node, s) <- lift $ runStateT action initialScannerState
+  case s of
+    -- We expect `Ignore` state to be `Nothing` when we reach EOF,
+    -- otherwise that means there was an annotation that didn't match
+    -- any node, so we have to report that.
+    ScannerState {_ssIgnore = Just (Ignore mode pos)} -> do
+      case mode of
         IMSParagraph -> do
-            tell . makeError pos $ ParagraphErr "EOF"
+            lift $ tell . makeError filepath pos $ ParagraphErr "EOF"
             pure node
         IMSLink _ -> do
-            tell $ makeError pos LinkErr
+            lift $ tell $ makeError filepath pos LinkErr
             pure node
         IMSAll -> do
-            tell $ makeError pos FileErr
+            lift $ tell $ makeError filepath pos FileErr
             pure node
-      (node, _) -> pure node
+    _ -> pure node
 
 -- | Custom `foldMap` for source tree.
 foldNode :: (Monoid a, Monad m) => (Node -> m a) -> Node -> m a
@@ -270,27 +274,33 @@ foldNode action node@(Node _ _ subs) = do
   b <- concatForM subs (foldNode action)
   return (a <> b)
 
-type ExtractorM a = ReaderT MarkdownConfig (Writer [ScanError 'Parse]) a
+data ExtractorCtx = ExtractorCtx
+  { ecConfig :: MarkdownConfig
+  , ecFilePath :: String  -- for printing
+  }
+
+type ExtractorM a = ReaderT ExtractorCtx (Writer [ScanError 'Parse]) a
 
 -- | Extract information from source tree.
 nodeExtractInfo :: Node -> ExtractorM FileInfo
 nodeExtractInfo input@(Node _ _ nSubs) = do
   if checkIgnoreAllFile nSubs
   then return (diffToFileInfo mempty)
-  else diffToFileInfo <$> (foldNode extractor =<< lift (removeIgnored input))
+  else diffToFileInfo <$> (foldNode extractor =<< removeIgnored input)
 
   where
     extractor :: Node -> ExtractorM FileInfoDiff
-    extractor node@(Node pos ty _) =
+    extractor node@(Node pos ty _) = do
+      filepath <- asks ecFilePath
       case ty of
         HTML_BLOCK _ -> do
           return mempty
 
         HEADING lvl -> do
-          flavor <- asks mcFlavor
+          flavor <- asks (mcFlavor . ecConfig)
           let aType = HeaderAnchor lvl
           let aName = headerToAnchor flavor $ nodeExtractText node
-          let aPos  = toPosition pos
+          let aPos  = toPosition filepath pos
           return $ FileInfoDiff DList.empty $ DList.singleton $ Anchor {aType, aName, aPos}
 
         HTML_INLINE text -> do
@@ -307,7 +317,7 @@ nodeExtractInfo input@(Node _ _ nSubs) = do
           case mName of
             Just aName -> do
               let aType = HandAnchor
-                  aPos  = toPosition pos
+                  aPos  = toPosition filepath pos
               return $ FileInfoDiff
                 mempty
                 (pure $ Anchor {aType, aName, aPos})
@@ -323,8 +333,9 @@ nodeExtractInfo input@(Node _ _ nSubs) = do
 
       where
         extractLink url = do
+          filepath <- asks ecFilePath
           let rName = nodeExtractText node
-              rPos = toPosition pos
+              rPos = toPosition filepath pos
               rInfo = referenceInfo $ if null url then rName else url
 
           return $ FileInfoDiff
@@ -351,10 +362,12 @@ defNode :: Node
 defNode = Node Nothing DOCUMENT [] -- hard-coded default Node
 
 makeError
-  :: Maybe PosInfo
+  :: FilePath
+  -> Maybe PosInfo
   -> ScanErrorDescription
   -> [ScanError 'Parse]
-makeError pos errDescription = one $ mkParseScanError (toPosition pos) errDescription
+makeError filepath pos errDescription =
+  one $ mkParseScanError (toPosition filepath pos) errDescription
 
 getCommentContent :: Node -> Maybe Text
 getCommentContent node = do
@@ -396,20 +409,23 @@ textToMode ("ignore" : [x])
   | otherwise        = InvalidMode x
 textToMode _         = NotAnAnnotation
 
-parseFileInfo :: MarkdownConfig -> LT.Text -> (FileInfo, [ScanError 'Parse])
-parseFileInfo config input
+parseFileInfo :: MarkdownConfig -> String -> LT.Text -> (FileInfo, [ScanError 'Parse])
+parseFileInfo config pathForPrinting input
   = runWriter
-  $ flip runReaderT config
+  $ flip runReaderT (ExtractorCtx config pathForPrinting)
   $ nodeExtractInfo
   $ commonmarkToNode [optFootnotes] [extAutolink]
   $ toStrict input
 
-markdownScanner :: MarkdownConfig -> ScanAction
-markdownScanner config root file =
-  parseFileInfo config . decodeUtf8
-    <$> BSL.readFile (filePathFromRoot root file)
+markdownScanner :: Given PrintUnixPaths => MarkdownConfig -> ScanAction
+markdownScanner config root relativePath =
+  parseFileInfo config pathForPrinting . decodeUtf8
+    <$> BSL.readFile rootedPath
+  where
+    rootedPath = filePathFromRoot root relativePath
+    pathForPrinting = mkPathForPrinting rootedPath
 
-markdownSupport :: MarkdownConfig -> FileSupport
+markdownSupport :: Given PrintUnixPaths => MarkdownConfig -> FileSupport
 markdownSupport config isSymlink extension = do
   guard $ extension == ".md"
   guard $ not isSymlink

@@ -60,13 +60,11 @@ instance FromJSON Flavor where
 -- | Description of element position in source file.
 -- We keep this in text because scanners for different formats use different
 -- representation of this thing, and it actually appears in reports only.
-newtype Position = Position (Maybe Text)
+newtype Position = Position Text
   deriving stock (Show, Eq, Generic)
 
-instance Given ColorMode => Buildable Position where
-  build (Position pos) = case pos of
-    Nothing -> ""
-    Just p  -> styleIfNeeded Faint $ "at src:" <> build p
+instance Buildable Position where
+  build (Position pos) = build pos
 
 -- | Full info about a reference.
 data Reference = Reference
@@ -235,46 +233,41 @@ instance Given ColorMode => Buildable Reference where
         case rifLink of
           FLLocal ->
             [int||
-            reference #{paren $ colorIfNeeded Green "file-local"}#{posSep}#{rPos}:
+            reference #{paren $ colorIfNeeded Green "file-local"} at #{rPos}:
               - text: #s{rName}
               - anchor: #{rifAnchor ?: styleIfNeeded Faint "-"}
             |]
           FLRelative link ->
             [int||
-            reference #{paren $ colorIfNeeded Yellow "relative"}#{posSep}#{rPos}:
+            reference #{paren $ colorIfNeeded Yellow "relative"} at #{rPos}:
               - text: #s{rName}
               - link: #{link}
               - anchor: #{rifAnchor ?: styleIfNeeded Faint "-"}
             |]
           FLAbsolute link ->
             [int||
-            reference #{paren $ colorIfNeeded Yellow "absolute"}#{posSep}#{rPos}:
+            reference #{paren $ colorIfNeeded Yellow "absolute"} at #{rPos}:
               - text: #s{rName}
               - link: /#{link}
               - anchor: #{rifAnchor ?: styleIfNeeded Faint "-"}
             |]
       RIExternal (ELUrl url) ->
         [int||
-        reference #{paren $ colorIfNeeded Red "external"}#{posSep}#{rPos}:
+        reference #{paren $ colorIfNeeded Red "external"} at #{rPos}:
           - text: #s{rName}
           - link: #{url}
         |]
       RIExternal (ELOther url) ->
         [int||
-        reference (other)#{posSep}#{rPos}:
+        reference (other) at #{rPos}:
           - text: #s{rName}
           - link: #{url}
         |]
-    where
-      posSep :: Text
-      posSep = case rPos of
-        Position Nothing -> ""
-        _ -> " "
 
 instance Given ColorMode => Buildable AnchorType where
   build = styleIfNeeded Faint . \case
     HeaderAnchor l -> colorIfNeeded Green ("header " <> headerLevelToRoman l)
-    HandAnchor -> colorIfNeeded Yellow "hand made"
+    HandAnchor -> colorIfNeeded Yellow "handmade"
     BiblioAnchor -> colorIfNeeded Cyan "biblio"
     where
       headerLevelToRoman = \case
@@ -289,7 +282,7 @@ instance Given ColorMode => Buildable AnchorType where
 instance Given ColorMode => Buildable Anchor where
   build Anchor{..} =
     [int||
-    #{aName} (#{aType}) #{aPos}
+    #{aName} (#{aType}) at #{aPos}
     |]
 
 instance Given ColorMode => Buildable FileInfo where

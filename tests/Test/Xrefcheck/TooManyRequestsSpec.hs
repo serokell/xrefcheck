@@ -7,8 +7,6 @@ module Test.Xrefcheck.TooManyRequestsSpec where
 
 import Universum
 
-import Control.Concurrent (forkIO, killThread)
-import Control.Exception qualified as E
 import Data.CaseInsensitive qualified as CI
 import Data.Set qualified as S
 import Data.Time (addUTCTime, defaultTimeLocale, formatTime, getCurrentTime, rfc822DateFormat)
@@ -16,7 +14,7 @@ import Data.Time.Clock.POSIX (getPOSIXTime)
 import Network.HTTP.Types (Status (..), ok200, serviceUnavailable503, tooManyRequests429)
 import Network.HTTP.Types.Header (HeaderName, hRetryAfter)
 import Network.Wai (requestMethod)
-import Network.Wai.Handler.Warp qualified as Web
+import Network.Wai qualified as Web
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertBool, testCase, (@?=))
 import Time (sec, (-:-))
@@ -33,18 +31,18 @@ test_tooManyRequests = testGroup "429 response tests"
   [ testCase "Returns 200 eventually" $ do
       setRef <- newIORef S.empty
       let prog = reportSuccess "" $ initProgress 1
-      checkLinkAndProgressWithServerDefault setRef (mock429 "1" ok200)
+      checkLinkAndProgressWithServerDefault setRef (5000, mock429 "1" ok200)
         "http://127.0.0.1:5000/429" prog $ VerifyResult []
   , testCase "Returns 503 eventually" $ do
       setRef <- newIORef S.empty
       let prog = reportError "" $ initProgress 1
-      checkLinkAndProgressWithServerDefault setRef (mock429 "1" serviceUnavailable503)
+      checkLinkAndProgressWithServerDefault setRef (5000, mock429 "1" serviceUnavailable503)
         "http://127.0.0.1:5000/429" prog $ VerifyResult
           [ ExternalHttpResourceUnavailable $
               Status { statusCode = 503, statusMessage = "Service Unavailable"}
           ]
   , testCase "Successfully updates the new retry-after value (as seconds)" $ do
-      E.bracket (forkIO $ mock429 "2" ok200) killThread $ \_ -> do
+      withServer (5000, mock429 "2" ok200) $ do
         now <- getPOSIXTime <&> posixTimeToTimeSecond
         setRef <- newIORef S.empty
         progressRef <- newIORef VerifyProgress
@@ -68,7 +66,7 @@ test_tooManyRequests = testGroup "429 response tests"
         -- Set the @Retry-After@ response header value as (current datetime + 4 seconds)
         retryAfter = formatTime defaultTimeLocale rfc822DateFormat (addUTCTime 4 utctime)
         now = utcTimeToTimeSecond utctime
-      E.bracket (forkIO $ mock429 (fromString retryAfter) ok200) killThread $ \_ -> do
+      withServer (5000, mock429 (fromString retryAfter) ok200) $ do
         setRef <- newIORef S.empty
         progressRef <- newIORef VerifyProgress
               { vrLocal = initProgress 0
@@ -92,7 +90,7 @@ test_tooManyRequests = testGroup "429 response tests"
         -- Set the @Retry-After@ response header value as (current datetime - 4 seconds)
         retryAfter = formatTime defaultTimeLocale rfc822DateFormat (addUTCTime (-4) utctime)
         now = utcTimeToTimeSecond utctime
-      E.bracket (forkIO $ mock429 (fromString retryAfter) ok200) killThread $ \_ -> do
+      withServer (5000, mock429 (fromString retryAfter) ok200) $ do
         setRef <- newIORef S.empty
         progressRef <- newIORef VerifyProgress
               { vrLocal = initProgress 0
@@ -111,10 +109,10 @@ test_tooManyRequests = testGroup "429 response tests"
           ", but instead it's " ++ show ttc
     , testCase "The GET request should not be attempted after catching a 429" $ do
       let
-        mock429WithGlobalIORef :: IORef [(Text, Status)] -> IO ()
+        mock429WithGlobalIORef :: IORef [(Text, Status)] -> IO Web.Application
         mock429WithGlobalIORef infoReverseAccumulatorRef = do
           callCountRef <- newIORef @_ @Int 0
-          Web.run 5000 <=< Web.scottyApp $
+          Web.scottyApp $
             Web.matchAny "/429grandfinale" $ do
               req <- Web.request
               let m = decodeUtf8 (requestMethod req)
@@ -135,7 +133,7 @@ test_tooManyRequests = testGroup "429 response tests"
                 | otherwise      -> Web.status serviceUnavailable503
       infoReverseAccumulatorRef <- newIORef []
       setRef <- newIORef S.empty
-      E.bracket (forkIO $ mock429WithGlobalIORef infoReverseAccumulatorRef) killThread $ \_ -> do
+      withServer (5000, mock429WithGlobalIORef infoReverseAccumulatorRef) $ do
         _ <- verifyLinkDefault setRef "http://127.0.0.1:5000/429grandfinale"
         infoReverseAccumulator <- readIORef infoReverseAccumulatorRef
         reverse infoReverseAccumulator @?=
@@ -147,10 +145,10 @@ test_tooManyRequests = testGroup "429 response tests"
   where
     -- When called for the first time, returns with a 429 and `Retry-After: @retryAfter@`.
     -- Subsequent calls will respond with @status@.
-    mock429 :: Text -> Status -> IO ()
+    mock429 :: Text -> Status -> IO Web.Application
     mock429 retryAfter status = do
       callCountRef <- newIORef @_ @Int 0
-      Web.run 5000 <=< Web.scottyApp $
+      Web.scottyApp $
         Web.matchAny "/429" $ do
           callCount <- atomicModifyIORef' callCountRef $ \cc -> (cc + 1, cc)
           if callCount == 0

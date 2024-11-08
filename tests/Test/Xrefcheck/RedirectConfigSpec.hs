@@ -11,7 +11,7 @@ import Control.Lens ((%~), (.~))
 import Data.CaseInsensitive qualified as CI
 import Network.HTTP.Types (found302, movedPermanently301, temporaryRedirect307)
 import Network.HTTP.Types.Header (HeaderName, hLocation)
-import Network.Wai.Handler.Warp qualified as Web
+import Network.Wai qualified as Web
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase)
 import Text.Regex.TDFA.Text qualified as R
@@ -32,7 +32,7 @@ test_redirectRequests = testGroup "Redirect config tests"
               checkLinkAndProgressWithServer
                 (configMod [RedirectRule Nothing Nothing (Just RROTemporary) RROInvalid] [])
                 setRef
-                mockRedirect
+                (5000, mockRedirect)
                 (link "/temporary-redirect")
                 (progress False)
                 (VerifyResult [RedirectRuleError (chain ["/temporary-redirect", "/ok"]) (Just RROTemporary)])
@@ -41,7 +41,7 @@ test_redirectRequests = testGroup "Redirect config tests"
               checkLinkAndProgressWithServer
                 (configMod [RedirectRule Nothing Nothing (Just RROPermanent) RROInvalid] [])
                 setRef
-                mockRedirect
+                (5000, mockRedirect)
                 (link "/temporary-redirect")
                 (progress True)
                 (VerifyResult [])
@@ -52,7 +52,7 @@ test_redirectRequests = testGroup "Redirect config tests"
               checkLinkAndProgressWithServer
                 (configMod [RedirectRule Nothing (regex ".*/ok") Nothing RROValid] [])
                 setRef
-                mockRedirect
+                (5000, mockRedirect)
                 (link "/permanent-redirect")
                 (progress True)
                 (VerifyResult [])
@@ -61,7 +61,7 @@ test_redirectRequests = testGroup "Redirect config tests"
               checkLinkAndProgressWithServer
                 (configMod [RedirectRule Nothing (regex ".*/no-ok") (Just RROPermanent) RROValid] [])
                 setRef
-                mockRedirect
+                (5000, mockRedirect)
                 (link "/permanent-redirect")
                 (progress False)
                 (VerifyResult [RedirectRuleError (chain ["/permanent-redirect", "/ok"]) (Just RROPermanent)])
@@ -72,7 +72,7 @@ test_redirectRequests = testGroup "Redirect config tests"
               checkLinkAndProgressWithServer
                 (configMod [RedirectRule (regex ".*/permanent-.*") Nothing Nothing RROValid] [])
                 setRef
-                mockRedirect
+                (5000, mockRedirect)
                 (link "/permanent-redirect")
                 (progress True)
                 (VerifyResult [])
@@ -81,7 +81,7 @@ test_redirectRequests = testGroup "Redirect config tests"
               checkLinkAndProgressWithServer
                 (configMod [RedirectRule (regex ".*/temporary-.*") Nothing (Just RROPermanent) RROValid] [])
                 setRef
-                mockRedirect
+                (5000, mockRedirect)
                 (link "/permanent-redirect")
                 (progress False)
                 (VerifyResult [RedirectRuleError (chain ["/permanent-redirect", "/ok"]) (Just RROPermanent)])
@@ -92,7 +92,7 @@ test_redirectRequests = testGroup "Redirect config tests"
             checkLinkAndProgressWithServer
               (configMod [RedirectRule (regex ".*/follow[0-9]") (regex "^.*/ok$") (Just (RROCode 307)) RROInvalid] [])
               setRef
-              mockRedirect
+              (5000, mockRedirect)
               (link "/follow3")
               (progress False)
               (VerifyResult [RedirectRuleError (chain ["/follow3", "/ok"]) (Just (RROCode 307))])
@@ -101,7 +101,7 @@ test_redirectRequests = testGroup "Redirect config tests"
             checkLinkAndProgressWithServer
               (configMod [RedirectRule (regex ".*/follow[0-9]") (regex "^.*/ok$") (Just (RROCode 307)) RROInvalid] [])
               setRef
-              mockRedirect
+              (5000, mockRedirect)
               (link "/follow2")
               (progress True)
               (VerifyResult [])
@@ -111,7 +111,7 @@ test_redirectRequests = testGroup "Redirect config tests"
           checkLinkAndProgressWithServer
             (configMod [RedirectRule Nothing Nothing Nothing RROValid] [])
             setRef
-            mockRedirect
+            (5000, mockRedirect)
             (link "/follow1")
             (progress True)
             (VerifyResult [])
@@ -122,7 +122,7 @@ test_redirectRequests = testGroup "Redirect config tests"
           checkLinkAndProgressWithServer
             (configMod [RedirectRule Nothing Nothing Nothing RROFollow] [])
             setRef
-            mockRedirect
+            (5000, mockRedirect)
             (link "/follow1")
             (progress True)
             (VerifyResult [])
@@ -131,7 +131,7 @@ test_redirectRequests = testGroup "Redirect config tests"
           checkLinkAndProgressWithServer
             (configMod [RedirectRule Nothing Nothing (Just (RROCode 307)) RROInvalid, RedirectRule Nothing Nothing Nothing RROFollow] [])
             setRef
-            mockRedirect
+            (5000, mockRedirect)
             (link "/follow1")
             (progress False)
             (VerifyResult [RedirectRuleError (chain ["/follow1", "/follow2", "/follow3", "/ok"]) (Just (RROCode 307))])
@@ -140,7 +140,7 @@ test_redirectRequests = testGroup "Redirect config tests"
           checkLinkAndProgressWithServer
             (configMod [RedirectRule Nothing Nothing (Just (RROCode 307)) RROInvalid, RedirectRule Nothing Nothing Nothing RROFollow] (maybeToList (regex ".*/follow3")))
             setRef
-            mockRedirect
+            (5000, mockRedirect)
             (link "/follow1")
             (progress True)
             (VerifyResult [])
@@ -172,9 +172,9 @@ test_redirectRequests = testGroup "Redirect config tests"
           then reportSuccess
           else reportError
 
-    mockRedirect :: IO ()
+    mockRedirect :: IO Web.Application
     mockRedirect =
-      Web.run 5000 <=< Web.scottyApp $ do
+      Web.scottyApp $ do
         Web.matchAny "/ok" $ Web.raw "Ok"
         Web.matchAny "/permanent-redirect" $ do
           setHeader hLocation "/ok"

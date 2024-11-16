@@ -11,43 +11,33 @@ load '../helpers'
 
 
 @test "No redirect rules" {
+  golden_file=$(realpath expected1.gold)
   to_temp xrefcheck -c no-rules.yaml
-
-assert_diff - <<EOF
-All repository links are valid.
-EOF
+  assert_diff
 }
 
 @test "Only outcome" {
+  golden_file=$(realpath expected2.gold)
   to_temp xrefcheck -c only-outcome.yaml
-
-assert_diff - <<EOF
-All repository links are valid.
-EOF
+  assert_diff
 }
 
 @test "Only outcome and to" {
+  golden_file=$(realpath expected3.gold)
   to_temp xrefcheck -c only-outcome-to.yaml
-
-assert_diff - <<EOF
-All repository links are valid.
-EOF
+  assert_diff
 }
 
 @test "Only outcome and on" {
+  golden_file=$(realpath expected4.gold)
   to_temp xrefcheck -c only-outcome-to.yaml
-
-assert_diff - <<EOF
-All repository links are valid.
-EOF
+  assert_diff
 }
 
 @test "Full rule" {
+  golden_file=$(realpath expected5.gold)
   to_temp xrefcheck -c full-rule.yaml
-
-assert_diff - <<EOF
-All repository links are valid.
-EOF
+  assert_diff
 }
 
 @test "Rules not an array error" {

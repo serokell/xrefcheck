@@ -11,9 +11,9 @@ load '../helpers'
 
 
 @test "Dump config to stdout" {
+  golden_file=$(realpath ../../configs/github-config.yaml)
   to_temp xrefcheck dump-config --stdout -t GitHub
-
-  assert_diff ../../configs/github-config.yaml
+  assert_diff
 }
 
 @test "Dump config to existent default file error" {

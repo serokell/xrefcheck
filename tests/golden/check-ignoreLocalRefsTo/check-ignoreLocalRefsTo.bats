@@ -17,7 +17,7 @@ load '../helpers'
 }
 
 @test "IgnoreLocalRefsTo: check failure" {
+  golden_file=$(realpath expected.gold)
   to_temp xrefcheck
-
-  assert_diff expected.gold
+  assert_diff
 }

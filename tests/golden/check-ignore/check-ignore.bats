@@ -35,46 +35,17 @@ load '../helpers'
 }
 
 @test "Ignore file with broken xrefcheck annotation: directory, check failure" {
+  golden_file=$(realpath expected1.gold)
   to_temp xrefcheck --ignore ./to-ignore/inner-directory/
-
-  assert_diff - <<EOF
-=== Scan errors found ===
-
-  ➥  In file to-ignore/inner-directory/broken_annotation.md
-     scan error at src:9:1-29:
-
-     Annotation "ignore all" must be at the top of markdown or right after comments at the top
-
-Scan errors dumped, 1 in total.
-EOF
+  assert_diff
 }
 
 @test "Ignore referenced file, check error" {
+  golden_file=$(realpath expected2.gold)
+
   to_temp xrefcheck --ignore referenced-file.md
 
-  assert_diff - <<EOF
-=== Scan errors found ===
-
-  ➥  In file to-ignore/inner-directory/broken_annotation.md
-     scan error at src:9:1-29:
-
-     Annotation "ignore all" must be at the top of markdown or right after comments at the top
-
-Scan errors dumped, 1 in total.
-
-=== Invalid references found ===
-
-  ➥  In file check-ignore.md
-     bad reference (absolute) at src:7:1-37:
-       - text: "Good reference"
-       - link: /referenced-file.md
-       - anchor: -
-
-     File does not exist:
-       referenced-file.md
-
-Invalid references dumped, 1 in total.
-EOF
+  assert_diff
 }
 
 @test "Config: Absolute fiepath in \"ignore\" error" {

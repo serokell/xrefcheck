@@ -11,9 +11,9 @@ load '../helpers'
 
 
 @test "We report broken links inside footnotes" {
+  golden_file=$(realpath expected.gold)
   to_temp xrefcheck -r broken-link-in-footnote
-
-  assert_diff expected.gold
+  assert_diff
 }
 
 @test  "We're not treating footnotes as 'shortcut reference links'"  {

@@ -11,8 +11,9 @@ load '../helpers'
 
 
 @test "Checking files with backslash" {
+  golden_file=$(realpath expected.gold)
+
   cp a.md $TEST_TEMP_DIR
-  cp expected.gold $TEST_TEMP_DIR
   touch "$TEST_TEMP_DIR/a\a.md" || \
     return 0 # Cannot be tested on Windows
 
@@ -29,5 +30,5 @@ EOF
 
   to_temp xrefcheck -v
 
-  assert_diff expected.gold
+  assert_diff
 }

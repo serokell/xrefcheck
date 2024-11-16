@@ -42,60 +42,21 @@ load '../helpers'
 }
 
 @test "Basic root, check errors report" {
+  golden_file=$(realpath expected1.gold)
   to_temp xrefcheck --root .
-
-  assert_diff - <<EOF
-=== Invalid references found ===
-
-  ➥  In file to-ignore/broken-link.md
-     bad reference (absolute) at src:7:1-25:
-       - text: "my link"
-       - link: /one/two/three
-       - anchor: -
-
-     File does not exist:
-       one/two/three
-
-Invalid references dumped, 1 in total.
-EOF
+  assert_diff
 }
 
 @test "Root with redundant slashes, check errors report" {
+  golden_file=$(realpath expected2.gold)
   to_temp xrefcheck --root ././///././././//./
-
-  assert_diff - <<EOF
-=== Invalid references found ===
-
-  ➥  In file to-ignore/broken-link.md
-     bad reference (absolute) at src:7:1-25:
-       - text: "my link"
-       - link: /one/two/three
-       - anchor: -
-
-     File does not exist:
-       one/two/three
-
-Invalid references dumped, 1 in total.
-EOF
+  assert_diff
 }
 
 @test "No root, check errors report" {
+  golden_file=$(realpath expected3.gold)
   to_temp xrefcheck
-
-  assert_diff - <<EOF
-=== Invalid references found ===
-
-  ➥  In file to-ignore/broken-link.md
-     bad reference (absolute) at src:7:1-25:
-       - text: "my link"
-       - link: /one/two/three
-       - anchor: -
-
-     File does not exist:
-       one/two/three
-
-Invalid references dumped, 1 in total.
-EOF
+  assert_diff
 }
 
 @test "Single file as root" {

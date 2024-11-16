@@ -38,6 +38,8 @@ load '../helpers'
 }
 
 @test "Git: bad file not tracked, --include-untracked enabled, check failure" {
+  golden_file=$(realpath expected1.gold)
+
   cd $TEST_TEMP_DIR
 
   git init
@@ -46,23 +48,12 @@ load '../helpers'
 
   to_temp xrefcheck --include-untracked
 
-  assert_diff - <<EOF
-=== Invalid references found ===
-
-  ➥  In file git.md
-     bad reference (relative) at src:1:1-11:
-       - text: "a"
-       - link: ./a.md
-       - anchor: -
-
-     File does not exist:
-       ./a.md
-
-Invalid references dumped, 1 in total.
-EOF
+  assert_diff
 }
 
 @test "Git: bad file tracked, check failure" {
+  golden_file=$(realpath expected2.gold)
+
   cd $TEST_TEMP_DIR
 
   git init
@@ -73,24 +64,13 @@ EOF
 
   to_temp xrefcheck
 
-  assert_diff - <<EOF
-=== Invalid references found ===
-
-  ➥  In file git.md
-     bad reference (relative) at src:1:1-11:
-       - text: "a"
-       - link: ./a.md
-       - anchor: -
-
-     File does not exist:
-       ./a.md
-
-Invalid references dumped, 1 in total.
-EOF
+  assert_diff
 }
 
 
 @test "Git: link to untracked file, check failure" {
+  golden_file=$(realpath expected3.gold)
+
   cd $TEST_TEMP_DIR
 
   git init
@@ -103,21 +83,7 @@ EOF
 
   to_temp xrefcheck
 
-  assert_diff - <<EOF
-=== Invalid references found ===
-
-  ➥  In file git.md
-     bad reference (relative) at src:1:1-11:
-       - text: "a"
-       - link: ./a.md
-       - anchor: -
-
-     Link target is not tracked by Git:
-       ./a.md
-       Please run "git add" before running xrefcheck or enable --include-untracked CLI option.
-
-Invalid references dumped, 1 in total.
-EOF
+  assert_diff
 }
 
 @test "Git: link to untracked file, --include-untracked enabled" {

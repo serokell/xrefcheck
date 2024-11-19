@@ -14,21 +14,36 @@ load '../helpers'
 # in CI)") may be running in CI).
 
 @test "Color flag (not in CI)" {
-  CI=false xrefcheck -v --no-progress --color | diff - expected-color.gold
+  golden_file=$(realpath expected-color.gold)
+  output_file="$TEST_TEMP_DIR/temp_file.test"
+  CI=false xrefcheck -v --no-progress --color > $output_file
+  assert_diff
 }
 
 @test "No color flag (not in CI)" {
-  CI=false xrefcheck -v --no-progress --no-color | diff - expected-no-color.gold
+  golden_file=$(realpath expected-no-color.gold)
+  output_file="$TEST_TEMP_DIR/temp_file.test"
+  CI=false xrefcheck -v --no-progress --no-color > $output_file
+  assert_diff
 }
 
 @test "No color default when pipe (not in CI)" {
-  CI=false xrefcheck -v --no-progress | diff - expected-no-color.gold
+  golden_file=$(realpath expected-no-color.gold)
+  output_file="$TEST_TEMP_DIR/temp_file.test"
+  CI=false xrefcheck -v --no-progress > $output_file
+  assert_diff
 }
 
 @test "Color default when CI" {
-  CI=true xrefcheck -v --no-progress | diff - expected-color.gold
+  golden_file=$(realpath expected-color.gold)
+  output_file="$TEST_TEMP_DIR/temp_file.test"
+  CI=true xrefcheck -v --no-progress > $output_file
+  assert_diff
 }
 
 @test "No color flag in CI" {
-  CI=true xrefcheck -v --no-progress --no-color | diff - expected-no-color.gold
+  golden_file=$(realpath expected-no-color.gold)
+  output_file="$TEST_TEMP_DIR/temp_file.test"
+  CI=true xrefcheck -v --no-progress --no-color > $output_file
+  assert_diff
 }

@@ -18,11 +18,24 @@ load '../helpers'
 }
 
 @test "Ignore localhost, check errors" {
+  uname_out=$(uname)
+  case "${uname_out}" in
+      Linux*)     platform_suffix=linux;;
+      Darwin*)    platform_suffix=darwin;;
+      CYGWIN*)    platform_suffix=windows;;
+      MINGW*)     platform_suffix=windows;;
+      MSYS_NT*)   platform_suffix=windows;;
+      *)          machine="UNKNOWN:${unameOut}"
+  esac
+  echo "platform_suffix=${platform_suffix}"
+
+  golden_file=$(realpath expected_${platform_suffix}.gold)
+
   to_temp xrefcheck \
     -c config-check-enabled.yaml \
     -r .
 
-  assert_diff expected_linux.gold || assert_diff expected_windows.gold
+  assert_diff
 }
 
 @test "Ignore localhost, no config specified" {

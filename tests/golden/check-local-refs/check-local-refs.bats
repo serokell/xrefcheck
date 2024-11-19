@@ -11,19 +11,19 @@ load '../helpers'
 
 
 @test "Checking local references, root = \".\"" {
+  golden_file=$(realpath expected1.gold)
   to_temp xrefcheck
-
-  assert_diff expected1.gold
+  assert_diff
 }
 
 @test "Checking local references, root = \"dir1\"" {
+  golden_file=$(realpath expected2.gold)
   to_temp xrefcheck -r dir1
-
-  assert_diff expected2.gold
+  assert_diff
 }
 
 @test "Checking behavior when there are virtual files, root = \"dir1\"" {
+  golden_file=$(realpath expected3.gold)
   to_temp xrefcheck -r dir1 -c config-with-virtual-files.yaml
-
-  assert_diff expected3.gold
+  assert_diff
 }

@@ -11,8 +11,9 @@ load '../helpers'
 
 
 @test "Checking that symlinks are not processed as md files" {
+  golden_file=$(realpath expected1.gold)
+
   cp config-ignore.yaml $TEST_TEMP_DIR
-  cp expected1.gold $TEST_TEMP_DIR
   cp -R dir $TEST_TEMP_DIR
 
   cd $TEST_TEMP_DIR
@@ -31,11 +32,12 @@ load '../helpers'
 
   to_temp xrefcheck -v -c config-ignore.yaml
 
-  assert_diff expected1.gold
+  assert_diff $golden_file
 }
 
 @test "Symlinks validation" {
-  cp expected2.gold $TEST_TEMP_DIR
+  golden_file=$(realpath expected2.gold)
+
   cp -R dir $TEST_TEMP_DIR
 
   cd $TEST_TEMP_DIR
@@ -54,5 +56,5 @@ load '../helpers'
 
   to_temp xrefcheck -v
 
-  assert_diff expected2.gold
+  assert_diff
 }

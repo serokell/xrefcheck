@@ -10,7 +10,7 @@ load '../helpers/bats-file/load'
 load '../helpers'
 
 @test "Check images" {
+  golden_file=$(realpath expected.gold)
   to_temp xrefcheck -v
-
-  assert_diff expected.gold
+  assert_diff
 }

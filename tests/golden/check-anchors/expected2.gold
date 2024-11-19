@@ -1,0 +1,27 @@
+=== Invalid references found ===
+
+  ➥  In file a.md
+     bad reference (file-local) at src:12:1-13:
+       - text: "broken"
+       - anchor: h3
+
+     Anchor 'h3' is not present, did you mean:
+         - h1 (header I) at src:6:1-4
+         - h2 (header II) at src:8:1-5
+
+  ➥  In file a.md
+     bad reference (file-local) at src:14:1-18:
+       - text: "broken"
+       - anchor: heading
+
+     Anchor 'heading' is not present, did you mean:
+         - the-heading (header I) at src:10:1-13
+
+  ➥  In file a.md
+     bad reference (file-local) at src:16:1-31:
+       - text: "broken"
+       - anchor: really-unique-anchor
+
+     Anchor 'really-unique-anchor' is not present
+
+Invalid references dumped, 3 in total.

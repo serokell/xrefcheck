@@ -30,43 +30,30 @@ to_temp() {
 }
 
 # Uses `diff` to compare output file created by `to_temp` against expected output.
-# Expected output could be given either:
-# - in the form of a filepath, e.g. `assert_diff expected.gold`
-# - via stdin when `-` is used, e.g. `assert_diff -`
-# Usage examples:
+# Expected output must be given by setting the `golden_file` variable to an
+# absolute path.
+#
+# Usage example:
 # - filepath:
 #
 # @test "Ignore localhost, check errors" {
+#   golden_file=$(realpath expected.gold)
+#
 #   to_temp xrefcheck \
 #     -c config-check-enabled.yaml \
 #     -r .
 #
-#   assert_diff expected.gold
-# }
-#
-# - stdin:
-# @test "Relative anchor, check error report" {
-#   to_temp xrefcheck
-#
-#   assert_diff - <<EOF
-# === Invalid references found ===
-#
-#        ➥  In file check-relative-anchor.md
-#           bad reference (relative) at src:7:1-40:
-#             - text: "no-anchor"
-#             - link: no-anchor.md
-#             - anchor: invalid-anchor
-#
-#           Anchor 'invalid-anchor' is not present
-#
-#
-# Invalid references dumped, 1 in total.
-# EOF
+#   assert_diff
 # }
 assert_diff() {
+  : "{golden_file?}"
   : "{output_file?}"
 
-  diff $output_file $1 \
+  if [ "${BATS_ACCEPT}" = "1" ]; then
+    cp $output_file $golden_file
+  fi
+
+  diff $output_file $golden_file \
     --ignore-tab-expansion \
     --strip-trailing-cr
 }

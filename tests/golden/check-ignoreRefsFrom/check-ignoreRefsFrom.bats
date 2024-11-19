@@ -29,20 +29,7 @@ load '../helpers'
 }
 
 @test "ignoreRefsFrom: directory, check failure" {
+  golden_file=$(realpath expected.gold)
   to_temp xrefcheck -c config-directory.yaml
-
-  assert_diff - <<EOF
-=== Invalid references found ===
-
-  ➥  In file ignoreRefsFrom/inner-directory/bad-reference.md
-     bad reference (absolute) at src:7:1-28:
-       - text: "Bad reference"
-       - link: /no-file.md
-       - anchor: -
-
-     File does not exist:
-       no-file.md
-
-Invalid references dumped, 1 in total.
-EOF
+  assert_diff
 }

@@ -92,7 +92,8 @@ defaultAction Options{..} = do
       verifyRepo rw fullConfig oMode repoInfo
 
     case verifyErrors verifyRes of
-      Nothing | null scanErrs -> fmtLn "All repository links are valid."
+      Nothing | null scanErrs ->
+        fmtLn $ colorIfNeeded Green "All repository links are valid."
       Nothing -> exitFailure
       Just verifyErrs -> do
         unless (null scanErrs) $ fmt "\n"

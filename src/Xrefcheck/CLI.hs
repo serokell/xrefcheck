@@ -208,7 +208,7 @@ exclusionOptionsParser :: Parser ExclusionOptions
 exclusionOptionsParser = do
   eoIgnore <- many . globOption $
     long "ignore" <>
-    metavar "GLOB PATTERN" <>
+    metavar "GLOB_PATTERN" <>
     help "Ignore these files. References to them will fail verification,\
          \ and references from them will not be verified.\
          \ Glob patterns that contain wildcards MUST be enclosed\
@@ -237,7 +237,7 @@ dumpConfigOptions = hsubparser $
       option repoTypeReadM $
       short 't' <>
       long "type" <>
-      metavar "REPOSITORY TYPE" <>
+      metavar "REPOSITORY_TYPE" <>
       help [int||
       Git repository type. \
       Can be (#{intercalate " | " $ map show allFlavors}). \

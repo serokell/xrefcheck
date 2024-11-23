@@ -1,0 +1,21 @@
+check-ignoreExternalRefsTo.md:7:10-53: bad reference:
+  The reference to "web-site" failed verification.
+  - link (external): https://localhost:20000/web-site
+  Connection failure
+
+check-ignoreExternalRefsTo.md:9:10-45: bad reference:
+  The reference to "team" failed verification.
+  - link (external): https://127.0.0.1:20000/team
+  Connection failure
+
+check-ignoreExternalRefsTo.md:11:10-44: bad reference:
+  The reference to "blog" failed verification.
+  - link (external): http://localhost:20000/blog
+  Connection failure
+
+check-ignoreExternalRefsTo.md:13:10-44: bad reference:
+  The reference to "labs" failed verification.
+  - link (external): http://127.0.0.1:20000/labs
+  Connection failure
+
+Invalid references dumped, 4 in total.

@@ -7,6 +7,9 @@
 Unreleased
 ==========
 
+0.3.0
+==========
+
 * [#176](https://github.com/serokell/xrefcheck/pull/176)
   + Enabled `autolink` extension for `cmark-gfm`, so now we're finding strings
     like `www.google.com` or `https://google.com`, treating them as links
@@ -36,7 +39,7 @@ Unreleased
   + Now we call references to anchors in current file (e.g. `[a](#b)`) as
   `file-local` references instead of calling them `current file` (which was ambiguous).
 * [#233](https://github.com/serokell/xrefcheck/pull/233)
-  + Now xrefxcheck does not follow redirect links by default. It fails for permanent
+  + Now xrefcheck does not follow redirect links by default. It fails for permanent
     redirect responses (i.e. 301 and 308) and passes for temporary ones (i.e. 302, 303, 307).
 * [#231](https://github.com/serokell/xrefcheck/pull/231)
   + Anchor analysis takes now into account the appropriate case-sensitivity depending on

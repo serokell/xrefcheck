@@ -1,12 +1,6 @@
-=== Invalid references found ===
-
-  ➥  In file ignoreRefsFrom/inner-directory/bad-reference.md
-     bad reference (absolute) at src:7:1-28:
-       - text: "Bad reference"
-       - link: /no-file.md
-       - anchor: -
-
-     File does not exist:
-       no-file.md
+ignoreRefsFrom/inner-directory/bad-reference.md:7:1-28: bad reference:
+  The reference to "Bad reference" failed verification.
+  File does not exist:
+    no-file.md
 
 Invalid references dumped, 1 in total.

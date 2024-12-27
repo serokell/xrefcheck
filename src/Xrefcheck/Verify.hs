@@ -46,9 +46,10 @@ import Data.Text.Metrics (damerauLevenshteinNorm)
 import Data.Time (UTCTime, defaultTimeLocale, formatTime, readPTime, rfc822DateFormat)
 import Data.Time.Clock.POSIX (getPOSIXTime)
 import Data.Traversable (for)
-import Fmt (Buildable (..), Builder, fmt, maybeF, nameF)
+import Fmt (Buildable (..), Builder, fmt, fmtLn, maybeF, nameF)
 import GHC.Exts qualified as Exts
 import GHC.Read (Read (readPrec))
+import Network.Connection qualified as N.C
 import Network.FTP.Client
   (FTPException (..), FTPResponse (..), ResponseStatus (..), login, nlst, size, withFTP, withFTPS)
 import Network.HTTP.Client
@@ -107,13 +108,6 @@ data WithReferenceLoc a = WithReferenceLoc
   , wrlItem      :: a
   }
 
-instance (Given ColorMode, Buildable a) => Buildable (WithReferenceLoc a) where
-  build WithReferenceLoc{..} = [int||
-    In file #{styleIfNeeded Faint (styleIfNeeded Bold wrlFile)}
-    bad #{wrlReference}
-    #{wrlItem}
-    |]
-
 -- | Contains a name of a domain, examples:
 -- @DomainName "github.com"@,
 -- @DomainName "localhost"@,
@@ -137,6 +131,7 @@ data VerifyError
   | ExternalFtpException FTPException
   | FtpEntryDoesNotExist FilePath
   | ExternalResourceSomeError Text
+  | ExternalResourceConnectionFailure
   | RedirectChainCycle RedirectChain
   | RedirectMissingLocation RedirectChain
   | RedirectChainLimit RedirectChain
@@ -147,8 +142,8 @@ data ResponseResult
   = RRDone
   | RRFollow Text
 
-instance Given ColorMode => Buildable VerifyError where
-  build = \case
+pprVerifyErr' :: Given ColorMode => ReferenceInfo -> VerifyError -> Builder
+pprVerifyErr' rInfo = \case
     LocalFileDoesNotExist file ->
       [int||
       File does not exist:
@@ -161,15 +156,15 @@ instance Given ColorMode => Buildable VerifyError where
 
     LocalFileOutsideRepo file ->
       [int||
-      Link targets a local file outside repository:
+      Link #{pprLinkTyp rInfo} targets a local file outside the repository:
         #{file}
       |]
 
     LinkTargetNotAddedToGit file ->
       [int||
-      Link target is not tracked by Git:
+      Link #{pprLinkTyp rInfo} targets a file not tracked by Git:
         #{file}
-        Please run "git add" before running xrefcheck or enable --include-untracked CLI option.
+      Please run "git add" before running xrefcheck or enable --include-untracked CLI option.
       |]
 
     AnchorDoesNotExist anchor similar -> case nonEmpty similar of
@@ -180,70 +175,70 @@ instance Given ColorMode => Buildable VerifyError where
       Just otherAnchors ->
         [int||
         Anchor '#{anchor}' is not present, did you mean:
-        #{interpolateIndentF 4 $ interpolateBlockListF otherAnchors}
+        #{interpolateIndentF 2 $ interpolateBlockListF otherAnchors}
         |]
 
     AmbiguousAnchorRef file anchor fileAnchors ->
       [int||
       Ambiguous reference to anchor '#{anchor}'
-        In file #{file}
-        It could refer to either:
-      #{interpolateIndentF 4 $ interpolateBlockListF fileAnchors}
-        Use of ambiguous anchors is discouraged because the target
-        can change silently while the document containing it evolves.
+      in file #{file}
+      It could refer to either:
+      #{interpolateIndentF 2 $ interpolateBlockListF fileAnchors}
+      Use of ambiguous anchors is discouraged because the target
+      can change silently while the document containing it evolves.
       |]
 
     ExternalResourceUriParseError (UPEInvalid err) ->
       [int||
       Invalid URI (#{err})
-      |]
+      |] <> pprLinkCtx rInfo
 
     ExternalResourceUriParseError (UPEConversion err) ->
       [int||
       Invalid URI
-      #{interpolateIndentF 4 . build $ displayException err}
-      |]
+      #{interpolateIndentF 2 . build $ displayException err}
+      |] <> pprLinkCtx rInfo
 
     ExternalResourceInvalidUrl Nothing ->
       [int||
       Invalid URL
-      |]
+      |] <> pprLinkCtx rInfo
 
     ExternalResourceInvalidUrl (Just message) ->
       [int||
       Invalid URL (#{message})
-      |]
+      |] <> pprLinkCtx rInfo
 
     ExternalResourceUnknownProtocol ->
       [int||
       Bad url (expected 'http','https', 'ftp' or 'ftps')
-      |]
+      |] <> pprLinkCtx rInfo
 
     ExternalHttpResourceUnavailable status ->
       [int||
       Resource unavailable (#{statusCode status} #{decodeUtf8 @Text (statusMessage status)})
-      |]
+      |] <> pprLinkCtx rInfo
 
     ExternalHttpTooManyRequests retryAfter _ ->
       [int||
       Resource unavailable (429 Too Many Requests; retry after #{maybeF retryAfter})
-      |]
+      |] <> pprLinkCtx rInfo
 
     ExternalHttpTimeout _ ->
       [int||
       Response timeout
-      |]
+      |] <> pprLinkCtx rInfo
 
     ExternalFtpResourceUnavailable response ->
       [int||
       Resource unavailable:
       #{response}
-      |]
+      |] <> pprLinkCtx rInfo
 
     ExternalFtpException err ->
       [int||
       FTP exception (#{err})
-      |]
+      |] <> pprLinkCtx rInfo
 
     FtpEntryDoesNotExist entry ->
       [int||
@@ -254,31 +249,36 @@ instance Given ColorMode => Buildable VerifyError where
     ExternalResourceSomeError err ->
       [int||
       #{err}
-      |]
+      |] <> pprLinkCtx rInfo
+
+    ExternalResourceConnectionFailure ->
+      [int||
+      Connection failure
+      |] <> pprLinkCtx rInfo
 
     RedirectChainCycle chain ->
       [int||
       Cycle found in the following redirect chain:
       #{interpolateIndentF 2 $ attachToRedirectChain chain "here"}
-      |]
+      |] <> pprLinkCtx rInfo
 
     RedirectMissingLocation chain ->
       [int||
       Missing location header in the following redirect chain:
       #{interpolateIndentF 2 $ attachToRedirectChain chain "no location header"}
-      |]
+      |] <> pprLinkCtx rInfo
 
     RedirectChainLimit chain ->
         [int||
         The follow redirects limit has been reached in the following redirect chain:
         #{interpolateIndentF 2 $ attachToRedirectChain chain "stopped before this one"}
-        |]
+        |] <> pprLinkCtx rInfo
 
     RedirectRuleError chain mOn ->
       [int||
       #{redirect} found:
       #{interpolateIndentF 2 $ attachToRedirectChain chain "stopped before this one"}
-      |]
+      |] <> pprLinkCtx rInfo
       where
         redirect :: Text
         redirect = case mOn of
@@ -304,15 +304,52 @@ incTotalCounter rc = rc {rcTotalRetries = rcTotalRetries rc + 1}
 incTimeoutCounter :: RetryCounter -> RetryCounter
 incTimeoutCounter rc = rc {rcTimeoutRetries = rcTimeoutRetries rc + 1}
 
+pprVerifyErr :: Given ColorMode => WithReferenceLoc VerifyError -> Builder
+pprVerifyErr wrl = hdr <> "\n" <> interpolateIndentF 2 msg
+  where
+    WithReferenceLoc{wrlReference, wrlItem} = wrl
+    Reference{rName, rInfo} = wrlReference
+
+    hdr, msg :: Builder
+    hdr =
+      styleIfNeeded Bold (build (rPos wrlReference) <> ": ") <>
+      colorIfNeeded Red "bad reference:"
+    msg =
+      "The reference to " <> show rName <> " failed verification.\n" <>
+      pprVerifyErr' rInfo wrlItem
+
+pprLink :: Given ColorMode => ReferenceInfo -> Maybe (Builder, Builder)
+pprLink = \case
+  RIFile ReferenceInfoFile{..} ->
+    case rifLink of
+      FLLocal -> Nothing
+      FLRelative link -> Just ("a " <> styleIfNeeded Faint "relative" <> " link", build link)
+      FLAbsolute link -> Just ("an " <> styleIfNeeded Faint "absolute" <> " link", build link)
+  RIExternal (ELUrl url) -> Just ("an " <> styleIfNeeded Faint "external" <> " link", build url)
+  RIExternal (ELOther url) -> Just ("a link", build url)
+
+pprLinkTyp :: Given ColorMode => ReferenceInfo -> Builder
+pprLinkTyp rInfo =
+  paren $ styleIfNeeded Faint $ case rInfo of
+    RIFile ReferenceInfoFile{rifLink} ->
+      case rifLink of
+        FLLocal -> "file-local"
+        FLRelative _ -> "relative"
+        FLAbsolute _ -> "absolute"
+    RIExternal _ -> "external"
+
+pprLinkCtx :: Given ColorMode => ReferenceInfo -> Builder
+pprLinkCtx rInfo =
+  case pprLink rInfo of
+    Nothing -> mempty
+    Just (b1, b2) -> "when processing " <> b1 <> ":\n" <> interpolateIndentF 2 b2 <> "\n"
+
 reportVerifyErrs
   :: Given ColorMode => NonEmpty (WithReferenceLoc VerifyError) -> IO ()
-reportVerifyErrs errs = fmt
-  [int||
-  === Invalid references found ===
-
-  #{interpolateIndentF 2 (interpolateBlockListF' "➥ " build errs)}
-  Invalid references dumped, #{length errs} in total.
-  |]
+reportVerifyErrs errs = do
+  traverse_ (fmtLn . pprVerifyErr) errs
+  fmtLn $ colorIfNeeded Red $
+    "Invalid references dumped, " <> build (length errs) <> " in total."
 
 data RetryAfter = Date UTCTime | Seconds (Time Second)
   deriving stock (Show, Eq)
@@ -708,7 +745,7 @@ checkExternalResource followed config@Config{..} link
       let maxTime = Time @Second $ unTime ncExternalRefCheckTimeout * timeoutFrac
 
       reqRes <- catch (liftIO (timeout maxTime $ reqLink $> RRDone)) $
-         (Just <$>) <$> interpretErrors uri
+         (Just <$>) <$> interpretHttpErrors uri
 
       case reqRes of
         Nothing -> throwError $ ExternalHttpTimeout $ extractHost uri
@@ -730,9 +767,13 @@ checkExternalResource followed config@Config{..} link
       , (405 ==) -- method mismatch
       ]
 
-    interpretErrors uri = \case
+    interpretHttpErrors :: URI -> Network.HTTP.Req.HttpException -> ExceptT VerifyError IO ResponseResult
+    interpretHttpErrors uri = \case
       JsonHttpException _ -> error "External link JSON parse exception"
-      VanillaHttpException err -> case err of
+      VanillaHttpException err -> interpretHttpErrors' uri err
+
+    interpretHttpErrors' :: URI -> Network.HTTP.Client.HttpException -> ExceptT VerifyError IO ResponseResult
+    interpretHttpErrors' uri = \case
         InvalidUrlException{} -> error "External link URL invalid exception"
         HttpExceptionRequest _ exc -> case exc of
           StatusCodeException resp _
@@ -765,6 +806,12 @@ checkExternalResource followed config@Config{..} link
               redirectLocation = fmap decodeUtf8
                 . lookup "Location"
                 $ responseHeaders resp
+
+          ConnectionFailure _ -> throwError ExternalResourceConnectionFailure
+          InternalException e
+            | Just (N.C.HostCannotConnect _ _) <- fromException e
+            -> throwError ExternalResourceConnectionFailure
+
           other -> throwError $ ExternalResourceSomeError $ show other
       where
         retryAfterInfo :: Response a -> Maybe RetryAfter

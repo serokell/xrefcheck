@@ -11,7 +11,7 @@ load '../helpers'
 
 
 @test "All HTML anchors should be valid" {
-  run xrefcheck
+  run xrefcheck -u
 
   assert_output --partial "All repository links are valid."
 }

@@ -1,12 +1,6 @@
-=== Invalid references found ===
-
-  ➥  In file to-ignore/broken-link.md
-     bad reference (absolute) at src:7:1-25:
-       - text: "my link"
-       - link: /one/two/three
-       - anchor: -
-
-     File does not exist:
-       one/two/three
+to-ignore/broken-link.md:7:1-25: bad reference:
+  The reference to "my link" failed verification.
+  File does not exist:
+    one/two/three
 
 Invalid references dumped, 1 in total.

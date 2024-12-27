@@ -11,25 +11,25 @@ load '../helpers'
 
 
 @test "ignoreRefsFrom: full path" {
-  run xrefcheck -c config-full-path.yaml
+  run xrefcheck -u -c config-full-path.yaml
 
   assert_output --partial "All repository links are valid."
 }
 
 @test "ignoreRefsFrom: glob wildcard" {
-  run xrefcheck -c config-wildcard.yaml
+  run xrefcheck -u -c config-wildcard.yaml
 
   assert_output --partial "All repository links are valid."
 }
 
 @test "ignoreRefsFrom: nested directories with glob wildcard" {
-  run xrefcheck -c config-nested-directories.yaml
+  run xrefcheck -u -c config-nested-directories.yaml
 
   assert_output --partial "All repository links are valid."
 }
 
 @test "ignoreRefsFrom: directory, check failure" {
   golden_file=$(realpath expected.gold)
-  to_temp xrefcheck -c config-directory.yaml
+  to_temp xrefcheck -u -c config-directory.yaml
   assert_diff
 }

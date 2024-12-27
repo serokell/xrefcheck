@@ -2,10 +2,10 @@
 
   [96mcolor.md[0m:
     - references:
-        - reference ([92mfile-local[0m) [2mat src:9:1-15[0m:
+        - reference ([92mfile-local[0m) at color.md:9:1-15:
             - text: "Color"
             - anchor: Color
     - anchors:
-        - color ([2m[92mheader I[0m[0m) [2mat src:7:1-7[0m
+        - color ([2m[92mheader I[0m[0m) at color.md:7:1-7
 
-All repository links are valid.
+[92mAll repository links are valid.[0m

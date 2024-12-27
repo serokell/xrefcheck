@@ -9,7 +9,7 @@ module Xrefcheck.Command
 
 import Universum
 
-import Data.Reflection (give)
+import Data.Reflection (Given, give)
 import Data.Yaml (decodeFileEither, prettyPrintParseException)
 import Fmt (build, fmt, fmtLn)
 import System.Console.Pretty (supportsPretty)
@@ -24,7 +24,7 @@ import Xrefcheck.Progress (allowRewrite)
 import Xrefcheck.Scan
 import Xrefcheck.Scanners.Markdown (markdownSupport)
 import Xrefcheck.Scanners.Symlink (symlinkSupport)
-import Xrefcheck.System (askWithinCI)
+import Xrefcheck.System (PrintUnixPaths (..), askWithinCI)
 import Xrefcheck.Util
 import Xrefcheck.Verify (reportVerifyErrs, verifyErrors, verifyRepo)
 
@@ -33,7 +33,7 @@ readConfig path = fmap overrideConfig do
   decodeFileEither path
     >>= either (error . toText . prettyPrintParseException) pure
 
-configuredFileSupport :: ScannersConfig -> FileSupport
+configuredFileSupport :: Given PrintUnixPaths => ScannersConfig -> FileSupport
 configuredFileSupport ScannersConfig{..} = firstFileSupport
     [ markdownSupport scMarkdown
     , symlinkSupport
@@ -55,7 +55,7 @@ defaultAction Options{..} = do
         then WithColors
         else WithoutColors
 
-  give colorMode $ do
+  give oPrintUnixPaths $ give colorMode $ do
     config <- case oConfigPath of
       Just configPath -> readConfig configPath
       Nothing -> do
@@ -92,7 +92,8 @@ defaultAction Options{..} = do
       verifyRepo rw fullConfig oMode repoInfo
 
     case verifyErrors verifyRes of
-      Nothing | null scanErrs -> fmtLn "All repository links are valid."
+      Nothing | null scanErrs ->
+        fmtLn $ colorIfNeeded Green "All repository links are valid."
       Nothing -> exitFailure
       Just verifyErrs -> do
         unless (null scanErrs) $ fmt "\n"

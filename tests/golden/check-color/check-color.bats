@@ -16,34 +16,34 @@ load '../helpers'
 @test "Color flag (not in CI)" {
   golden_file=$(realpath expected-color.gold)
   output_file="$TEST_TEMP_DIR/temp_file.test"
-  CI=false xrefcheck -v --no-progress --color > $output_file
+  CI=false xrefcheck -u -v --no-progress --color > $output_file
   assert_diff
 }
 
 @test "No color flag (not in CI)" {
   golden_file=$(realpath expected-no-color.gold)
   output_file="$TEST_TEMP_DIR/temp_file.test"
-  CI=false xrefcheck -v --no-progress --no-color > $output_file
+  CI=false xrefcheck -u -v --no-progress --no-color > $output_file
   assert_diff
 }
 
 @test "No color default when pipe (not in CI)" {
   golden_file=$(realpath expected-no-color.gold)
   output_file="$TEST_TEMP_DIR/temp_file.test"
-  CI=false xrefcheck -v --no-progress > $output_file
+  CI=false xrefcheck -u -v --no-progress > $output_file
   assert_diff
 }
 
 @test "Color default when CI" {
   golden_file=$(realpath expected-color.gold)
   output_file="$TEST_TEMP_DIR/temp_file.test"
-  CI=true xrefcheck -v --no-progress > $output_file
+  CI=true xrefcheck -u -v --no-progress > $output_file
   assert_diff
 }
 
 @test "No color flag in CI" {
   golden_file=$(realpath expected-no-color.gold)
   output_file="$TEST_TEMP_DIR/temp_file.test"
-  CI=true xrefcheck -v --no-progress --no-color > $output_file
+  CI=true xrefcheck -u -v --no-progress --no-color > $output_file
   assert_diff
 }

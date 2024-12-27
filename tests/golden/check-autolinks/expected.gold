@@ -2,25 +2,22 @@
 
   file-with-autolinks.md:
     - references:
-        - reference (external) at src:6:22-52:
+        - reference (external) at file-with-autolinks.md:6:22-52:
             - text: "https://www.google.com/doodles"
             - link: https://www.google.com/doodles
-        - reference (external) at src:8:0-18:
+        - reference (external) at file-with-autolinks.md:8:0-18:
             - text: "www.commonmark.org"
             - link: http://www.commonmark.org
     - anchors:
         none
 
-=== Invalid references found ===
-
-  ➥  In file file-with-autolinks.md
-     bad reference (external) at src:8:0-18:
-       - text: "www.commonmark.org"
-       - link: http://www.commonmark.org
-
-     Permanent redirect found:
-       -| http://www.commonmark.org
-       -> https://commonmark.org
-          ^-- stopped before this one
+file-with-autolinks.md:8:0-18: bad reference:
+  The reference to "www.commonmark.org" failed verification.
+  Permanent redirect found:
+    -| http://www.commonmark.org
+    -> https://commonmark.org
+       ^-- stopped before this one
+  when processing an external link:
+    http://www.commonmark.org
 
 Invalid references dumped, 1 in total.

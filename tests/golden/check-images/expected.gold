@@ -2,61 +2,49 @@
 
   check-images.md:
     - references:
-        - reference (external) at src:7:1-76:
+        - reference (external) at check-images.md:7:1-76:
             - text: "good image ref 1"
             - link: https://avatars.githubusercontent.com/u/13840520
-        - reference (external) at src:9:1-35:
+        - reference (external) at check-images.md:9:1-35:
             - text: "good image ref 2"
             - link: https://avatars.githubusercontent.com/u/13840520
-        - reference (external) at src:14:1-52:
+        - reference (external) at check-images.md:14:1-52:
             - text: "bad image ref 1"
             - link: https://serokell.io/1.png
-        - reference (external) at src:16:1-33:
+        - reference (external) at check-images.md:16:1-33:
             - text: "bad image ref 2"
             - link: https://serokell.io/2.png
-        - reference (relative) at src:20:1-34:
+        - reference (relative) at check-images.md:20:1-34:
             - text: "bad image ref 3"
             - link: ./3.png
             - anchor: -
-        - reference (relative) at src:21:1-33:
+        - reference (relative) at check-images.md:21:1-33:
             - text: "bad image ref 4"
             - link: ./4.png
             - anchor: -
     - anchors:
         none
 
-=== Invalid references found ===
+check-images.md:14:1-52: bad reference:
+  The reference to "bad image ref 1" failed verification.
+  Resource unavailable (404 Not Found)
+  when processing an external link:
+    https://serokell.io/1.png
 
-  ➥  In file check-images.md
-     bad reference (external) at src:14:1-52:
-       - text: "bad image ref 1"
-       - link: https://serokell.io/1.png
+check-images.md:16:1-33: bad reference:
+  The reference to "bad image ref 2" failed verification.
+  Resource unavailable (404 Not Found)
+  when processing an external link:
+    https://serokell.io/2.png
 
-     Resource unavailable (404 Not Found)
+check-images.md:20:1-34: bad reference:
+  The reference to "bad image ref 3" failed verification.
+  File does not exist:
+    ./3.png
 
-  ➥  In file check-images.md
-     bad reference (external) at src:16:1-33:
-       - text: "bad image ref 2"
-       - link: https://serokell.io/2.png
-
-     Resource unavailable (404 Not Found)
-
-  ➥  In file check-images.md
-     bad reference (relative) at src:20:1-34:
-       - text: "bad image ref 3"
-       - link: ./3.png
-       - anchor: -
-
-     File does not exist:
-       ./3.png
-
-  ➥  In file check-images.md
-     bad reference (relative) at src:21:1-33:
-       - text: "bad image ref 4"
-       - link: ./4.png
-       - anchor: -
-
-     File does not exist:
-       ./4.png
+check-images.md:21:1-33: bad reference:
+  The reference to "bad image ref 4" failed verification.
+  File does not exist:
+    ./4.png
 
 Invalid references dumped, 4 in total.

@@ -56,6 +56,10 @@ Unreleased
   + Now Xrefcheck is able to follow relative redirects.
 * [#262](https://github.com/serokell/xrefcheck/pull/262)
   + Now Xrefcheck includes a scanner that verifies the repository symlinks.
+* [#307](https://github.com/serokell/xrefcheck/pull/307)
+  + The output of Xrefcheck is now more legible.
+  + Add the `--print-unix-paths` (`-u`) flag to print paths in Unix style (with
+    forward slashes) on all platforms.
 
 0.2.2
 ==========

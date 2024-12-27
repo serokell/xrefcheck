@@ -7,6 +7,7 @@ module Test.Xrefcheck.Util where
 
 import Universum
 
+import Data.Reflection (give)
 import Data.Tagged (untag)
 import Network.HTTP.Types (forbidden403, unauthorized401)
 import Network.Wai.Handler.Warp qualified as Web
@@ -17,9 +18,11 @@ import Web.Scotty qualified as Web
 import Xrefcheck.Core (Flavor)
 import Xrefcheck.Scan (ScanAction)
 import Xrefcheck.Scanners.Markdown (MarkdownConfig (MarkdownConfig, mcFlavor), markdownScanner)
+import Xrefcheck.System (PrintUnixPaths (..))
 
 parse :: Flavor -> ScanAction
 parse fl path =
+  give (PrintUnixPaths False) $
   markdownScanner MarkdownConfig { mcFlavor = fl } path
 
 mockServerUrl :: MockServerPort -> Text -> Text

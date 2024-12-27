@@ -19,6 +19,7 @@ import Xrefcheck.Core
 import Xrefcheck.Progress (allowRewrite)
 import Xrefcheck.Scan
 import Xrefcheck.Scanners.Markdown
+import Xrefcheck.System
 import Xrefcheck.Util (ColorMode (WithoutColors))
 import Xrefcheck.Verify
 
@@ -26,7 +27,9 @@ test_ignoreRegex :: TestTree
 test_ignoreRegex = give WithoutColors $
   let root = "tests/markdowns/without-annotations"
       showProgressBar = False
-      fileSupport = firstFileSupport [markdownSupport defGithubMdConfig]
+      fileSupport =
+        give (PrintUnixPaths False) $
+        firstFileSupport [markdownSupport defGithubMdConfig]
       verifyMode = ExternalOnlyMode
 
       linksTxt =

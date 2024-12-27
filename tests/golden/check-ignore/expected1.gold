@@ -1,8 +1,4 @@
-=== Scan errors found ===
-
-  ➥  In file to-ignore/inner-directory/broken_annotation.md
-     scan error at src:9:1-29:
-
-     Annotation "ignore all" must be at the top of markdown or right after comments at the top
+to-ignore/inner-directory/broken_annotation.md:9:1-29: scan error:
+  Annotation "ignore all" must be at the top of markdown or right after comments at the top
 
 Scan errors dumped, 1 in total.

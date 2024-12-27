@@ -119,7 +119,7 @@ verifyLink
   -> Text
   -> IO (VerifyResult VerifyError, Progress Int Text)
 verifyLink configModifier setRef link = do
-  let reference = Reference "" (Position Nothing) $ RIExternal $ ELUrl link
+  let reference = Reference "" (Position "") $ RIExternal $ ELUrl link
   progRef <- newIORef $ initVerifyProgress [reference]
   result <- verifyReferenceWithProgress configModifier reference setRef progRef
   progress <- readIORef progRef

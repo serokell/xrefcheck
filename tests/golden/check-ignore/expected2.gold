@@ -1,21 +1,11 @@
-=== Scan errors found ===
-
-  ➥  In file to-ignore/inner-directory/broken_annotation.md
-     scan error at src:9:1-29:
-
-     Annotation "ignore all" must be at the top of markdown or right after comments at the top
+to-ignore/inner-directory/broken_annotation.md:9:1-29: scan error:
+  Annotation "ignore all" must be at the top of markdown or right after comments at the top
 
 Scan errors dumped, 1 in total.
 
-=== Invalid references found ===
-
-  ➥  In file check-ignore.md
-     bad reference (absolute) at src:7:1-37:
-       - text: "Good reference"
-       - link: /referenced-file.md
-       - anchor: -
-
-     File does not exist:
-       referenced-file.md
+check-ignore.md:7:1-37: bad reference:
+  The reference to "Good reference" failed verification.
+  File does not exist:
+    referenced-file.md
 
 Invalid references dumped, 1 in total.

@@ -30,7 +30,7 @@ load '../helpers'
   git init
   git add ./*
 
-  to_temp xrefcheck -v -c config-ignore.yaml
+  to_temp xrefcheck -u -v -c config-ignore.yaml
 
   assert_diff $golden_file
 }
@@ -54,7 +54,7 @@ load '../helpers'
   git init
   git add ./*
 
-  to_temp xrefcheck -v
+  to_temp xrefcheck -u -v
 
   assert_diff
 }

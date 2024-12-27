@@ -8,6 +8,7 @@ module Test.Xrefcheck.TrailingSlashSpec where
 import Universum hiding ((.~))
 
 import Control.Lens ((.~))
+import Data.Reflection (give)
 import System.Directory (doesFileExist)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertFailure, testCase)
@@ -24,7 +25,9 @@ import Xrefcheck.Util
 test_slash :: TestTree
 test_slash = testGroup "Trailing forward slash detection" $
   let config = defConfig GitHub
-      fileSupport = firstFileSupport [markdownSupport (scMarkdown (cScanners config))]
+      fileSupport =
+        give (PrintUnixPaths False) $
+        firstFileSupport [markdownSupport (scMarkdown (cScanners config))]
   in roots <&> \root ->
     testCase ("All the files within the root \"" <>
       root <>

@@ -2,11 +2,11 @@
 
   dir/b.md:
     - references:
-        - reference (relative) at src:7:1-15:
+        - reference (relative) at dir/b.md:7:1-15:
             - text: "Empty file"
             - link: a
             - anchor: -
-        - reference (relative) at src:9:1-24:
+        - reference (relative) at dir/b.md:9:1-24:
             - text: "Some symlink"
             - link: ../ok.md
             - anchor: -
@@ -15,7 +15,7 @@
 
   ok.md:
     - references:
-        - reference (relative):
+        - reference (relative) at ok.md:
             - text: "Symbolic Link"
             - link: dir/b.md
             - anchor: -

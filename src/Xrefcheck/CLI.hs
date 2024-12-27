@@ -39,7 +39,7 @@ import Paths_xrefcheck (version)
 import Xrefcheck.Config (NetworkingConfig, NetworkingConfig' (..))
 import Xrefcheck.Core
 import Xrefcheck.Scan
-import Xrefcheck.System (CanonicalRelGlobPattern, mkCanonicalRelGlobPattern)
+import Xrefcheck.System (CanonicalRelGlobPattern, PrintUnixPaths (..), mkCanonicalRelGlobPattern)
 import Xrefcheck.Util (ColorMode (WithColors, WithoutColors))
 
 modeReadM :: ReadM VerifyMode
@@ -84,6 +84,7 @@ data Options = Options
   , oVerbose           :: Bool
   , oShowProgressBar   :: Maybe Bool
   , oColorMode         :: Maybe ColorMode
+  , oPrintUnixPaths    :: PrintUnixPaths
   , oExclusionOptions  :: ExclusionOptions
   , oNetworkingOptions :: NetworkingOptions
   , oScanPolicy        :: ScanPolicy
@@ -196,6 +197,10 @@ optionsParser = do
         help "Disable ANSI coloring of output."
     , pure Nothing
     ]
+  oPrintUnixPaths <- fmap PrintUnixPaths $ switch $
+    short 'u' <>
+    long "--print-unix-paths" <>
+    help "Print paths in Unix style (with forward slashes) on all platforms."
   oExclusionOptions <- exclusionOptionsParser
   oNetworkingOptions <- networkingOptionsParser
   oScanPolicy <- flag OnlyTracked IncludeUntracked $
@@ -208,7 +213,7 @@ exclusionOptionsParser :: Parser ExclusionOptions
 exclusionOptionsParser = do
   eoIgnore <- many . globOption $
     long "ignore" <>
-    metavar "GLOB PATTERN" <>
+    metavar "GLOB_PATTERN" <>
     help "Ignore these files. References to them will fail verification,\
          \ and references from them will not be verified.\
          \ Glob patterns that contain wildcards MUST be enclosed\
@@ -237,7 +242,7 @@ dumpConfigOptions = hsubparser $
       option repoTypeReadM $
       short 't' <>
       long "type" <>
-      metavar "REPOSITORY TYPE" <>
+      metavar "REPOSITORY_TYPE" <>
       help [int||
       Git repository type. \
       Can be (#{intercalate " | " $ map show allFlavors}). \

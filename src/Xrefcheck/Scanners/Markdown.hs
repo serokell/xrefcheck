@@ -23,11 +23,10 @@ import CMarkGFM
 import Control.Lens (_Just, makeLenses, makeLensesFor, use, (.=))
 import Control.Monad.Trans.Writer.CPS (Writer, runWriter, tell)
 import Data.Aeson (FromJSON (..), genericParseJSON)
-import Data.ByteString.Lazy qualified as BSL
+import Data.ByteString qualified as BS
 import Data.DList qualified as DList
 import Data.Reflection (Given)
 import Data.Text qualified as T
-import Data.Text.Lazy qualified as LT
 import Fmt (Buildable (..), nameF)
 import Text.HTML.TagSoup
 import Text.Interpolation.Nyan
@@ -409,18 +408,17 @@ textToMode ("ignore" : [x])
   | otherwise        = InvalidMode x
 textToMode _         = NotAnAnnotation
 
-parseFileInfo :: MarkdownConfig -> String -> LT.Text -> (FileInfo, [ScanError 'Parse])
+parseFileInfo :: MarkdownConfig -> String -> T.Text -> (FileInfo, [ScanError 'Parse])
 parseFileInfo config pathForPrinting input
   = runWriter
   $ flip runReaderT (ExtractorCtx config pathForPrinting)
   $ nodeExtractInfo
-  $ commonmarkToNode [optFootnotes] [extAutolink]
-  $ toStrict input
+  $ commonmarkToNode [optFootnotes] [extAutolink] input
 
 markdownScanner :: Given PrintUnixPaths => MarkdownConfig -> ScanAction
 markdownScanner config root relativePath =
   parseFileInfo config pathForPrinting . decodeUtf8
-    <$> BSL.readFile rootedPath
+    <$> BS.readFile rootedPath
   where
     rootedPath = filePathFromRoot root relativePath
     pathForPrinting = mkPathForPrinting rootedPath

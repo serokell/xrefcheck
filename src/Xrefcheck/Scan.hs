@@ -39,7 +39,7 @@ import Data.Map qualified as M
 import Data.Reflection (Given)
 import Fmt (Buildable (..), Builder, fmtLn)
 import System.Directory (doesDirectoryExist, pathIsSymbolicLink)
-import System.Process (cwd, readCreateProcess, shell)
+import System.Process (cwd, proc, readCreateProcess)
 import Text.Interpolation.Nyan
 import Text.Regex.TDFA.Common (CompOption (..), ExecOption (..), Regex)
 import Text.Regex.TDFA.Text qualified as R
@@ -185,9 +185,9 @@ readDirectoryWith mode config scanner root = do
       RdmBothTrackedAndUtracked -> liftA2 (<>) getTrackedFiles getUntrackedFiles
 
     getTrackedFiles = readCreateProcess
-      (shell "git ls-files -z"){cwd = Just root} ""
+      (proc "git" ["ls-files", "-z"]){cwd = Just root} ""
     getUntrackedFiles = readCreateProcess
-      (shell "git ls-files -z --others --exclude-standard"){cwd = Just root} ""
+      (proc "git" ["ls-files", "-z", "--others", "--exclude-standard"]){cwd = Just root} ""
 
     fileLines :: String -> [String]
     fileLines (dropWhile (== '\0') -> ls) =

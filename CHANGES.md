@@ -7,6 +7,9 @@
 Unreleased
 ==========
 
+0.3.1
+==========
+
 * [#311](https://github.com/serokell/xrefcheck/issues/311)
   + Fix a "resource exhausted" crash on repositories containing a large number
     of Markdown files.

@@ -105,6 +105,13 @@ networking:
   externalRefRedirects:
 #{interpolateIndentF 4 externalRefRedirects}
 
+  # The maximum allowed total size of HTTP headers (in bytes) that can
+  # be returned by the server.
+  #
+  # If the total size of the headers exceeds this value, the request will
+  # fail with an error to prevent the processing of excessively large headers.
+  maxHeaderLength: 4096
+
 # Parameters of scanners for various file types.
 scanners:
   # On 'anchor not found' error, how much similar anchors should be displayed as

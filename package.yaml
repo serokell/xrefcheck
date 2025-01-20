@@ -95,7 +95,8 @@ library:
     - ftp-client
     - crypton-connection
     - Glob
-    - http-client
+    - http-client >= 0.7.17
+    - http-client-tls
     - http-types
     - lens
     - modern-uri

@@ -57,7 +57,7 @@ import Network.HTTP.Client
 import Network.HTTP.Req
   (AllowsBody, CanHaveBody (NoBody), GET (..), HEAD (..), HttpBodyAllowed,
   HttpConfig (httpConfigRedirectCount), HttpException (..), HttpMethod, NoReqBody (..),
-  defaultHttpConfig, ignoreResponse, req, runReq, useURI)
+  defaultHttpConfig, ignoreResponse, req, runReq, useURI, httpConfigAltManager)
 import Network.HTTP.Types.Header (hRetryAfter)
 import Network.HTTP.Types.Status (Status, statusCode, statusMessage)
 import Text.Interpolation.Nyan
@@ -136,6 +136,7 @@ data VerifyError
   | RedirectMissingLocation RedirectChain
   | RedirectChainLimit RedirectChain
   | RedirectRuleError RedirectChain (Maybe RedirectRuleOn)
+  | MaxHeaderLengthError Int
   deriving stock (Show, Eq)
 
 data ResponseResult
@@ -286,6 +287,11 @@ pprVerifyErr' rInfo = \case
           Just RROPermanent -> "Permanent redirect"
           Just RROTemporary -> "Temporary redirect"
           Just (RROCode code) -> show code <> " redirect"
+
+    MaxHeaderLengthError len ->
+      [int||
+      The total size of the response headers exceeds the limit of #{len} bytes.
+      |] <> pprLinkCtx rInfo
 
 attachToRedirectChain :: RedirectChain -> Text -> Builder
 attachToRedirectChain chain attached
@@ -718,7 +724,10 @@ checkExternalResource followed config@Config{..} link
       _ -> makeHttpRequest uri GET 0.7
 
     httpConfig :: HttpConfig
-    httpConfig = defaultHttpConfig { httpConfigRedirectCount = 0 }
+    httpConfig = defaultHttpConfig
+        { httpConfigRedirectCount = 0
+        , httpConfigAltManager = ncHttpManager
+        }
 
     makeHttpRequest
       :: (HttpMethod method, HttpBodyAllowed (AllowsBody method) 'NoBody)
@@ -811,6 +820,8 @@ checkExternalResource followed config@Config{..} link
           InternalException e
             | Just (N.C.HostCannotConnect _ _) <- fromException e
             -> throwError ExternalResourceConnectionFailure
+
+          OverlongHeaders -> throwError $ MaxHeaderLengthError ncMaxHeaderLength
 
           other -> throwError $ ExternalResourceSomeError $ show other
       where

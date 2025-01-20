@@ -156,6 +156,7 @@ tests:
       - warp
       - scotty
       - http-types
+      - http-client
       - lens
       - modern-uri
       - nyan-interpolation
@@ -165,6 +166,7 @@ tests:
       - tasty
       - tasty-hunit
       - tasty-quickcheck
+      - text
       - time
       - universum
       - uri-bytestring

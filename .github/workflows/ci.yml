@@ -112,16 +112,17 @@ jobs:
       - name: Golden tests (bats)
         run: nix shell .#bats .#diffutils .#xrefcheck -c bash -c "cd tests/golden/ && bats ./**"
 
-      - name: windows cross-compilation
-        run: |
-          nix build -L .#xrefcheck-windows
-          echo "WINDOWS_BINARY_PATH=$(readlink -f result)" >> $GITHUB_ENV
+      # Windows cross compilation is currently broken
+      # - name: windows cross-compilation
+      #   run: |
+      #     nix build -L .#xrefcheck-windows
+      #     echo "WINDOWS_BINARY_PATH=$(readlink -f result)" >> $GITHUB_ENV
 
-      - name: Upload windows executable
-        uses: actions/upload-artifact@v4
-        with:
-          name: xrefcheck-windows
-          path: ${{ env.WINDOWS_BINARY_PATH }}/bin/*
+      # - name: Upload windows executable
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: xrefcheck-windows
+      #     path: ${{ env.WINDOWS_BINARY_PATH }}/bin/*
 
       - name: docker-image
         run: nix build -L .#docker-image

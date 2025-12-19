@@ -3,7 +3,7 @@
  -
  - SPDX-License-Identifier: MPL-2.0
  -->
-So, first one is here https://www.google.com/doodles.
+So, first one is here https://doodles.google/.
 
 www.commonmark.org
 

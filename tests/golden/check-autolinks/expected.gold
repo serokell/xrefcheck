@@ -2,9 +2,9 @@
 
   file-with-autolinks.md:
     - references:
-        - reference (external) at file-with-autolinks.md:6:22-52:
-            - text: "https://www.google.com/doodles"
-            - link: https://www.google.com/doodles
+        - reference (external) at file-with-autolinks.md:6:22-45:
+            - text: "https://doodles.google/"
+            - link: https://doodles.google/
         - reference (external) at file-with-autolinks.md:8:0-18:
             - text: "www.commonmark.org"
             - link: http://www.commonmark.org

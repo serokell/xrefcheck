@@ -7,7 +7,9 @@ module Xrefcheck.Command
   ( defaultAction
   ) where
 
-import Universum
+import Universum hiding ((.~))
+
+import Control.Lens ((.~))
 
 import Data.Reflection (Given, give)
 import Data.Yaml (decodeFileEither, prettyPrintParseException)
@@ -15,10 +17,12 @@ import Fmt (build, fmt, fmtLn)
 import System.Console.Pretty (supportsPretty)
 import System.Directory (doesFileExist)
 import Text.Interpolation.Nyan
+import Network.HTTP.Client (newManager, managerSetMaxHeaderLength)
+import Network.HTTP.Client.TLS (tlsManagerSettings)
 
 import Xrefcheck.CLI (Options (..), addExclusionOptions, addNetworkingOptions, defaultConfigPaths)
 import Xrefcheck.Config
-  (Config, Config' (..), ScannersConfig, ScannersConfig' (..), defConfig, overrideConfig)
+  (Config, Config' (..), NetworkingConfig' (..), ScannersConfig, ScannersConfig' (..), defConfig, overrideConfig, cNetworkingL, ncHttpManagerL)
 import Xrefcheck.Core (Flavor (..))
 import Xrefcheck.Progress (allowRewrite)
 import Xrefcheck.Scan
@@ -87,8 +91,12 @@ defaultAction Options{..} = do
     whenJust (nonEmpty $ sortBy (compare `on` seFile) scanErrs) reportScanErrs
 
     verifyRes <- allowRewrite showProgressBar $ \rw -> do
-      let fullConfig = config
+      let parsedConfig = config
             { cNetworking = addNetworkingOptions (cNetworking config) oNetworkingOptions }
+
+      mgr <- newManager $ managerSetMaxHeaderLength (ncMaxHeaderLength (cNetworking parsedConfig)) tlsManagerSettings
+      let fullConfig = parsedConfig & cNetworkingL . ncHttpManagerL .~ Just mgr
+
       verifyRepo rw fullConfig oMode repoInfo
 
     case verifyErrors verifyRes of

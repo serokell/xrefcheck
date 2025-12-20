@@ -103,12 +103,14 @@ addExclusionOptions ExclusionConfig{..} (ExclusionOptions ignore) =
 
 data NetworkingOptions = NetworkingOptions
   { noMaxRetries :: Maybe Int
+  , noMaxHeaderLength :: Maybe Int
   }
 
 addNetworkingOptions :: NetworkingConfig -> NetworkingOptions -> NetworkingConfig
-addNetworkingOptions NetworkingConfig{..} (NetworkingOptions maxRetries) =
+addNetworkingOptions NetworkingConfig{..} (NetworkingOptions maxRetries maxHeaderLength) =
   NetworkingConfig
   { ncMaxRetries = fromMaybe ncMaxRetries maxRetries
+  , ncMaxHeaderLength = fromMaybe ncMaxHeaderLength maxHeaderLength
   , ..
   }
 
@@ -228,6 +230,13 @@ networkingOptionsParser = do
     value Nothing <>
     help "How many attempts to retry an external link after getting \
          \a \"429 Too Many Requests\" response."
+
+  noMaxHeaderLength <- option (Just <$> auto) $
+    long "header-limit" <>
+    metavar "INT" <>
+    value Nothing <>
+    help "The maximum allowed total size of HTTP headers (in bytes) \
+         \ that can be returned by the server."
   return NetworkingOptions{..}
 
 dumpConfigOptions :: Parser Command

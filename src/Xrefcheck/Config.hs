@@ -18,6 +18,7 @@ import Data.Aeson (genericParseJSON)
 import Data.Yaml (FromJSON (..), decodeEither', prettyPrintParseException, withText)
 import Text.Regex.TDFA.Text ()
 import Time (KnownRatName, Second, Time (..), unitsP)
+import Network.HTTP.Client (Manager)
 
 import Xrefcheck.Config.Default
 import Xrefcheck.Core
@@ -85,6 +86,19 @@ data NetworkingConfig' f = NetworkingConfig
     -- chain.
   , ncExternalRefRedirects      :: Field f RedirectConfig
     -- ^  Rules to override the redirect behavior for external references.
+  , ncMaxHeaderLength           :: Field f Int
+    -- ^ The maximum allowed total size of HTTP headers (in bytes) that can
+    -- be returned by the server.
+    --
+    -- If the total size of the headers exceeds this value, the request will
+    -- fail with an error to prevent the processing of excessively large headers.
+  , ncHttpManager               :: Field f (Maybe Manager)
+    -- ^ A custom HTTP Manager used for all HTTP requests.
+    --
+    -- Using the same implicit global manager for provides maximal connection
+    -- sharing.
+    --
+    -- If 'Nothing', a default manager will be used.
   } deriving stock (Generic)
 
 -- | A list of custom redirect rules.
@@ -151,6 +165,8 @@ overrideConfig config
         , ncMaxTimeoutRetries         = overrideField ncMaxTimeoutRetries
         , ncMaxRedirectFollows        = overrideField ncMaxRedirectFollows
         , ncExternalRefRedirects      = overrideField ncExternalRefRedirects
+        , ncMaxHeaderLength           = overrideField ncMaxHeaderLength
+        , ncHttpManager               = overrideField ncHttpManager
         }
       where
         overrideField :: (forall f. NetworkingConfig' f -> Field f a) -> a
@@ -181,3 +197,6 @@ instance FromJSON (ScannersConfig) where
 
 instance FromJSON (ScannersConfig' Maybe) where
   parseJSON = genericParseJSON aesonConfigOption
+
+instance FromJSON Manager where
+  parseJSON _ = fail "Manager field is not configurable"
